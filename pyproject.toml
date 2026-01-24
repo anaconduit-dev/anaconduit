@@ -15,6 +15,5 @@ dependencies = [
     "uvicorn[standard]>=0.40.0",
     "grpcio",
     "grpcio-tools",
-    "xraydb",
     "grpcio-tools",
 ]
