@@ -1,6 +1,7 @@
 import os
 import json
 import docker
+import secrets
 from fastapi import HTTPException
 
 client = docker.from_env()
@@ -131,3 +132,34 @@ async def get_xray_logs(tail: int = 100):
         return container.logs(tail=tail).decode("utf-8")
     except docker.errors.NotFound:
         return "Контейнер не найден"
+
+async def generate_reality_keys():
+    """
+    Генерирует пару Private/Public ключей и ShortID через работающий контейнер Xray.
+    """
+    try:
+        container = client.containers.get("anaconduit-xray-core")
+        
+        # 1. Генерируем ключи через встроенную команду xray x25519
+        # Выполняем команду внутри контейнера
+        exec_result = container.exec_run("xray x25519")
+        output = exec_result.output.decode("utf-8")
+        
+        # Парсим вывод (он идет в две строки: Private key: ... \n Public key: ...)
+        lines = output.strip().split('\n')
+        private_key = lines[0].split(': ')[1].strip()
+        public_key = lines[1].split(': ')[1].strip()
+
+        # 2. Генерируем ShortID (это просто случайная hex-строка от 2 до 16 символов)
+        # Обычно используют 8 символов (16 знаков hex)
+        short_id = secrets.token_hex(8)
+
+        return {
+            "private_key": private_key,
+            "public_key": public_key,
+            "short_id": short_id
+        }
+    except docker.errors.NotFound:
+        raise HTTPException(status_code=400, detail="Контейнер Xray должен быть запущен для генерации ключей")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка генерации: {str(e)}")
