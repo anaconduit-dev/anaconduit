@@ -28,3 +28,8 @@ async def install_xray(request: InstallRequest):
     """
     result = await install_xray_container(request.version)
     return result
+@app.get("/api/xray/status")
+async def xray_status():
+    """Получить текущее состояние ядра Xray"""
+    status = await get_xray_status()
+    return status
