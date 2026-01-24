@@ -20,28 +20,39 @@ HOST_CONFIG_PATH = f"{HOST_DATA_PATH}/xray/config.json"
 
 
 async def ensure_base_config():
-    """Создает базовый конфиг через внутренний путь бэкенда"""
+    """Создает минимально корректный конфиг для запуска Xray"""
     if not os.path.exists(INTERNAL_DATA_DIR):
         os.makedirs(INTERNAL_DATA_DIR, exist_ok=True)
     
-    # Если на месте файла оказалась ошибочная директория от Docker - удаляем её
     if os.path.isdir(INTERNAL_CONFIG_PATH):
-        print(f"--- Исправление: удаление ошибочной директории {INTERNAL_CONFIG_PATH} ---")
         os.rmdir(INTERNAL_CONFIG_PATH)
 
     if not os.path.exists(INTERNAL_CONFIG_PATH):
+        # Этот конфиг просто запускает ядро, которое ничего не делает, но не падает
         base_config = {
-            "log": {"loglevel": "info"},
-            "inbounds": [{
-                "port": 10085,
-                "protocol": "dokodemo-door",
-                "settings": {"address": "127.0.0.1"}
-            }],
-            "outbounds": [{"protocol": "freedom"}]
+            "log": {
+                "loglevel": "info"
+            },
+            "inbounds": [
+                {
+                    "port": 10085,
+                    "protocol": "dokodemo-door",
+                    "settings": {
+                        "address": "127.0.0.1"
+                    },
+                    "tag": "interal-test-inbound" 
+                }
+            ],
+            "outbounds": [
+                {
+                    "protocol": "freedom",
+                    "tag": "direct"
+                }
+            ]
         }
         with open(INTERNAL_CONFIG_PATH, "w") as f:
             json.dump(base_config, f, indent=4)
-        print(f"--- Создан базовый конфиг: {INTERNAL_CONFIG_PATH} ---")
+        print(f"--- Создан валидный базовый конфиг: {INTERNAL_CONFIG_PATH} ---")
 
 async def install_xray_container(version: str):
     # Гарантируем наличие файла на диске
