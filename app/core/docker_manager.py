@@ -69,7 +69,7 @@ async def install_xray_container(version: str):
         # Важно: для монтирования (left side) используем HOST_CONFIG_PATH
         container = client.containers.run(
             image=image_tag,
-            name="pyray-xray-core",
+            name="anaconduit-xray-core",
             detach=True,
             restart_policy={"Name": "always"},
             network_mode="host",
