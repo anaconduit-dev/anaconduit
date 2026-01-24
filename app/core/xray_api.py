@@ -3,7 +3,7 @@ from app.proto import stats_pb2 as stats_types
 from app.proto import stats_pb2_grpc as stats_service
 
 class XrayAPIClient:
-    def __init__(self, address="host.docker.internal:10085"):
+    def __init__(self, address="172.18.0.1:10085"):
         self.address = address
 
     async def test_connection(self):
