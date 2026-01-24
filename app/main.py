@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from .services.github import get_xray_releases
 
-from .core.docker_manager import install_xray_container, get_xray_status
+from .core.docker_manager import install_xray_container, get_xray_status, get_xray_logs
 from pydantic import BaseModel
 
 app = FastAPI(title="Anaconduit Panel API")
@@ -34,3 +34,11 @@ async def xray_status():
     """Получить текущее состояние ядра Xray"""
     status = await get_xray_status()
     return status
+
+@app.get("/api/xray/logs")
+async def xray_logs():
+    """Получить текущее состояние ядра Xray"""
+    logs = await get_xray_logs()
+    return logs
+
+
