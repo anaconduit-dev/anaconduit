@@ -8,31 +8,28 @@ import re
 XRAY_REPO = "https://raw.githubusercontent.com/XTLS/Xray-core/main"
 PROTO_DIR = os.path.join("app", "proto")
 # Список необходимых файлов для работы API (основные сервисы)
-PROTO_FILES = [
-    "app/proxyman/command/command.proto",
-    "app/stats/command/command.proto",
-    "common/serial/typed_message.proto",
-    "common/net/address.proto",
-    "common/net/port.proto",
-]
+PROTO_MAP = {
+    "stats_command.proto": "app/stats/command/command.proto",
+    "proxy_command.proto": "app/proxyman/command/command.proto",
+    "typed_message.proto": "common/serial/typed_message.proto",
+    "address.proto": "common/net/address.proto",
+    "port.proto": "common/net/port.proto"
+}
 
 async def download_protos():
-    """Скачивает актуальные .proto файлы из репозитория Xray"""
     os.makedirs(PROTO_DIR, exist_ok=True)
     async with httpx.AsyncClient() as client:
-        for proto_path in PROTO_FILES:
-            url = f"{XRAY_REPO}/{proto_path}"
-            # Сохраняем структуру папок, но для простоты в одну директорию
-            filename = os.path.basename(proto_path)
-            target = os.path.join(PROTO_DIR, filename)
+        for local_name, remote_path in PROTO_MAP.items():
+            url = f"{XRAY_REPO}/{remote_path}"
+            target = os.path.join(PROTO_DIR, local_name)
             
-            print(f"Downloading {filename}...")
+            print(f"Downloading {remote_path} as {local_name}...")
             response = await client.get(url)
             if response.status_code == 200:
                 with open(target, "wb") as f:
                     f.write(response.content)
             else:
-                print(f"Failed to download {filename}")
+                print(f"Failed: {url}")
 
 def compile_protos():
     """Компилирует .proto файлы в Python код"""
