@@ -87,3 +87,28 @@ async def install_xray_container(version: str):
             status_code=500, 
             detail=f"Docker error: {str(e)}. Проверьте HOST_DATA_PATH в .env"
         )
+async def get_xray_status():
+    """Возвращает текущий статус и версию установленного ядра Xray"""
+    try:
+        container = client.containers.get("pyray-xray-core")
+        
+        # Получаем тег образа (например, 'teddysun/xray:1.8.4')
+        image_tag = container.image.tags[0] if container.image.tags else "unknown"
+        # Вырезаем только версию
+        version = image_tag.split(":")[-1] if ":" in image_tag else image_tag
+
+        return {
+            "is_installed": True,
+            "status": container.status,  # running, exited, paused
+            "version": version,
+            "container_id": container.short_id,
+            "image": image_tag
+        }
+    except docker.errors.NotFound:
+        return {
+            "is_installed": False,
+            "status": "not_found",
+            "version": None
+        }
+    except Exception as e:
+        return {"error": str(e)}
