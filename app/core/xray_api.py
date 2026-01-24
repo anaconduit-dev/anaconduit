@@ -6,14 +6,13 @@ class XrayAPIClient:
         self.address = address
 
     def _import_proto(self):
-        try:
-            # Теперь импортируем из ПЕРЕИМЕНОВАННОГО файла статистики
-            from app.proto import stats_command_pb2 as stats_command
-            from app.proto import stats_command_pb2_grpc as stats_service
-            return stats_command, stats_service
-        except ImportError as e:
-            print(f"Import Error: {e}")
-            raise HTTPException(status_code=500, detail="Интерфейсы не найдены")
+    try:
+        # Путь теперь повторяет структуру папок Xray
+        from app.proto.app.stats.command import command_pb2 as stats_command
+        from app.proto.app.stats.command import command_pb2_grpc as stats_service
+        return stats_command, stats_service
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=f"Генерация не завершена: {e}")
 
     async def test_connection(self):
         stats_command, stats_service = self._import_proto()
