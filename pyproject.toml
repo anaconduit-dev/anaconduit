@@ -13,4 +13,7 @@ dependencies = [
     "python-jose[cryptography]>=3.5.0",
     "sqlalchemy>=2.0.45",
     "uvicorn[standard]>=0.40.0",
+    "grpcio",
+    "grpcio-tools",
+    "xraydb",
 ]
