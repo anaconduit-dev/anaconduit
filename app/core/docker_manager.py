@@ -59,7 +59,7 @@ async def install_xray_container(version: str):
 
         # Удаление старого контейнера
         try:
-            old = client.containers.get("pyray-xray-core")
+            old = client.containers.get("anaconduit-xray-core")
             old.stop()
             old.remove()
         except docker.errors.NotFound:
@@ -90,7 +90,7 @@ async def install_xray_container(version: str):
 async def get_xray_status():
     """Возвращает текущий статус и версию установленного ядра Xray"""
     try:
-        container = client.containers.get("pyray-xray-core")
+        container = client.containers.get("anaconduit-xray-core")
         
         # Получаем тег образа (например, 'teddysun/xray:1.8.4')
         image_tag = container.image.tags[0] if container.image.tags else "unknown"
