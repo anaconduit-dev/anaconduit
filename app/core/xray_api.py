@@ -2,7 +2,7 @@ import grpc
 from fastapi import HTTPException
 
 class XrayAPIClient:
-    def __init__(self, address="127.0.0.1:10085"):
+    def __init__(self, address="host.docker.internal:10085"):
         self.address = address
 
     def _import_proto(self):
