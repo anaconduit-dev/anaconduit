@@ -3,7 +3,7 @@ import json
 import docker
 import secrets
 from fastapi import HTTPException
-from app.core.grpc_builder import build_grpc_interface
+
 
 client = docker.from_env()
 
@@ -93,9 +93,7 @@ async def install_xray_container(version: str):
             print(f"Pulling {image_tag}...")
             client.images.pull(image_tag)
 
-        # 2. Обновляем gRPC интерфейсы ДО запуска (чтобы бэкенд был готов к работе)
-        print(f"Updating gRPC interfaces for version {version}...")
-        await build_grpc_interface()
+       
 
         # 3. Удаляем старый контейнер
         try:
