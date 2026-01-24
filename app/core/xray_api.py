@@ -27,5 +27,7 @@ class XrayAPIClient:
                     print(f"gRPC Status Error: {e.code()}")
                     return False
         except Exception as e:
-            print(f"gRPC Connection Fatal Error: {e}")
+            print(f"DEBUG: Connecting to {self.address}")
+            print(f"DEBUG: Error type: {type(e)}")
+            print(f"DEBUG: Error details: {e}")
             return False
