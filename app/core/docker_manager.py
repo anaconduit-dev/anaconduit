@@ -81,20 +81,23 @@ async def ensure_base_config():
         print(f"--- Создан базовый конфиг с gRPC API: {INTERNAL_CONFIG_PATH} ---")
 
 async def install_xray_container(version: str):
-    # Гарантируем наличие файла на диске
     await ensure_base_config()
     
     image_tag = f"teddysun/xray:{version.lstrip('v')}"
     
     try:
-        # Проверка и скачивание образа
+        # 1. Скачиваем образ
         try:
             client.images.get(image_tag)
         except docker.errors.ImageNotFound:
             print(f"Pulling {image_tag}...")
             client.images.pull(image_tag)
 
-        # Удаление старого контейнера
+        # 2. Обновляем gRPC интерфейсы ДО запуска (чтобы бэкенд был готов к работе)
+        print(f"Updating gRPC interfaces for version {version}...")
+        await build_grpc_interface()
+
+        # 3. Удаляем старый контейнер
         try:
             old = client.containers.get("anaconduit-xray-core")
             old.stop()
@@ -102,8 +105,7 @@ async def install_xray_container(version: str):
         except docker.errors.NotFound:
             pass
 
-        # Запуск контейнера Xray
-        # Важно: для монтирования (left side) используем HOST_CONFIG_PATH
+        # 4. Запускаем контейнер
         container = client.containers.run(
             image=image_tag,
             name="anaconduit-xray-core",
@@ -117,14 +119,15 @@ async def install_xray_container(version: str):
                 }
             }
         )
-        print(f"Updating gRPC interfaces for version {version}...")
-        await build_grpc_interface()
+        
         return {"status": "success", "container_id": container.short_id}
 
     except Exception as e:
+        # Логируем ошибку здесь, чтобы понимать, на каком этапе упало
+        print(f"Installation failed: {e}")
         raise HTTPException(
             status_code=500, 
-            detail=f"Docker error: {str(e)}. Проверьте HOST_DATA_PATH в .env"
+            detail=f"Error: {str(e)}"
         )
 async def get_xray_status():
     """Возвращает текущий статус и версию установленного ядра Xray"""
