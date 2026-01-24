@@ -22,12 +22,20 @@ PROTO_FILES = [
 
 async def download_protos():
     os.makedirs(PROTO_DIR, exist_ok=True)
+    # Создаем __init__.py в корне proto
+    open(os.path.join(PROTO_DIR, "__init__.py"), "a").close()
+    
     async with httpx.AsyncClient() as client:
         for path in PROTO_FILES:
             url = f"{XRAY_REPO}/{path}"
-            # Создаем вложенные папки, чтобы структура совпадала с Xray
             target_path = os.path.join(PROTO_DIR, path)
-            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+            
+            # Создаем папки и __init__.py в каждой из них
+            current_dir = PROTO_DIR
+            for part in os.path.dirname(path).split('/'):
+                current_dir = os.path.join(current_dir, part)
+                os.makedirs(current_dir, exist_ok=True)
+                open(os.path.join(current_dir, "__init__.py"), "a").close()
             
             response = await client.get(url)
             if response.status_code == 200:
@@ -36,9 +44,9 @@ async def download_protos():
 
 def compile_protos():
     import grpc_tools.protoc
-    # Компилируем, указывая PROTO_DIR как корень поиска (proto_path)
     for path in PROTO_FILES:
         target_file = os.path.join(PROTO_DIR, path)
+        # Компилируем
         grpc_tools.protoc.main([
             "grpc_tools.protoc",
             f"--proto_path={PROTO_DIR}",
@@ -46,28 +54,24 @@ def compile_protos():
             f"--grpc_python_out={PROTO_DIR}",
             target_file
         ])
+    
+    # Очень важный момент: исправляем импорты во ВСЕЙ папке рекурсивно
+    fix_imports_recursive(PROTO_DIR)
 
-
-
-def fix_imports(directory):
-    """Корректно исправляет импорты в сгенерированных файлах"""
-    for filename in os.listdir(directory):
-        if filename.endswith("_pb2.py") or filename.endswith("_pb2_grpc.py"):
-            path = os.path.join(directory, filename)
-            with open(path, 'r') as f:
-                content = f.read()
-
-            # Исправляем импорты: ищем 'import name_pb2' и меняем на 'from . import name_pb2'
-            # Но только если перед 'import' нет слова 'from'
-            patterns = [
-                (r'(?m)^import\s+(\w+_pb2)', r'from . import \1'),
-            ]
-            
-            for pattern, replacement in patterns:
-                content = re.sub(pattern, replacement, content)
-            
-            with open(path, 'w') as f:
-                f.write(content)
+def fix_imports_recursive(directory):
+    import re
+    for root, dirs, files in os.walk(directory):
+        for filename in files:
+            if filename.endswith("_pb2.py") or filename.endswith("_pb2_grpc.py"):
+                path = os.path.join(root, filename)
+                with open(path, 'r') as f:
+                    content = f.read()
+                
+                # Заменяем 'import ..._pb2' на относительный импорт 'from . import ..._pb2'
+                content = re.sub(r'(?m)^import\s+(\w+_pb2)', r'from . import \1', content)
+                
+                with open(path, 'w') as f:
+                    f.write(content)
 
 async def build_grpc_interface():
     """Главная функция для вызова при установке/обновлении ядра"""
