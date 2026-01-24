@@ -2,6 +2,7 @@ import os
 import subprocess
 import httpx
 import sys
+import re
 
 # Базовые настройки
 XRAY_REPO = "https://raw.githubusercontent.com/XTLS/Xray-core/main"
@@ -59,17 +60,25 @@ def compile_protos():
     fix_imports(PROTO_DIR)
     print("Compilation complete.")
 
+
+
 def fix_imports(directory):
-    """Исправляет абсолютные импорты в сгенерированных файлах для Python 3"""
+    """Корректно исправляет импорты в сгенерированных файлах"""
     for filename in os.listdir(directory):
         if filename.endswith("_pb2.py") or filename.endswith("_pb2_grpc.py"):
             path = os.path.join(directory, filename)
             with open(path, 'r') as f:
                 content = f.read()
-            # Заменяем импорты типа 'import x_pb2' на 'from . import x_pb2'
-            # Это нужно, чтобы модули внутри папки proto видели друг друга
-            for p in [os.path.basename(f).replace('.proto', '') for f in PROTO_FILES]:
-                content = content.replace(f'import {p}_pb2', f'from . import {p}_pb2')
+
+            # Исправляем импорты: ищем 'import name_pb2' и меняем на 'from . import name_pb2'
+            # Но только если перед 'import' нет слова 'from'
+            patterns = [
+                (r'(?m)^import\s+(\w+_pb2)', r'from . import \1'),
+            ]
+            
+            for pattern, replacement in patterns:
+                content = re.sub(pattern, replacement, content)
+            
             with open(path, 'w') as f:
                 f.write(content)
 
