@@ -3,6 +3,7 @@ import json
 import docker
 import secrets
 from fastapi import HTTPException
+from app.core.grpc_builder import build_grpc_interface
 
 client = docker.from_env()
 
@@ -21,7 +22,7 @@ HOST_CONFIG_PATH = f"{HOST_DATA_PATH}/xray/config.json"
 
 
 async def ensure_base_config():
-    """Создает минимально корректный конфиг для запуска Xray"""
+    """Создает базовый конфиг с поддержкой gRPC API для PyRay"""
     if not os.path.exists(INTERNAL_DATA_DIR):
         os.makedirs(INTERNAL_DATA_DIR, exist_ok=True)
     
@@ -29,19 +30,43 @@ async def ensure_base_config():
         os.rmdir(INTERNAL_CONFIG_PATH)
 
     if not os.path.exists(INTERNAL_CONFIG_PATH):
-        # Этот конфиг просто запускает ядро, которое ничего не делает, но не падает
         base_config = {
             "log": {
                 "loglevel": "info"
             },
+            # 1. Включаем сбор статистики
+            "stats": {},
+            # 2. Описываем API сервисы
+            "api": {
+                "tag": "api",
+                "services": [
+                    "HandlerService", # Управление пользователями
+                    "StatsService",   # Сбор статистики
+                    "LoggerService"   # Управление логами
+                ]
+            },
+            # 3. Политики (важно для работы статистики)
+            "policy": {
+                "levels": {
+                    "0": {
+                        "statsUserUplink": True,
+                        "statsUserDownlink": True
+                    }
+                },
+                "system": {
+                    "statsInboundUplink": True,
+                    "statsInboundDownlink": True
+                }
+            },
             "inbounds": [
                 {
+                    "listen": "127.0.0.1",
                     "port": 10085,
                     "protocol": "dokodemo-door",
                     "settings": {
                         "address": "127.0.0.1"
                     },
-                    "tag": "interal-test-inbound" 
+                    "tag": "api" # Тег должен совпадать с api.tag выше
                 }
             ],
             "outbounds": [
@@ -53,7 +78,7 @@ async def ensure_base_config():
         }
         with open(INTERNAL_CONFIG_PATH, "w") as f:
             json.dump(base_config, f, indent=4)
-        print(f"--- Создан валидный базовый конфиг: {INTERNAL_CONFIG_PATH} ---")
+        print(f"--- Создан базовый конфиг с gRPC API: {INTERNAL_CONFIG_PATH} ---")
 
 async def install_xray_container(version: str):
     # Гарантируем наличие файла на диске
@@ -92,6 +117,8 @@ async def install_xray_container(version: str):
                 }
             }
         )
+        print(f"Updating gRPC interfaces for version {version}...")
+        await build_grpc_interface()
         return {"status": "success", "container_id": container.short_id}
 
     except Exception as e:
