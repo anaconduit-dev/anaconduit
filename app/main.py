@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from .services.github import get_xray_releases
+from app.core.xray_api import XrayAPIClient
 
 from .core.docker_manager import install_xray_container, get_xray_status, get_xray_logs
 from pydantic import BaseModel
@@ -40,5 +41,17 @@ async def xray_logs():
     """Получить текущее состояние ядра Xray"""
     logs = await get_xray_logs()
     return logs
+
+@app.get("/api/xray/test-grpc")
+async def test_grpc():
+    client = XrayAPIClient()
+    is_alive = await client.test_connection()
+    if is_alive:
+        return {"status": "connected", "message": "gRPC API is responding"}
+    else:
+        raise HTTPException(
+            status_code=503, 
+            detail="Xray gRPC API is unreachable. Check if Xray is running with API enabled."
+        )
 
 
