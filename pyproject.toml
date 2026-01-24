@@ -16,5 +16,4 @@ dependencies = [
     "grpcio",
     "grpcio-tools",
     "grpcio-tools",
-    "xray-grpc",
 ]
