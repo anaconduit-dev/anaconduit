@@ -8,54 +8,44 @@ import re
 XRAY_REPO = "https://raw.githubusercontent.com/XTLS/Xray-core/main"
 PROTO_DIR = os.path.join("app", "proto")
 # Список необходимых файлов для работы API (основные сервисы)
-PROTO_MAP = {
-    "stats_command.proto": "app/stats/command/command.proto",
-    "proxy_command.proto": "app/proxyman/command/command.proto",
-    "typed_message.proto": "common/serial/typed_message.proto",
-    "address.proto": "common/net/address.proto",
-    "port.proto": "common/net/port.proto"
-}
+# Полный список с путями
+PROTO_FILES = [
+    "app/stats/command/command.proto",
+    "app/proxyman/command/command.proto",
+    "common/serial/typed_message.proto",
+    "common/net/address.proto",
+    "common/net/port.proto",
+    "common/protocol/user.proto",
+    "proxy/vless/account.proto",
+    "core/config.proto"
+]
 
 async def download_protos():
     os.makedirs(PROTO_DIR, exist_ok=True)
     async with httpx.AsyncClient() as client:
-        for local_name, remote_path in PROTO_MAP.items():
-            url = f"{XRAY_REPO}/{remote_path}"
-            target = os.path.join(PROTO_DIR, local_name)
+        for path in PROTO_FILES:
+            url = f"{XRAY_REPO}/{path}"
+            # Создаем вложенные папки, чтобы структура совпадала с Xray
+            target_path = os.path.join(PROTO_DIR, path)
+            os.makedirs(os.path.dirname(target_path), exist_ok=True)
             
-            print(f"Downloading {remote_path} as {local_name}...")
             response = await client.get(url)
             if response.status_code == 200:
-                with open(target, "wb") as f:
+                with open(target_path, "wb") as f:
                     f.write(response.content)
-            else:
-                print(f"Failed: {url}")
 
 def compile_protos():
-    """Компилирует .proto файлы в Python код"""
     import grpc_tools.protoc
-    
-    print("Compiling gRPC stubs...")
-    proto_include = PROTO_DIR
-    
-    # Собираем список всех скачанных .proto файлов
-    files = [os.path.join(PROTO_DIR, f) for f in os.listdir(PROTO_DIR) if f.endswith(".proto")]
-    
-    for proto_file in files:
-        command = [
+    # Компилируем, указывая PROTO_DIR как корень поиска (proto_path)
+    for path in PROTO_FILES:
+        target_file = os.path.join(PROTO_DIR, path)
+        grpc_tools.protoc.main([
             "grpc_tools.protoc",
             f"--proto_path={PROTO_DIR}",
             f"--python_out={PROTO_DIR}",
             f"--grpc_python_out={PROTO_DIR}",
-            proto_file
-        ]
-        # Выполняем компиляцию
-        grpc_tools.protoc.main(command)
-    
-    # Маленький хак: исправление импортов внутри сгенерированных файлов
-    # (protobuf часто генерирует относительные импорты, которые ломаются в пакетах)
-    fix_imports(PROTO_DIR)
-    print("Compilation complete.")
+            target_file
+        ])
 
 
 
