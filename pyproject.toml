@@ -16,4 +16,5 @@ dependencies = [
     "grpcio",
     "grpcio-tools",
     "xraydb",
+    "grpcio-tools",
 ]
