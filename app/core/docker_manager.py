@@ -112,3 +112,11 @@ async def get_xray_status():
         }
     except Exception as e:
         return {"error": str(e)}
+
+async def get_xray_logs(tail: int = 100):
+    """Получает последние N строк логов из контейнера Xray"""
+    try:
+        container = client.containers.get("anaconduit-xray-core")
+        return container.logs(tail=tail).decode("utf-8")
+    except docker.errors.NotFound:
+        return "Контейнер не найден"
