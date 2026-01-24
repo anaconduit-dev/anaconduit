@@ -6,16 +6,14 @@ class XrayAPIClient:
         self.address = address
 
     def _import_proto(self):
-        """Ленивый импорт сгенерированных файлов"""
         try:
-            from app.proto import command_pb2 as stats_command
-            from app.proto import command_pb2_grpc as stats_service
+            # Теперь импортируем из ПЕРЕИМЕНОВАННОГО файла статистики
+            from app.proto import stats_command_pb2 as stats_command
+            from app.proto import stats_command_pb2_grpc as stats_service
             return stats_command, stats_service
-        except ImportError:
-            raise HTTPException(
-                status_code=500, 
-                detail="gRPC интерфейсы еще не сгенерированы. Попробуйте установить ядро Xray сначала."
-            )
+        except ImportError as e:
+            print(f"Import Error: {e}")
+            raise HTTPException(status_code=500, detail="Интерфейсы не найдены")
 
     async def test_connection(self):
         stats_command, stats_service = self._import_proto()
