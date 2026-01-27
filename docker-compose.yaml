@@ -1,16 +1,14 @@
 services:
   backend:
     build: .
-    container_name: xray_panel_backend
+    container_name: anaconduit_backend
+    restart: always
     ports:
       - "8000:8000"
     env_file:
       - .env
     environment:
-      # Мы берем значение из .env и передаем его внутрь контейнера
-      - HOST_DATA_PATH=${HOST_DATA_PATH}
+      HOST_DATA_PATH: ${HOST_DATA_PATH}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data:/app/data
-    restart: always
-
