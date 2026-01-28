@@ -2,7 +2,6 @@ import logging
 
 from fastapi import FastAPI
 
-from app.api.health import router as health_router
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.api.docker import router as docker_router
@@ -20,4 +19,4 @@ app = FastAPI(
 )
 
 app.include_router(docker_router)
-app.include_router(health_router)
+
