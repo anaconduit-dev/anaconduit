@@ -15,8 +15,12 @@ class XrayService:
 
     def __init__(self):
         self.docker = DockerService()
-        self.data_dir = settings.host_data_path / "xray"
-        self.data_dir.mkdir(parents=True, exist_ok=True)
+        # Путь для Python (запись файла)
+        self.internal_xray_dir = settings.internal_data_path / "xray"
+        self.internal_xray_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Путь для Docker (монтирование)
+        self.host_xray_dir = f"{settings.host_data_path}/xray"
 
     # ---------- Versions ----------
 
@@ -44,11 +48,10 @@ class XrayService:
     # ---------- Config ----------
 
     def ensure_base_config(self):
-        config_path = self.data_dir / "config.json"
+        config_path = self.internal_xray_dir / "config.json"
 
         base_config = {
             "log": {"loglevel": "info"},
-            "stats": {},
             "api": {
                 "tag": "api",
                 "services": [
@@ -67,22 +70,16 @@ class XrayService:
                 }
             ],
             "outbounds": [
-                {"protocol": "freedom", "tag": "direct"},
-                {"protocol": "blackhole", "tag": "block"}
-            ],
-            "routing": {
-                "rules": [
-                    {
-                        "type": "field",
-                        "inboundTag": ["api"],
-                        "outboundTag": "direct"
-                    }
-                ]
-            }
+                {"protocol": "freedom", "tag": "direct"}
+            ]
         }
 
         with open(config_path, "w") as f:
             json.dump(base_config, f, indent=2)
+        
+        print(f"✅ Конфиг записан во внутреннюю папку: {config_path}")
+
+
 
     # ---------- Runtime ----------
 
@@ -99,7 +96,7 @@ class XrayService:
             image=image,
             ports={f"{self.API_PORT}/tcp": self.API_PORT},
             volumes={
-                str(self.data_dir): {
+                self.host_xray_dir: {
                     "bind": "/etc/xray",
                     "mode": "rw",
                 }
