@@ -14,6 +14,6 @@ class Settings(BaseSettings):
     # то Python должен писать именно в /app/data
     internal_data_path: Path = Path("/app/data")
     
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore"б env_prefix="")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_prefix="")
 
 settings = Settings()
