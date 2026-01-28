@@ -11,5 +11,5 @@ services:
       HOST_DATA_PATH: ${HOST_DATA_PATH}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /opt/anaconduit/data:/app/data
+      - ${HOST_DATA_PATH}:/app/data
 
