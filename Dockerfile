@@ -1,20 +1,22 @@
 FROM python:3.13-slim
 
-# uv
+# Установка uv (быстрый сервер)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
-# Зависимости (кешируем)
+# Кеширование зависимостей
 COPY pyproject.toml uv.lock ./
 RUN uv pip install --system --no-cache .
 
-# Код
+# Копируем код
 COPY . .
 
-# Данные
+# Создаём папку для данных
 RUN mkdir -p /app/data
 
+# Открываем порт для FastAPI
 EXPOSE 8000
 
+# ⚡ Запуск FastAPI
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
