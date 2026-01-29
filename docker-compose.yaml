@@ -1,3 +1,8 @@
+networks:
+  anaconduit_net:
+    name: anaconduit_net   # 🔹 задаём точное имя
+    driver: bridge
+
 services:
   backend:
     build: .
@@ -12,4 +17,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_DATA_PATH}:/app/data
+    networks:
+      - anaconduit_net  # 🔹 подключаем к сети
+
 
