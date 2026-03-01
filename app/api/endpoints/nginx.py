@@ -32,7 +32,6 @@ async def apply_config(nginx_service = Depends(get_nginx_service)):
         # 1. Генерируем конфиг
         await nginx_service.apply_all()
         
-        )
         
         logger.info(f"Nginx reload output: {output}")
         return {"message": "Config applied and Nginx reloaded", "details": output}
