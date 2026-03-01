@@ -36,20 +36,11 @@ class NginxService:
 
     async def generate_stream_conf(self):
         # 1. Формируем логику маппинга
-        if self.reality_domain == self.domain:
-            # Если домен один, всё шлем на панель (www), xray будет default
-            map_logic = f"{self.domain}              127.0.0.1:7443;"
-        else:
-            # Если разные, распределяем по SNI
-            map_logic = f"""
-    {self.reality_domain}      anaconduit_xray:8443;
-    {self.domain}              127.0.0.1:7443;"""
-
-        # 2. Формируем конфиг
-        content = f"""
+       content = f"""
 map $ssl_preread_server_name $backend_name {{
     hostnames;
-    {map_logic.strip()}
+    {self.reality_domain}      anaconduit_xray:8443;
+    {self.domain}              127.0.0.1:7443;
     default                    anaconduit_xray:8443;
 }}
 
@@ -58,6 +49,7 @@ server {{
     proxy_pass      $backend_name;
     ssl_preread     on;
     proxy_protocol  on;
+    # set_real_ip_from для стрима в докере обычно не критичен, но оставим логику
 }}
 """
         await self._write(self.stream_d / "stream.conf", content)
@@ -68,24 +60,24 @@ server {{
         content = f"""
 user  nginx;
 worker_processes  auto;
+worker_rlimit_nofile 16384;
+
 events {{
     worker_connections  4096;
 }}
 
 stream {{
-    # Добавляем Docker DNS ресолвер
     resolver 127.0.0.11 valid=30s;
     include /etc/nginx/stream-enabled/*.conf;
 }}
 
 http {{
-    resolver 127.0.0.11 valid=30s;
     include       /etc/nginx/mime.types;
     default_type  application/octet-stream;
     sendfile        on;
     keepalive_timeout  65;
 
-    # Логика для Certbot (HTTP-01 challenge)
+    # Редирект с 80 на 443
     server {{
         listen 80;
         server_name {self.domain} {self.reality_domain};
@@ -104,47 +96,52 @@ http {{
 
     async def generate_sites_conf(self):
         # Пути к сертификатам внутри контейнера (соответствуют volume в install.sh)
+        ssl_path = f"/etc/nginx/certs/live/{self.domain}"
+        
         ssl_block = f"""
-    ssl_certificate /etc/nginx/certs/live/{self.domain}/fullchain.pem;
-    ssl_certificate_key /etc/nginx/certs/live/{self.domain}/privkey.pem;
-    
-    server_tokens off;
+    ssl_certificate {ssl_path}/fullchain.pem;
+    ssl_certificate_key {ssl_path}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!eNULL:!MD5:!DES:!RC4:!ADH:!SSLv3:!EXP:!PSK:!DSS;
     ssl_prefer_server_ciphers on;
-
-    if ($request_uri ~ "(\\"|'|`|~|,|:|--|;|%|\\$|&&|\\?\\?|0x00|0X00|\\||\\\\|\\{{|\\}}|\\[|\\]|<|>|\\.\\.\\.|\\.\\.\\/|\\/\\/\\/)"){{set $hack 1;}}
 """
 
+        # Конфиг основного домена (Панель + Подписки)
         domain_conf = f"""
 server {{
     listen 7443 ssl http2 proxy_protocol;
     server_name {self.domain};
     {ssl_block}
 
-    if ($host !~* ^(.+\\.)?{self.domain}$ ){{return 444;}}
+    server_tokens off;
+    
+    # Защита от хаков (из твоего примера)
+    if ($request_uri ~ "(\\"|'|`|~|,|:|--|;|%|\\$|&&|\\?\\?|0x00|0X00|\\||\\\\|\\{{|\\}}|\\[|\\]|<|>|\\.\\.\\.|\\.\\.\\/|\\/\\/\\/)") {{ set $hack 1; }}
 
+    # Админка
     location /{self.panel_path}/ {{
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
         proxy_pass http://anaconduit_backend:{self.panel_port};
     }}
 
-    # Роут для подписки
-    location /{self.sub_path} {{
-        proxy_set_header Host $host;
-        proxy_pass http://anaconduit_backend:{self.sub_port};
-    }}
-
+    # Подписки и остальное
     include /etc/nginx/snippets/includes.conf;
 }}
 """
-        # Reality использует те же сертификаты для маскировки (само-кража)
+        # Конфиг домена маскировки (Reality Dest)
+        reality_ssl_path = f"/etc/nginx/certs/live/{self.reality_domain}"
         reality_conf = f"""
 server {{
     listen 9443 ssl http2;
     server_name {self.reality_domain};
-    {ssl_block}
+    ssl_certificate {reality_ssl_path}/fullchain.pem;
+    ssl_certificate_key {reality_ssl_path}/privkey.pem;
 
     location / {{
         root /var/www/html;
