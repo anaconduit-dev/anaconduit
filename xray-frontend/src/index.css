@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+/* Это обнуление стилей Vite, чтобы всё не липло */
+:root {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: left !important;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f8fafc;
+}
