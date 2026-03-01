@@ -15,9 +15,11 @@ async def setup_nginx(use_ssl: bool = False, nginx_service = Depends(get_nginx_s
     try:
         # 1. Генерируем конфиги
         await nginx_service.generate_main_nginx_conf()
-        await nginx_service.generate_snippets()
         await nginx_service.generate_stream_conf()
         await nginx_service.generate_sites_conf()
+        await nginx_service.generate_sites_conf()
+        
+       
         
         # 2. Запускаем контейнер
         await nginx_service.install_and_run()
