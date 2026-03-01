@@ -61,11 +61,13 @@ server {{
         await self._write(self.stream_d / "stream.conf", content)
 
     async def generate_main_nginx_conf(self):
-        # Убрали загрузку лишних модулей, оставили только stream
+        # Модуль stream в официальном образе nginx:latest уже встроен.
+        # Удаляем строки load_module, чтобы не было ошибки dlopen().
         content = f"""
 user  nginx;
 worker_processes  auto;
-load_module modules/ngx_stream_module.so;
+
+# load_module modules/ngx_stream_module.so;  <-- ЭТУ СТРОКУ УДАЛЯЕМ
 
 events {{
     worker_connections  4096;
