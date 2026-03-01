@@ -30,13 +30,8 @@ async def apply_config(nginx_service = Depends(get_nginx_service)):
     """Перегенерация конфига без перезапуска контейнера (nginx reload)"""
     try:
         # 1. Генерируем конфиг
-        await nginx_service.generate_default_config(use_ssl=True)
+        await nginx_service.apply_all()
         
-        # 2. Используем твою функцию exec из DockerService
-        # Она сама сделает to_thread.run_sync и вернет результат
-        output = await nginx_service.docker.exec(
-            name=nginx_service.CONTAINER_NAME, 
-            command="nginx -s reload"
         )
         
         logger.info(f"Nginx reload output: {output}")
