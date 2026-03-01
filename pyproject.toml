@@ -15,4 +15,7 @@ dependencies = [
     "uvicorn[standard]>=0.40.0",
     "grpcio",
     "grpcio-tools",
+    "aiosqlite",
+    "bcrypt==4.2.1",
+    "cryptography==44.0.0",
 ]
