@@ -35,11 +35,18 @@ class NginxService:
         await anyio.to_thread.run_sync(lambda: path.write_text(content.strip()))
 
     async def generate_stream_conf(self):
+        # Если домены одинаковые, используем только один, чтобы избежать конфликта в map
+        if self.reality_domain == self.domain:
+            map_logic = f"{self.domain}              www;"
+        else:
+            map_logic = f"""
+    {self.reality_domain}      xray;
+    {self.domain}              www;"""
+
         content = f"""
 map $ssl_preread_server_name $sni_name {{
     hostnames;
-    {self.reality_domain}      xray;
-    {self.domain}              www;
+    {map_logic.strip()}
     default                    xray;
 }}
 
