@@ -38,30 +38,18 @@ class NginxService:
 
     async def generate_stream_conf(self):
         content = f"""
-map $ssl_preread_server_name $sni_name {{
+map $ssl_preread_server_name $backend_target {{
     hostnames;
-    {self.reality_domain}    xray;
-    {self.domain}              www;
-    default                    xray;
-}}
-
-# Используем переменную для динамического резолвинга
-upstream xray {{
-    server anaconduit_xray:8443;
-}}
-
-upstream www {{
-    server 127.0.0.1:7443;
+    {self.reality_domain}    anaconduit_xray:8443;
+    {self.domain}              127.0.0.1:7443;
+    default                    anaconduit_xray:8443;
 }}
 
 server {{
-    proxy_protocol on;
-    set_real_ip_from 127.0.0.1;
     listen          443;
-    
-    # Nginx не упадет, если резолвер указан в http блоке (он у нас там есть)
-    proxy_pass      $sni_name;
-    ssl_preread      on;
+    proxy_protocol  on;
+    proxy_pass      $backend_target; # Использование переменной откладывает проверку хоста
+    ssl_preread     on;
 }}
 """
         await self._write(self.stream_d / "stream.conf", content)
