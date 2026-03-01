@@ -87,13 +87,15 @@ events {{
 }}
 
 stream {{
+    # Внутренний DNS Docker. Позволяет Nginx находить контейнеры по именам.
+    resolver 127.0.0.11 valid=30s; 
     include /etc/nginx/stream-enabled/*.conf;
 }}
 
 http {{
     include       /etc/nginx/mime.types;
     default_type  application/octet-stream;
-    resolver 8.8.8.8 1.1.1.1 valid=300s;
+    resolver 127.0.0.11 8.8.8.8 valid=300s;
     include /etc/nginx/conf.d/*.conf;
 }}
 """
