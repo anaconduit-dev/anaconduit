@@ -97,12 +97,13 @@ http {{
         await self._write(self.base_dir / "nginx.conf", content)
 
     async def generate_sites_conf(self):
+        # Пути для проверки наличия сертификатов на хосте
         host_cert_dir = settings.internal_data_path / "letsencrypt" / "live" / self.domain
         has_certs = (host_cert_dir / "fullchain.pem").exists()
 
         if not has_certs:
-            logger.warning(f"Certificates for {self.domain} not found. Using HTTP-only.")
-            common_ssl_logic = "# SSL pending certbot"
+            logger.warning(f"Certificates for {self.domain} not found. Using HTTP-only mode for Certbot challenge.")
+            common_ssl_logic = "# SSL will be enabled after certbot run"
             ssl_listen_domain = "listen 7443 proxy_protocol;"
             ssl_listen_reality = "listen 9443;"
         else:
@@ -112,13 +113,68 @@ http {{
     ssl_ciphers HIGH:!aNULL:!eNULL:!MD5:!DES:!RC4:!ADH:!SSLv3:!EXP:!PSK:!DSS;
     ssl_certificate /etc/letsencrypt/live/{self.domain}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/{self.domain}/privkey.pem;
+
+    if ($request_uri ~ "(\\"|'|`|~|,|:|--|;|%|\\$|&&|\\?\\?|0x00|0X00|\\||\\\\|\\{{|\\}}|\\[|\\]|<|>|\\.\\.\\.|\\.\\.\\/|\\/\\/\\/)"){{set $hack 1;}}
 """
             ssl_listen_domain = "listen 7443 ssl http2 proxy_protocol;"
             ssl_listen_reality = "listen 9443 ssl http2;"
 
-        # Генерируем domain_conf, reality_conf и http_conf (как в вашем последнем сообщении)
-        # ... (код генерации строк) ...
+        # --- Конфиг основного домена ---
+        # Используем двойные скобки {{ }} там, где они должны остаться в конфиге Nginx
+        domain_conf = f"""
+server {{
+    {ssl_listen_domain}
+    server_name {self.domain};
+    root /var/www/html/;
+    {common_ssl_logic}
 
+    if ($host !~* ^(.+\\.)?{self.domain.replace('.', '\\.')}$ ){{return 444;}}
+    {f'if ($ssl_server_name !~* ^(.+\\.)?{self.domain.replace(".", "\\.")}$ ) {{ return 444; }}' if has_certs else ""}
+
+    location /{self.panel_path}/ {{
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_pass http://anaconduit_backend:{self.panel_port};
+    }}
+    include /etc/nginx/snippets/includes.conf;
+}}
+"""
+
+        # --- Конфиг Reality домена ---
+        reality_conf = f"""
+server {{
+    {ssl_listen_reality}
+    server_name {self.reality_domain};
+    root /var/www/html/;
+    {common_ssl_logic}
+
+    if ($host !~* ^(.+\\.)?{self.reality_domain.replace('.', '\\.')}$ ){{return 444;}}
+    
+    location /{self.panel_path}/ {{
+        proxy_pass http://anaconduit_backend:{self.panel_port};
+    }}
+    include /etc/nginx/snippets/includes.conf;
+}}
+"""
+
+        # --- Конфиг 80 порта (HTTP) ---
+        http_conf = f"""
+server {{
+    listen 80;
+    server_name {self.domain} {self.reality_domain};
+
+    location /.well-known/acme-challenge/ {{
+        root /var/www/html;
+    }}
+
+    location / {{
+        return 301 https://$host$request_uri;
+    }}
+}}
+"""
+        # Теперь записываем переменные, которые мы только что определили
         await self._write(self.conf_d / f"{self.domain}.conf", domain_conf)
         await self._write(self.conf_d / f"{self.reality_domain}.conf", reality_conf)
         await self._write(self.conf_d / "80.conf", http_conf)
