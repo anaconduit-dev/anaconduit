@@ -45,6 +45,7 @@ map $ssl_preread_server_name $sni_name {{
     default                    xray;
 }}
 
+# Используем переменную для динамического резолвинга
 upstream xray {{
     server anaconduit_xray:8443;
 }}
@@ -57,6 +58,8 @@ server {{
     proxy_protocol on;
     set_real_ip_from 127.0.0.1;
     listen          443;
+    
+    # Nginx не упадет, если резолвер указан в http блоке (он у нас там есть)
     proxy_pass      $sni_name;
     ssl_preread      on;
 }}
