@@ -37,6 +37,7 @@ class NginxService:
         await anyio.to_thread.run_sync(lambda: path.write_text(content.strip()))
 
     async def generate_stream_conf(self):
+        # Мы пишем адрес прямо в значения map
         content = f"""
 map $ssl_preread_server_name $backend_target {{
     hostnames;
@@ -48,7 +49,11 @@ map $ssl_preread_server_name $backend_target {{
 server {{
     listen          443;
     proxy_protocol  on;
-    proxy_pass      $backend_target; # Использование переменной откладывает проверку хоста
+    
+    # Так как используется переменная $backend_target, 
+    # Nginx НЕ будет проверять наличие 'anaconduit_xray' при старте!
+    proxy_pass      $backend_target;
+    
     ssl_preread     on;
 }}
 """
@@ -75,15 +80,19 @@ events {{
 }}
 
 stream {{
-    # Внутренний DNS Docker. Позволяет Nginx находить контейнеры по именам.
+    # Внутренний DNS Docker (обязательно для резолвинга имен контейнеров)
     resolver 127.0.0.11 valid=30s; 
+
     include /etc/nginx/stream-enabled/*.conf;
 }}
 
 http {{
     include       /etc/nginx/mime.types;
     default_type  application/octet-stream;
+    
+    # Резолвер и здесь для надежности
     resolver 127.0.0.11 8.8.8.8 valid=300s;
+
     include /etc/nginx/conf.d/*.conf;
 }}
 """
