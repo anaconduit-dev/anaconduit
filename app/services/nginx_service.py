@@ -35,29 +35,31 @@ class NginxService:
         await anyio.to_thread.run_sync(lambda: path.write_text(content.strip()))
 
     async def generate_stream_conf(self):
-        # Если домены одинаковые, используем только один, чтобы избежать конфликта в map
+        # 1. Формируем логику маппинга
         if self.reality_domain == self.domain:
-            map_logic = f"{self.domain}              www;"
+            # Если домен один, всё шлем на панель (www), xray будет default
+            map_logic = f"{self.domain}              127.0.0.1:7443;"
         else:
+            # Если разные, распределяем по SNI
             map_logic = f"""
-    {self.reality_domain}      xray;
-    {self.domain}              www;"""
+    {self.reality_domain}      anaconduit_xray:8443;
+    {self.domain}              127.0.0.1:7443;"""
 
+        # 2. Формируем конфиг
         content = f"""
 map $ssl_preread_server_name $backend_name {{
     hostnames;
-    {self.reality_domain}      anaconduit_xray:8443;
-    {self.domain}              127.0.0.1:7443;
+    {map_logic.strip()}
     default                    anaconduit_xray:8443;
 }}
 
 server {{
     listen          443;
-    proxy_pass      $backend_name; # Используем переменную!
+    proxy_pass      $backend_name;
     ssl_preread     on;
     proxy_protocol  on;
 }}
-"""    
+"""
         await self._write(self.stream_d / "stream.conf", content)
 
     async def generate_main_nginx_conf(self):
