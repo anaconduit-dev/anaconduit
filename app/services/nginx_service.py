@@ -36,33 +36,28 @@ class NginxService:
     async def _write(self, path, content: str):
         await anyio.to_thread.run_sync(lambda: path.write_text(content.strip()))
     async def run_certbot(self):
-        """Запуск получения сертификата через standalone режим (до запуска Nginx)"""
+        """Получение сертификата до запуска Nginx"""
         logger.info(f"Starting Certbot standalone for {self.domain}")
-
         host_letsencrypt = f"{settings.host_data_path}/letsencrypt"
-        
-        # Используем standalone: Certbot сам откроет 80 порт
-        # ВАЖНО: 80 порт на хосте должен быть свободен в этот момент!
+
         command = (
             f"certonly --standalone "
             f"-d {self.domain} -d {self.reality_domain} "
             f"--email {settings.admin_email} --agree-tos --no-eff-email --non-interactive "
             f"--preferred-challenges http"
         )
-        
+
         await self.docker.run_container(
             name="certbot_standalone",
             image="certbot/certbot",
             volumes={
                 host_letsencrypt: {"bind": "/etc/letsencrypt", "mode": "rw"},
             },
-            # Пробрасываем 80 порт напрямую для прохождения проверки
-            ports={"80/tcp": 80},
+            ports={"80/tcp": 80}, # Пробрасываем порт для проверки
             command=command,
             network="anaconduit_net",
             remove=True
         )
-        logger.info("Certbot successfully obtained certificates.")
     async def generate_stream_conf(self):
         # Мы пишем адрес прямо в значения map
         content = f"""
@@ -209,28 +204,38 @@ server {{
         await self._write(self.conf_d / "80.conf", http_conf)
 
     async def apply_all(self):
-        # 1. Проверяем сертификаты ПЕРЕД запуском чего-либо
+        # 1. Проверяем сертификаты на хосте
         host_cert_file = settings.internal_data_path / "letsencrypt" / "live" / self.domain / "fullchain.pem"
         
         if not host_cert_file.exists():
-            logger.info("New installation detected. Getting SSL certificates first...")
-            # Останавливаем Nginx, если он вдруг занимает 80 порт
-            if await self.docker.get_status(self.CONTAINER_NAME) == "running":
+            logger.info("SSL not found. Attempting to get certificates via Certbot Standalone...")
+            
+            # Останавливаем Nginx, если он запущен, чтобы освободить 80 порт
+            status = await self.docker.get_status(self.CONTAINER_NAME)
+            if status == "running":
                 await self.docker.stop(self.CONTAINER_NAME)
             
-            await self.run_certbot()
-
-        # 2. Теперь генерируем конфиги (они сразу будут с SSL, так как файлы уже есть)
+            try:
+                await self.run_certbot()
+            except Exception as e:
+                logger.error(f"Certbot failed: {e}")
+                # Если упало, всё равно попробуем запуститься хотя бы в HTTP
+        
+        # 2. Генерируем конфиги (теперь has_certs увидит файлы и создаст SSL конфиг)
         await self.generate_main_nginx_conf()
         await self.generate_snippets()
         await self.generate_stream_conf()
         await self.generate_sites_conf()
 
-        # 3. Запускаем "чистый" Nginx
+        # 3. Запускаем Nginx
         if await self.docker.get_status(self.CONTAINER_NAME) != "running":
             await self.install_and_run()
         else:
             await self.docker.exec(self.CONTAINER_NAME, "nginx -s reload")
+        
+        # Финальная проверка для логов
+        final_ssl = (settings.internal_data_path / "letsencrypt" / "live" / self.domain / "fullchain.pem").exists()
+        return {"message": "Nginx started successfully", "ssl": final_ssl}
 
 
     async def install_and_run(self):
