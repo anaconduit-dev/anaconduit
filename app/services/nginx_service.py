@@ -44,27 +44,20 @@ class NginxService:
     {self.domain}              www;"""
 
         content = f"""
-map $ssl_preread_server_name $sni_name {{
+map $ssl_preread_server_name $backend_name {{
     hostnames;
-    {map_logic.strip()}
-    default                    xray;
-}}
-
-upstream xray {{
-    server anaconduit_xray:8443;
-}}
-
-upstream www {{
-    server 127.0.0.1:7443;
+    {self.reality_domain}      anaconduit_xray:8443;
+    {self.domain}              127.0.0.1:7443;
+    default                    anaconduit_xray:8443;
 }}
 
 server {{
     listen          443;
-    proxy_pass      $sni_name;
+    proxy_pass      $backend_name; # Используем переменную!
     ssl_preread     on;
     proxy_protocol  on;
 }}
-"""
+"""    
         await self._write(self.stream_d / "stream.conf", content)
 
     async def generate_main_nginx_conf(self):
@@ -73,18 +66,18 @@ server {{
         content = f"""
 user  nginx;
 worker_processes  auto;
-
-# load_module modules/ngx_stream_module.so;  <-- ЭТУ СТРОКУ УДАЛЯЕМ
-
 events {{
     worker_connections  4096;
 }}
 
 stream {{
+    # Добавляем Docker DNS ресолвер
+    resolver 127.0.0.11 valid=30s;
     include /etc/nginx/stream-enabled/*.conf;
 }}
 
 http {{
+    resolver 127.0.0.11 valid=30s;
     include       /etc/nginx/mime.types;
     default_type  application/octet-stream;
     sendfile        on;
