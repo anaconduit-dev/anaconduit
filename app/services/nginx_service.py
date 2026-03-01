@@ -36,7 +36,7 @@ class NginxService:
 
     async def generate_stream_conf(self):
         # 1. Формируем логику маппинга
-       content = f"""
+        content = f"""
 map $ssl_preread_server_name $backend_name {{
     hostnames;
     {self.reality_domain}      anaconduit_xray:8443;
@@ -49,9 +49,9 @@ server {{
     proxy_pass      $backend_name;
     ssl_preread     on;
     proxy_protocol  on;
-    # set_real_ip_from для стрима в докере обычно не критичен, но оставим логику
 }}
 """
+        # Убедись, что эта строка стоит на том же уровне, что и 'content = f"""'
         await self._write(self.stream_d / "stream.conf", content)
 
     async def generate_main_nginx_conf(self):
