@@ -243,22 +243,52 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
             await self.install_and_run()
 
     async def install_and_run(self):
+        await self.apply_all()  # Генерация конфигов и сниппетов
+
         host_path = f"{settings.host_data_path}/nginx"
         volumes = {
             f"{host_path}/nginx.conf": {"bind": "/etc/nginx/nginx.conf", "mode": "ro"},
             f"{host_path}/conf.d": {"bind": "/etc/nginx/conf.d", "mode": "rw"},
             f"{host_path}/stream-enabled": {"bind": "/etc/nginx/stream-enabled", "mode": "rw"},
             f"{host_path}/snippets": {"bind": "/etc/nginx/snippets", "mode": "rw"},
-            f"{host_path}/certs": {"bind": "/etc/nginx/certs", "mode": "ro"}, # Сертификаты от Certbot
-            f"{host_path}/www": {"bind": "/var/www/certbot", "mode": "rw"}, # Для проверки Certbot
+            f"{host_path}/certs": {"bind": "/etc/nginx/certs", "mode": "ro"},
+            f"{host_path}/www": {"bind": "/var/www/certbot", "mode": "rw"},
             f"{host_path}/sites-available": {"bind": "/etc/nginx/sites-available", "mode": "rw"},
             f"{host_path}/sites-enabled": {"bind": "/etc/nginx/sites-enabled", "mode": "rw"},
         }
 
-        return await self.docker.run_container(
+        # Удаляем старый контейнер, если есть
+        await self.docker.remove_container(self.CONTAINER_NAME)
+
+        container = await self.docker.run_container(
             name=self.CONTAINER_NAME,
             image=self.IMAGE,
             ports={"80/tcp": 80, "443/tcp": 443},
             volumes=volumes,
-            network="anaconduit_net"
+            network="anaconduit_net",
+            restart_policy={"Name": "always"},
         )
+        return container
+
+    async def start(self):
+        return await self.docker.start(self.CONTAINER_NAME)
+
+    async def stop(self):
+        return await self.docker.stop(self.CONTAINER_NAME)
+
+    async def restart(self):
+        return await self.docker.restart(self.CONTAINER_NAME)
+
+    async def logs(self, tail: int = 100):
+        return await self.docker.logs(self.CONTAINER_NAME, tail=tail)
+
+    async def ensure_nginx_running(self):
+        """
+        Проверяет контейнер, если не существует или не запущен — устанавливает и запускает.
+        """
+        status = await self.docker.get_status(self.CONTAINER_NAME)
+        if status != "running":
+            await self.install_and_run()
+        else:
+            await self.restart()
+        return {"status": "ok", "container": self.CONTAINER_NAME}
