@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class NginxService:
     CONTAINER_NAME = "nginx"
-    IMAGE = "nginx:latest" # Используем официальный стабильный образ
+    IMAGE = "nginx:latest"
 
     def __init__(self):
         self.docker = DockerService()
@@ -20,8 +20,8 @@ class NginxService:
         self.sites_a_d = self.base_dir / "sites-available"
         self.sites_e_d = self.base_dir / "sites-enabled"
         self.snippets = self.base_dir / "snippets"
-        self.certs_dir = self.base_dir / "certs" # Папка для certbot
-        
+        self.certs_dir = self.base_dir / "certs"
+
         for p in [self.conf_d, self.stream_d, self.snippets, self.certs_dir, self.sites_a_d, self.sites_e_d]:
             p.mkdir(parents=True, exist_ok=True)
 
@@ -29,8 +29,6 @@ class NginxService:
         self.reality_domain = settings.reality_dest_domain
         self.panel_port = "8000"
         self.panel_path = settings.panel_secret_path.strip("/")
-        
-        # Параметры путей
         self.sub_path = settings.sub_path.strip('/')
         self.sub_port = "8000"
         self.escaped_domain = re.escape(self.domain)
@@ -48,10 +46,7 @@ class NginxService:
             os.symlink(src.resolve(), dst)
         await anyio.to_thread.run_sync(create)
 
-    
     async def generate_main_nginx_conf(self):
-        # Модуль stream в официальном образе nginx:latest уже встроен.
-        # Удаляем строки load_module, чтобы не было ошибки dlopen().
         content = f"""
 user nginx;
 worker_processes auto;
@@ -108,10 +103,7 @@ server {{
 """
         await self._write(self.stream_d / "00-sni-router.conf", content)
 
-    
-
     async def generate_sites_available_conf(self):
-        
         redirect_conf = f"""
 server {{
     listen 80;
@@ -119,10 +111,7 @@ server {{
 
     return 301 https://$host$request_uri;
 }}
-        """
-
-
-        # Конфиг основного домена (Панель + Подписки)
+"""
         domain_conf = f"""
 server {{
     listen 7443 ssl http2 proxy_protocol;
@@ -151,7 +140,6 @@ server {{
     include /etc/nginx/snippets/xui-common-locations.conf;
 }}
 """
-        # Конфиг домена маскировки (Reality Dest)
         reality_conf = f"""
 server {{
     listen 9443 ssl http2;
@@ -170,12 +158,11 @@ server {{
     include /etc/nginx/snippets/xui-common-locations.conf;
 }}
 """
-        await self._write(self.sites_a_d / f"80-redirect.conf", redirect_conf)
-        await self._write(self.sites_a_d / f"main-domain.conf", domain_conf)
-        await self._write(self.sites_a_d / f"reality-domain.conf", reality_conf)
+        await self._write(self.sites_a_d / "80-redirect.conf", redirect_conf)
+        await self._write(self.sites_a_d / "main-domain.conf", domain_conf)
+        await self._write(self.sites_a_d / "reality-domain.conf", reality_conf)
 
     async def generate_snippet(self):
-
         content = f"""
 ########################################
 # Панель
@@ -213,42 +200,44 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
     proxy_pass http://anaconduit_xray:$fwdport;
 }}
 """
-
         await self._write(self.snippets / "xui-common-locations.conf", content)
 
     async def generate_symlinks(self):
-        await self._symlink(
-            self.sites_a_d / "main-domain.conf",
-            self.sites_e_d / "main-domain.conf"
-        )
+        for name in ["main-domain.conf", "reality-domain.conf", "80-redirect.conf"]:
+            src = self.sites_a_d / name
+            dst = self.sites_e_d / name
+            await self._symlink(src, dst)
 
-        await self._symlink(
-            self.sites_a_d / "reality-domain.conf",
-            self.sites_e_d / "reality-domain.conf"
-        )
-
-        await self._symlink(
-            self.sites_a_d / "80-redirect.conf",
-            self.sites_e_d / "80-redirect.conf"
-        )
     async def apply_all(self):
-        # 1. Генерация конфигов
         await self.generate_main_nginx_conf()
         await self.generate_stream_conf()
         await self.generate_sites_available_conf()
-        await self.generate_snippet()        # Сначала создаём сниппеты
-        await self.generate_symlinks()       # Потом симлинки
+        await self.generate_snippet()        # сначала сниппеты
+        await self.generate_symlinks()       # потом симлинки
         logger.info("✅ Конфиги Nginx сгенерированы")
-    
-        # 2. Если контейнер уже запущен — reload
+
         if await self.docker.get_status(self.CONTAINER_NAME) == "running":
             await self.docker.exec(self.CONTAINER_NAME, "nginx -s reload")
             logger.info("♻️ Nginx перезагружен")
 
     async def install_and_run(self):
-        await self.apply_all()  # Генерация конфигов и сниппетов
+        await self.apply_all()
 
         host_path = f"{settings.host_data_path}/nginx"
+        os.makedirs(host_path, exist_ok=True)
+
+        # Проверка и копирование sites-enabled на хост, чтобы симлинки не терялись
+        host_sites_enabled = os.path.join(host_path, "sites-enabled")
+        os.makedirs(host_sites_enabled, exist_ok=True)
+        for name in ["main-domain.conf", "reality-domain.conf", "80-redirect.conf"]:
+            src = self.sites_e_d / name
+            dst = os.path.join(host_sites_enabled, name)
+            if not os.path.exists(dst):
+                try:
+                    os.symlink(src.resolve(), dst)
+                except FileExistsError:
+                    pass
+
         volumes = {
             f"{host_path}/nginx.conf": {"bind": "/etc/nginx/nginx.conf", "mode": "ro"},
             f"{host_path}/conf.d": {"bind": "/etc/nginx/conf.d", "mode": "rw"},
@@ -260,9 +249,7 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
             f"{host_path}/sites-enabled": {"bind": "/etc/nginx/sites-enabled", "mode": "rw"},
         }
 
-        # Удаляем старый контейнер, если есть
         await self.docker.remove_container(self.CONTAINER_NAME)
-
         container = await self.docker.run_container(
             name=self.CONTAINER_NAME,
             image=self.IMAGE,
@@ -289,7 +276,7 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
         status = await self.docker.get_status(self.CONTAINER_NAME)
         if status == "running":
             logger.info("✅ Nginx уже запущен, перезагрузка конфигов")
-            await self.apply_all()  # обновляем конфиги
+            await self.apply_all()
         else:
             logger.info("🚀 Запуск Nginx контейнера")
             await self.install_and_run()
