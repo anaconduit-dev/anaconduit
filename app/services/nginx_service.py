@@ -43,7 +43,7 @@ class NginxService:
         def create():
             if dst.exists() or dst.is_symlink():
                 dst.unlink()
-            os.symlink(src.resolve(), dst)  # resolve() превращает в абсолютный путь
+            os.symlink(src.resolve(), dst)  # обязательно абсолютный путь
         await anyio.to_thread.run_sync(create)
 
     
