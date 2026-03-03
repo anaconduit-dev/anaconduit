@@ -230,17 +230,18 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
             self.sites_e_d / "80-redirect.conf"
         )
     async def apply_all(self):
+        # 1. Генерация конфигов
         await self.generate_main_nginx_conf()
         await self.generate_stream_conf()
         await self.generate_sites_available_conf()
         await self.generate_symlinks()
-        # Сниппеты можно оставить пустыми или с доп. логикой
         await self.generate_snippet()
-        
+        logger.info("✅ Конфиги Nginx сгенерированы")
+    
+        # 2. Если контейнер уже запущен — reload
         if await self.docker.get_status(self.CONTAINER_NAME) == "running":
             await self.docker.exec(self.CONTAINER_NAME, "nginx -s reload")
-        else:
-            await self.install_and_run()
+            logger.info("♻️ Nginx перезагружен")
 
     async def install_and_run(self):
         await self.apply_all()  # Генерация конфигов и сниппетов
@@ -283,12 +284,7 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
         return await self.docker.logs(self.CONTAINER_NAME, tail=tail)
 
     async def ensure_nginx_running(self):
-        """
-        Проверяет контейнер, если не существует или не запущен — устанавливает и запускает.
-        """
         status = await self.docker.get_status(self.CONTAINER_NAME)
         if status != "running":
+            logger.info("🚀 Запуск Nginx контейнера")
             await self.install_and_run()
-        else:
-            await self.restart()
-        return {"status": "ok", "container": self.CONTAINER_NAME}
