@@ -19,9 +19,11 @@ from app.core.security import hash_password
 from sqlalchemy import select 
 from app.xray_api.client import XrayAPIClient
 from app.services.xray_service import XrayService
+from app.services.nginx_service import NginxService
 
 xray_client = XrayAPIClient()
 xray_service = XrayService(client=xray_client)
+nginx_service = NginxService()
 
 # Настройка логирования
 setup_logging(settings.log_level)
