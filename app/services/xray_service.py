@@ -411,6 +411,27 @@ class XrayService:
 
         return {"status": "installed", "version": clean_v}
 
+    async def ensure_xray_running(self, version: str = "latest") -> Dict[str, Any]:
+        """
+        Проверяет, запущен ли контейнер Xray нужной версии.
+        Если нет — устанавливает и запускает.
+        """
+        status = await self.get_current_status()
+        current_version = status.get("version", "unknown")
+        container_state = status.get("status", "exited")
+
+        logger.info(f"Текущий контейнер Xray: {container_state}, версия: {current_version}")
+
+        # Если контейнер не запущен или версия не совпадает
+        if container_state != "running" or (version != "latest" and current_version != version.lstrip("v")):
+            logger.info(f"♻️ Устанавливаем Xray версии {version}...")
+            result = await self.install(version)
+            logger.info(f"✅ Xray {result['version']} установлен и запущен")
+            return result
+        else:
+            logger.info(f"✅ Xray уже работает, версия {current_version}")
+            return {"status": "already_running", "version": current_version}
+
     async def get_current_status(self):
         state = await self.docker.get_status(self.CONTAINER_NAME)
         version = "unknown"
