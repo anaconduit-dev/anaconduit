@@ -111,6 +111,7 @@ async def lifespan(app: FastAPI):
         await xray_service.ensure_xray_running(version="latest")
         # Генерация конфигов сразу после установки
         await xray_service.generate_full_config()
+        await nginx_service.ensure_nginx_running()
     except Exception as e:
         logger.error(f"❌ Не удалось установить Xray при старте: {e}")
 
