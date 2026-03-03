@@ -223,7 +223,7 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
     async def install_and_run(self):
         await self.apply_all()
 
-        host_path = f"{settings.host_data_path}/nginx"
+        host_path = f"{self.base_dir}"
         os.makedirs(host_path, exist_ok=True)
 
         # Проверка и копирование sites-enabled на хост, чтобы симлинки не терялись
