@@ -2,6 +2,7 @@ import anyio
 import logging
 import socket
 import os
+import re
 from app.core.config import settings
 from app.services.docker_service import DockerService
 
@@ -16,10 +17,12 @@ class NginxService:
         self.base_dir = settings.internal_data_path / "nginx"
         self.conf_d = self.base_dir / "conf.d"
         self.stream_d = self.base_dir / "stream-enabled"
+        self.sites_a_d = self.base_dir / "sites-available"
+        self.sites_e_d = self.base_dir / "sites-enabled"
         self.snippets = self.base_dir / "snippets"
         self.certs_dir = self.base_dir / "certs" # Папка для certbot
         
-        for p in [self.conf_d, self.stream_d, self.snippets, self.certs_dir]:
+        for p in [self.conf_d, self.stream_d, self.snippets, self.certs_dir, self.sites_a_d, self.sites_e_d]:
             p.mkdir(parents=True, exist_ok=True)
 
         self.domain = settings.panel_domain
@@ -30,18 +33,68 @@ class NginxService:
         # Параметры путей
         self.sub_path = settings.sub_path.strip('/')
         self.sub_port = "8000"
+        self.escaped_domain = re.escape(self.domain)
+        self.escaped_reality = re.escape(self.reality_domain)
 
     async def _write(self, path, content: str):
         await anyio.to_thread.run_sync(lambda: path.write_text(content.strip()))
 
+    async def _symlink(self, src, dst):
+        def create():
+            if dst.exists():
+                dst.unlink()
+            os.symlink(src.name, dst)
+        await anyio.to_thread.run_sync(create)
+
+    
+    async def generate_main_nginx_conf(self):
+        # Модуль stream в официальном образе nginx:latest уже встроен.
+        # Удаляем строки load_module, чтобы не было ошибки dlopen().
+        content = f"""
+user nginx;
+worker_processes auto;
+pid /run/nginx.pid;
+
+events {{
+    worker_connections 4096;
+}}
+
+stream {{
+    include /etc/nginx/stream-enabled/*.conf;
+}}
+
+http {{
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+
+    keepalive_timeout 65;
+
+    include /etc/nginx/sites-enabled/*;
+}}
+"""
+        await self._write(self.base_dir / "nginx.conf", content)
+
     async def generate_stream_conf(self):
-        # 1. Формируем логику маппинга
         content = f"""
 map $ssl_preread_server_name $backend_name {{
     hostnames;
-    {self.reality_domain}      anaconduit_xray:8443;
-    {self.domain}              127.0.0.1:7443;
-    default                    anaconduit_xray:8443;
+
+    {self.reality_domain}   xray;
+    {self.domain}           web;
+
+    default                 xray;
+}}
+
+upstream xray {{
+    server anaconduit_xray:8443;
+}}
+
+upstream web {{
+    server 127.0.0.1:7443;
 }}
 
 server {{
@@ -51,113 +104,138 @@ server {{
     proxy_protocol  on;
 }}
 """
-        # Убедись, что эта строка стоит на том же уровне, что и 'content = f"""'
-        await self._write(self.stream_d / "stream.conf", content)
+        await self._write(self.stream_d / "00-sni-router.conf", content)
 
-    async def generate_main_nginx_conf(self):
-        # Модуль stream в официальном образе nginx:latest уже встроен.
-        # Удаляем строки load_module, чтобы не было ошибки dlopen().
-        content = f"""
-user  nginx;
-worker_processes  auto;
-worker_rlimit_nofile 16384;
+    
 
-events {{
-    worker_connections  4096;
-}}
-
-stream {{
-    resolver 127.0.0.11 valid=30s;
-    include /etc/nginx/stream-enabled/*.conf;
-}}
-
-http {{
-    include       /etc/nginx/mime.types;
-    default_type  application/octet-stream;
-    sendfile        on;
-    keepalive_timeout  65;
-
-    # Редирект с 80 на 443
-    server {{
-        listen 80;
-        server_name {self.domain} {self.reality_domain};
-        location /.well-known/acme-challenge/ {{
-            root /var/www/certbot;
-        }}
-        location / {{
-            return 301 https://$host$request_uri;
-        }}
-    }}
-
-    include /etc/nginx/conf.d/*.conf;
-}}
-"""
-        await self._write(self.base_dir / "nginx.conf", content)
-
-    async def generate_sites_conf(self):
-        # Пути к сертификатам внутри контейнера (соответствуют volume в install.sh)
-        ssl_path = f"/etc/nginx/certs/live/{self.domain}"
+    async def generate_sites_available_conf(self):
         
-        ssl_block = f"""
-    ssl_certificate {ssl_path}/fullchain.pem;
-    ssl_certificate_key {ssl_path}/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!eNULL:!MD5:!DES:!RC4:!ADH:!SSLv3:!EXP:!PSK:!DSS;
-    ssl_prefer_server_ciphers on;
-"""
+        redirect_conf = f"""
+server {{
+    listen 80;
+    server_name {self.domain} {self.reality_domain};
+
+    return 301 https://$host$request_uri;
+}}
+        """
+
 
         # Конфиг основного домена (Панель + Подписки)
         domain_conf = f"""
 server {{
     listen 7443 ssl http2 proxy_protocol;
+    listen [::]:7443 ssl http2 proxy_protocol;
+
     server_name {self.domain};
-    {ssl_block}
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_certificate     /etc/nginx/certs/{self.domain}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/{self.domain}/privkey.pem;
 
     server_tokens off;
-    
-    # Защита от хаков (из твоего примера)
-    if ($request_uri ~ "(\\"|'|`|~|,|:|--|;|%|\\$|&&|\\?\\?|0x00|0X00|\\||\\\\|\\{{|\\}}|\\[|\\]|<|>|\\.\\.\\.|\\.\\.\\/|\\/\\/\\/)") {{ set $hack 1; }}
 
-    # Админка
-    location /{self.panel_path}/ {{
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
+    if ($host !~* ^(.+\\.)?{self.escaped_domain}$ ){{ return 444; }}
+
+    location / {{
         proxy_pass http://anaconduit_backend:{self.panel_port};
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $proxy_protocol_addr;
+        proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }}
 
-    # Подписки и остальное
-    include /etc/nginx/snippets/includes.conf;
+    include /etc/nginx/snippets/xui-common-locations.conf;
 }}
 """
         # Конфиг домена маскировки (Reality Dest)
-        reality_ssl_path = f"/etc/nginx/certs/live/{self.reality_domain}"
         reality_conf = f"""
 server {{
     listen 9443 ssl http2;
-    server_name {self.reality_domain};
-    ssl_certificate {reality_ssl_path}/fullchain.pem;
-    ssl_certificate_key {reality_ssl_path}/privkey.pem;
+    listen [::]:9443 ssl http2;
 
-    location / {{
-        root /var/www/html;
-        index index.html;
-    }}
+    server_name {self.reality_domain};
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_certificate     /etc/nginx/certs/{self.reality_domain}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/{self.reality_domain}/privkey.pem;
+
+    server_tokens off;
+
+    if ($host !~* ^(.+\.)?{self.escaped_reality}$ ){{ return 444; }}
+
+    include /etc/nginx/snippets/xui-common-locations.conf;
 }}
 """
-        await self._write(self.conf_d / f"{self.domain}.conf", domain_conf)
-        await self._write(self.conf_d / f"{self.reality_domain}.conf", reality_conf)
+        await self._write(self.sites_a_d / f"80-redirect.conf", redirect_conf)
+        await self._write(self.sites_a_d / f"main-domain.conf", domain_conf)
+        await self._write(self.sites_a_d / f"reality-domain.conf", reality_conf)
 
+    async def generate_snippet(self):
+
+        content = f"""
+########################################
+# Панель
+########################################
+
+location /{self.panel_path}/ {{
+    proxy_pass http://anaconduit_backend:{self.panel_port}/;
+    proxy_http_version 1.1;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $proxy_protocol_addr;
+    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}}
+
+########################################
+# Подписки
+########################################
+
+location /{self.sub_path}/ {{
+    proxy_pass http://anaconduit_backend:{self.sub_port}/;
+}}
+
+########################################
+# WebSocket forwarder
+########################################
+
+location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
+
+    proxy_http_version 1.1;
+
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+
+    proxy_pass http://anaconduit_xray:$fwdport;
+}}
+"""
+
+        await self._write(self.snippets / "xui-common-locations.conf", content)
+
+    async def generate_symlinks(self):
+        await self._symlink(
+            self.sites_a_d / "main-domain.conf",
+            self.sites_e_d / "main-domain.conf"
+        )
+
+        await self._symlink(
+            self.sites_a_d / "reality-domain.conf",
+            self.sites_e_d / "reality-domain.conf"
+        )
+
+        await self._symlink(
+            self.sites_a_d / "80-redirect.conf",
+            self.sites_e_d / "80-redirect.conf"
+        )
     async def apply_all(self):
         await self.generate_main_nginx_conf()
         await self.generate_stream_conf()
-        await self.generate_sites_conf()
+        await self.generate_sites_available_conf()
+        await self.generate_symlinks()
         # Сниппеты можно оставить пустыми или с доп. логикой
-        await self._write(self.snippets / "includes.conf", "# Empty for now")
+        await self.generate_snippet()
         
         if await self.docker.get_status(self.CONTAINER_NAME) == "running":
             await self.docker.exec(self.CONTAINER_NAME, "nginx -s reload")
@@ -173,6 +251,8 @@ server {{
             f"{host_path}/snippets": {"bind": "/etc/nginx/snippets", "mode": "rw"},
             f"{host_path}/certs": {"bind": "/etc/nginx/certs", "mode": "ro"}, # Сертификаты от Certbot
             f"{host_path}/www": {"bind": "/var/www/certbot", "mode": "rw"}, # Для проверки Certbot
+            f"{host_path}/sites-available": {"bind": "/etc/nginx/sites-available", "mode": "rw"},
+            f"{host_path}/sites-enabled": {"bind": "/etc/nginx/sites-enabled", "mode": "rw"},
         }
 
         return await self.docker.run_container(
