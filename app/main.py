@@ -17,6 +17,11 @@ from app.core.database import get_db
 from app.models import models 
 from app.core.security import hash_password
 from sqlalchemy import select 
+from app.xray_api.client import XrayAPIClient
+from app.services.xray_service import XrayService
+
+xray_client = XrayAPIClient()
+xray_service = XrayService(client=xray_client)
 
 # Настройка логирования
 setup_logging(settings.log_level)
@@ -90,24 +95,40 @@ async def stats_updater_task():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 Приложение Anaconduit запускается")
+
+    # 1. Создание таблиц
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # 2. Создание начального админа
     try:
         await create_initial_admin()
     except Exception as e:
         logger.error(f"❌ Ошибка при создании начального админа: {e}")
-    
+
+    # 3. Установка и запуск Xray
+    try:
+        await xray_service.ensure_xray_running(version="latest")
+        # Генерация конфигов сразу после установки
+        await xray_service.generate_full_config()
+    except Exception as e:
+        logger.error(f"❌ Не удалось установить Xray при старте: {e}")
+
+    # 4. Фоновый планировщик статистики
     bg_task = asyncio.create_task(stats_updater_task())
-    yield
+    
+    yield  # --- FastAPI готов к работе ---
+    
+    # 5. Завершение фоновой задачи
     bg_task.cancel()
     try:
         await bg_task
     except asyncio.CancelledError:
         pass
     
-    client = get_xray_client()
-    await client.close()
-    logger.info("🛑 Приложение Anaconduit останавливается")
+    # 6. Закрытие клиента
+    await xray_client.close()
+    logger.info("🛑 Приложение Anaconduit остановлено")
 
 # --- Инициализация FastAPI ---
 app = FastAPI(
@@ -179,8 +200,7 @@ if os.path.exists(static_path):
         if is_client_app:
             try:
                 # Получаем сервис через зависимости вручную (так как мы внутри роута)
-                client = get_xray_client()
-                xray_service = get_xray_service(client)
+                xray_service = globals().get("xray_service")
                 
                 # Отдаем конфиг (Base64) напрямую приложению
                 return await get_public_sub(
