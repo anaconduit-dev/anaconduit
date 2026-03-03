@@ -41,8 +41,8 @@ class NginxService:
 
     async def _symlink(self, src, dst):
         def create():
-            if dst.exists():
-                dst.unlink()
+            if dst.exists() or dst.is_symlink():
+                dst.unlink()  # удаляем любой файл или симлинк
             os.symlink(src.name, dst)
         await anyio.to_thread.run_sync(create)
 
