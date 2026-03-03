@@ -41,9 +41,11 @@ class NginxService:
 
     async def _symlink(self, src, dst):
         def create():
+            if not src.exists():
+                raise FileNotFoundError(f"Source file for symlink does not exist: {src}")
             if dst.exists() or dst.is_symlink():
                 dst.unlink()
-            os.symlink(src.resolve(), dst)  # обязательно абсолютный путь
+            os.symlink(src.resolve(), dst)
         await anyio.to_thread.run_sync(create)
 
     
@@ -234,8 +236,8 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
         await self.generate_main_nginx_conf()
         await self.generate_stream_conf()
         await self.generate_sites_available_conf()
-        await self.generate_symlinks()
-        await self.generate_snippet()
+        await self.generate_snippet()        # Сначала создаём сниппеты
+        await self.generate_symlinks()       # Потом симлинки
         logger.info("✅ Конфиги Nginx сгенерированы")
     
         # 2. Если контейнер уже запущен — reload
@@ -285,6 +287,9 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
 
     async def ensure_nginx_running(self):
         status = await self.docker.get_status(self.CONTAINER_NAME)
-        if status != "running":
+        if status == "running":
+            logger.info("✅ Nginx уже запущен, перезагрузка конфигов")
+            await self.apply_all()  # обновляем конфиги
+        else:
             logger.info("🚀 Запуск Nginx контейнера")
             await self.install_and_run()
