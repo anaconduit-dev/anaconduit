@@ -104,7 +104,7 @@ upstream xray {{
 }}
 
 upstream web {{
-    server 127.0.0.1:7443;
+    server nginx:7443;
 }}
 
 server {{
