@@ -132,6 +132,7 @@ server {{
     http2 on;
 
     server_name {self.domain};
+    port_in_redirect off;
 
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_certificate     /etc/nginx/certs/{self.domain}/fullchain.pem;
