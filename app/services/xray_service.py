@@ -120,9 +120,9 @@ class XrayService:
         config = {
             "log": {
                 "loglevel": "warning",
-                "access": container_access_log,
-                "error": container_error_log
-            },
+                "access": "none",
+                "error": "" 
+              },
             "stats": {},
             "api": {
                 "tag": "api",
