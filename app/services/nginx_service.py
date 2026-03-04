@@ -45,6 +45,20 @@ class NginxService:
             os.symlink(src.resolve(), dst)
         await anyio.to_thread.run_sync(create)
 
+    async def ensure_directories(self):
+        dirs = [
+            self.base_dir,
+            self.conf_d,
+            self.stream_d,
+            self.sites_a_d,
+            self.sites_e_d,
+            self.snippets,
+            self.certs_dir,
+        ]
+    
+        for d in dirs:
+            d.mkdir(parents=True, exist_ok=True)
+        
     async def generate_main_nginx_conf(self):
         content = f"""
 user nginx;
@@ -208,6 +222,7 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
             await self._symlink(src, dst)
 
     async def apply_all(self):
+        await self.ensure_directories()
         await self.generate_main_nginx_conf()
         await self.generate_stream_conf()
         await self.generate_sites_available_conf()
@@ -221,10 +236,7 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
 
     async def install_and_run(self):
         await self.apply_all()
-
-        os.makedirs(self.base_dir, exist_ok=True)
-
-        
+      
 
         volumes = {
             f"{self.base_dir}": {"bind": "/etc/nginx", "mode": "rw"},
