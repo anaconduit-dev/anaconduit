@@ -216,10 +216,25 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
         await self._write(self.snippets / "xui-common-locations.conf", content)
 
     async def generate_symlinks(self):
-        for name in ["main-domain.conf", "reality-domain.conf", "80-redirect.conf"]:
-            src = self.sites_a_d / name
-            dst = self.sites_e_d / name
-            await self._symlink(src, dst)
+        # Список файлов, которые нужно активировать
+        configs = ["main-domain.conf", "reality-domain.conf", "80-redirect.conf"]
+        
+        def create_relative_links():
+            for name in configs:
+                dst = self.sites_e_d / name
+                # Относительный путь: подняться на уровень выше и зайти в sites-available
+                # Это будет работать и на хосте, и внутри контейнера
+                src_relative = f"../sites-available/{name}"
+                
+                # Удаляем старый линк или файл, если он есть
+                if dst.exists() or dst.is_symlink():
+                    dst.unlink()
+                
+                # Создаем симлинк
+                os.symlink(src_relative, dst)
+                logger.info(f"🔗 Создан симлинк: {name} -> {src_relative}")
+
+        await anyio.to_thread.run_sync(create_relative_links)
 
     async def apply_all(self):
         await self.ensure_directories()
