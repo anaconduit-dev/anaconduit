@@ -225,17 +225,7 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
 
         os.makedirs(self.base_dir, exist_ok=True)
 
-        # Проверка и копирование sites-enabled на хост, чтобы симлинки не терялись
-        host_sites_enabled = os.path.join(host_path, "sites-enabled")
-        os.makedirs(host_sites_enabled, exist_ok=True)
-        for name in ["main-domain.conf", "reality-domain.conf", "80-redirect.conf"]:
-            src = self.sites_e_d / name
-            dst = os.path.join(host_sites_enabled, name)
-            if not os.path.exists(dst):
-                try:
-                    os.symlink(src.resolve(), dst)
-                except FileExistsError:
-                    pass
+        
 
         volumes = {
             f"{self.base_dir}/nginx.conf": {"bind": "/etc/nginx/nginx.conf", "mode": "ro"},
