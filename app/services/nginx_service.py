@@ -146,7 +146,11 @@ server {{
     if ($host !~* ^(.+\\.)?{self.escaped_domain}$ ){{ return 444; }}
 
     # Заглушка для корня
-    
+    location / {{
+        root /var/www/html/;
+        index index.html index.htm;
+        try_files $uri $uri/ /index.html;
+    }}
     
     location /{self.panel_path} {{
         proxy_pass http://anaconduit_backend:{self.panel_port};
@@ -180,7 +184,9 @@ server {{
     if ($host !~* ^(.+\.)?{self.escaped_reality}$ ){{ return 444; }}
 
     location / {{
-        try_files $uri $uri/ =404;
+        root /var/www/html/;
+        index index.html index.htm;
+        try_files $uri $uri/ /index.html;
     }}
     location /xray_port/ {{
         proxy_pass http://anaconduit_xray:$fwdport;
