@@ -176,7 +176,7 @@ server {{
         index index.html;
         try_files $uri /index.html;
     }}
-    
+        
     location /{self.panel_path} {{
         proxy_pass http://anaconduit_backend:{self.panel_port};
         proxy_http_version 1.1;
