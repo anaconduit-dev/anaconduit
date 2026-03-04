@@ -166,6 +166,8 @@ app.add_middleware(
 
 # 1. Сначала подключаем API роутеры
 app.include_router(api_router, prefix=f"/{settings.panel_secret_path}")
+# Подписочный API (отдельный router)
+app.include_router(subscription_router, prefix=f"/{SUB_PATH}")
 
 
 
@@ -176,7 +178,7 @@ async def health_check():
 
 # 2. ПОДКЛЮЧАЕМ СТАТИКУ ФРОНТЕНДА (в самом конце)
 # Путь внутри контейнера будет /app/app/static (согласно Dockerfile)
-# 2️⃣ Подключаем SPA (фронтенд)
+# Подключаем SPA (фронтенд)
 if os.path.exists(static_path):
     # Ассеты (JS/CSS) остаются на /assets
     assets_dir = os.path.join(static_path, "assets")
