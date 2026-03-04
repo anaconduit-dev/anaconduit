@@ -228,14 +228,7 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
         
 
         volumes = {
-            f"{self.base_dir}/nginx.conf": {"bind": "/etc/nginx/nginx.conf", "mode": "ro"},
-            f"{self.base_dir}/conf.d": {"bind": "/etc/nginx/conf.d", "mode": "rw"},
-            f"{self.base_dir}/stream-enabled": {"bind": "/etc/nginx/stream-enabled", "mode": "rw"},
-            f"{self.base_dir}/snippets": {"bind": "/etc/nginx/snippets", "mode": "rw"},
-            f"{self.base_dir}/certs": {"bind": "/etc/nginx/certs", "mode": "ro"},
-            f"{self.base_dir}/www": {"bind": "/var/www/certbot", "mode": "rw"},
-            f"{self.base_dir}/sites-available": {"bind": "/etc/nginx/sites-available", "mode": "rw"},
-            f"{self.base_dir}/sites-enabled": {"bind": "/etc/nginx/sites-enabled", "mode": "rw"},
+            f"{self.base_dir}": {"bind": "/etc/nginx", "mode": "rw"},
         }
 
         await self.docker.remove_container(self.CONTAINER_NAME)
