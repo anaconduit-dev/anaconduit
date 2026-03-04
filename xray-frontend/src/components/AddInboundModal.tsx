@@ -58,7 +58,7 @@ const getEmptyForm = () => ({
     // --- 2. Глобальные настройки Stream & Security ---
     network: "raw",
     security: "none",
-    hideBehindNginx: false,
+    hideBehindNginx: true,
     
     // --- 3. Reality Settings ---
     show: false,
