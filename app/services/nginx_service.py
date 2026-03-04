@@ -146,9 +146,7 @@ server {{
     if ($host !~* ^(.+\\.)?{self.escaped_domain}$ ){{ return 444; }}
 
     # Заглушка для корня
-    location / {{
-        try_files $uri $uri/ =404;
-    }}
+    
     
     location /{self.panel_path} {{
         proxy_pass http://anaconduit_backend:{self.panel_port};
