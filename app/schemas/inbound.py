@@ -150,10 +150,6 @@ class InboundCreate(BaseModel):
         if self.stream_settings.network == "ws" and self.stream_settings.security == "reality":
             raise ValueError("WS network does not support Reality security")
         
-        # Проверка: Если скрыто за Nginx, протокол должен поддерживать HTTP-подобный транспорт
-        if self.hide_behind_nginx:
-            supported_nets = ["ws", "grpc", "xhttp"]
-            if self.stream_settings.network not in supported_nets:
-                raise ValueError(f"Nginx proxying is only supported for: {supported_nets}")
+        
                 
         return self
