@@ -235,16 +235,24 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
             logger.info("♻️ Nginx перезагружен")
 
     async def install_and_run(self):
+        
+        host_nginx_dir = f"{settings.host_data_path}/nginx"
+        await self.docker.remove_container(self.CONTAINER_NAME)
         await self.apply_all()
-      
-
         mime_path = self.base_dir / "mime.types"
         if not mime_path.exists():
             mime_content = "types { text/html html; text/css css; application/javascript js; image/png png; }"
             await self._write(mime_path, mime_content)
 
         volumes = {
-            str(self.base_dir): {"bind": "/etc/nginx", "mode": "rw"},
+            f"{host_nginx_dir}/nginx.conf": {"bind": "/etc/nginx/nginx.conf", "mode": "ro"},
+            f"{host_nginx_dir}/conf.d": {"bind": "/etc/nginx/conf.d", "mode": "rw"},
+            f"{host_nginx_dir}/stream-enabled": {"bind": "/etc/nginx/stream-enabled", "mode": "rw"},
+            f"{host_nginx_dir}/snippets": {"bind": "/etc/nginx/snippets", "mode": "rw"},
+            f"{host_nginx_dir}/certs": {"bind": "/etc/nginx/certs", "mode": "ro"},
+            f"{host_nginx_dir}/www": {"bind": "/var/www/certbot", "mode": "rw"},
+            f"{host_nginx_dir}/sites-available": {"bind": "/etc/nginx/sites-available", "mode": "rw"},
+            f"{host_nginx_dir}/sites-enabled": {"bind": "/etc/nginx/sites-enabled", "mode": "rw"},
         }
 
         await self.docker.remove_container(self.CONTAINER_NAME)
