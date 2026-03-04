@@ -1,7 +1,11 @@
 import axios from "axios";
 
+// Получаем префикс API из текущего URL
+const pathParts = window.location.pathname.split("/").filter(Boolean);
+const secretPath = pathParts[0] || ""; // первый сегмент — SECRET_PATH
+
 export const api = axios.create({
-  baseURL: '/',
+  baseURL: `/${secretPath}/`,
 });
 
 export async function login(username: string, password: string) {
