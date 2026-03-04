@@ -134,6 +134,9 @@ server {{
     server_name {self.domain};
     port_in_redirect off;
 
+    root /var/www/html/;
+    index index.html index.htm;
+
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_certificate     /etc/nginx/certs/{self.domain}/fullchain.pem;
     ssl_certificate_key /etc/nginx/certs/{self.domain}/privkey.pem;
@@ -142,7 +145,12 @@ server {{
 
     if ($host !~* ^(.+\\.)?{self.escaped_domain}$ ){{ return 444; }}
 
+    # Заглушка для корня
     location / {{
+        try_files $uri $uri/ =404;
+    }}
+    
+    location /{self.panel_path} {{
         proxy_pass http://anaconduit_backend:{self.panel_port};
         proxy_http_version 1.1;
 
@@ -162,6 +170,8 @@ server {{
     http2 on;
 
     server_name {self.reality_domain};
+    root /var/www/html/;
+    index index.html index.htm;
 
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_certificate     /etc/nginx/certs/{self.reality_domain}/fullchain.pem;
@@ -171,6 +181,19 @@ server {{
 
     if ($host !~* ^(.+\.)?{self.escaped_reality}$ ){{ return 444; }}
 
+    location / {{
+        try_files $uri $uri/ =404;
+    }}
+    location /xray_port/ {{
+        proxy_pass http://anaconduit_xray:$fwdport;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $proxy_protocol_addr;
+        proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }}
     include /etc/nginx/snippets/xui-common-locations.conf;
 }}
 """
