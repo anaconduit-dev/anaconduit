@@ -476,7 +476,9 @@ class XrayService:
         security = stream.get("security", "none")
     
         # Порт учитывает Nginx
-        port = 443 
+        port = 443 if inbound.hide_behind_nginx else inbound.port
+        if inbound.hide_behind_nginx and security != "reality":
+            security = "tls"
     
         # Базовые параметры
         params = {"security": security, "type": net}
