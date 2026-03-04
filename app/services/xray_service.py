@@ -467,70 +467,65 @@ class XrayService:
 
     
 
-    def generate_config_link(self, client: Client, user: User, inbound: Inbound) -> str:
-        # Берем основной домен панели
-        domain = settings.panel_domain
-        
-        stream = inbound.stream_settings
-        net = stream.get("network", "tcp")
-        security = stream.get("security", "none")
-        
-        # Базовые параметры ссылки
-        params = {
-            "security": security,
-            "type": net,
-        }
+    import urllib.parse
 
-        # Определяем порт (443 если за Nginx)
-        port = 443 if inbound.hide_behind_nginx else inbound.port
-        if inbound.hide_behind_nginx:
-            params["security"] = "tls"
+def generate_config_link(self, client: Client, user: User, inbound: Inbound) -> str:
+    domain = settings.panel_domain
 
-        # Настройки транспорта
-        if net == "ws":
-            ws = stream.get("wsSettings", {})
-            params["path"] = ws.get("path", "/")
-            params["host"] = ws.get("headers", {}).get("Host", domain)
-        elif net == "grpc":
-            grpc = stream.get("grpcSettings", {})
-            params["serviceName"] = grpc.get("serviceName", "")
-            params["mode"] = "multi" if grpc.get("multiMode") else "gun"
-        elif net == "xhttp":
-            xhttp = stream.get("xhttpSettings", {})
-            params["path"] = xhttp.get("path", "/")
-            params["mode"] = xhttp.get("mode", "stream-up")
+    stream = inbound.stream_settings
+    net = stream.get("network", "tcp")
+    security = stream.get("security", "none")
 
-        # Настройки Reality (Trojan тоже поддерживает Reality в новых версиях Xray)
-        if security == "reality":
-            reality = stream.get("realitySettings", {})
-            params.update({
-                "security": "reality",
-                "sni": reality.get("serverNames", [domain])[0],
-                "pbk": reality.get("publicKey", ""),
-                "sid": reality.get("shortIds", [""])[0] if reality.get("shortIds") else "",
-                "fp": reality.get("fingerprint", "chrome"),
-            })
+    # Порт учитывает Nginx
+    port = 443 if inbound.hide_behind_nginx else inbound.port
+    if inbound.hide_behind_nginx and security != "reality":
+        security = "tls"
 
-        # Очистка пустых параметров
-        query_params = {k: v for k, v in params.items() if v}
-        query_str = urllib.parse.urlencode(query_params)
-        
-        # Название (Remark)
-        remark = urllib.parse.quote(f"{user.email}@{inbound.tag}")
+    # Базовые параметры
+    params = {"security": security, "type": net}
 
-        # Сборка ссылки в зависимости от протокола
-        if inbound.protocol == "trojan":
-            # Формат: trojan://password@domain:port?query#remark
-            # В Trojan обычно используется пароль из client.uuid
-            return f"trojan://{client.uuid}@{domain}:{port}?{query_str}#{remark}"
-        
-        elif inbound.protocol == "vless":
-            # В VLESS добавляем flow, если это Reality + TCP
-            if security == "reality" and net == "tcp":
-                query_str += "&flow=xtls-rprx-vision"
-            return f"vless://{client.uuid}@{domain}:{port}?{query_str}#{remark}"
-        
-        return ""
+    # Транспортные настройки
+    if net == "ws":
+        ws = stream.get("wsSettings", {})
+        params["path"] = ws.get("path", "/")
+        params["host"] = ws.get("headers", {}).get("Host", domain)
+    elif net == "grpc":
+        grpc = stream.get("grpcSettings", {})
+        params["serviceName"] = grpc.get("serviceName", "")
+        params["mode"] = "multi" if grpc.get("multiMode") else "gun"
+    elif net == "xhttp":
+        xhttp = stream.get("xhttpSettings", {})
+        params["path"] = xhttp.get("path", "/")
+        params["mode"] = xhttp.get("mode", "stream-up")
+
+    # Reality
+    if security == "reality":
+        reality = stream.get("realitySettings", {})
+        params.update({
+            "security": "reality",
+            "sni": reality.get("serverNames", [domain])[0],
+            "pbk": reality.get("publicKey", ""),
+            "sid": reality.get("shortIds", [""])[0] if reality.get("shortIds") else "",
+            "fp": reality.get("fingerprint", "chrome"),
+        })
+        # Если TCP + Reality, принудительно flow
+        if net == "tcp":
+            params["flow"] = "xtls-rprx-vision"
+
+    # Очистка пустых параметров
+    query_params = {k: v for k, v in params.items() if v}
+    query_str = urllib.parse.urlencode(query_params)
+
+    # Remark
+    remark = urllib.parse.quote(f"{user.email}@{inbound.tag}")
+
+    # Формат ссылки
+    if inbound.protocol == "trojan":
+        return f"trojan://{client.uuid}@{domain}:{port}?{query_str}#{remark}"
+    elif inbound.protocol == "vless":
+        return f"vless://{client.uuid}@{domain}:{port}?{query_str}#{remark}"
+
+    return ""
 
 
     def generate_subscription(self, client_links: List[str]) -> str:
