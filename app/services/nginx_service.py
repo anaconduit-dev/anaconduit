@@ -185,7 +185,7 @@ server {{
 ########################################
 
 location /{self.panel_path}/ {{
-    proxy_pass http://anaconduit_backend:{self.panel_port}/;
+    proxy_pass http://anaconduit_backend:{self.panel_port};
     proxy_http_version 1.1;
 
     proxy_set_header Host $host;
@@ -199,7 +199,7 @@ location /{self.panel_path}/ {{
 ########################################
 
 location /{self.sub_path}/ {{
-    proxy_pass http://anaconduit_backend:{self.sub_port}/;
+    proxy_pass http://anaconduit_backend:{self.sub_port};
 }}
 
 ########################################
