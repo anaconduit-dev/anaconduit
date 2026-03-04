@@ -169,7 +169,7 @@ class XrayService:
                     
                     # Если домен совпадает — подменяем на локальный порт
                     if settings.reality_dest_domain in current_dest:
-                        reality_settings["dest"] = "0.0.0.0:9443"
+                        reality_settings["dest"] = "127.0.0.1:9443"
                         # Убеждаемся, что изменения применились к словарю
                         clean_stream_settings["realitySettings"] = reality_settings
                 
@@ -178,7 +178,7 @@ class XrayService:
                 if is_proxied:
                     # Заставляем инбаунд слушать только локальные запросы от Nginx
                     # В идеале тут использовать Unix Sockets: f"/dev/shm/{ib.tag}.sock,0666"
-                    ib.listen = "0.0.0.0" 
+                    ib.listen = "127.0.0.1" 
                     
                     # Убираем sniffing, так как Nginx уже расшифровал трафик
                     ib.sniffing["enabled"] = False
