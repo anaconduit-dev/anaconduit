@@ -238,7 +238,16 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
                 logger.info(f"🔗 Создан симлинк: {name} -> {src_relative}")
 
         await anyio.to_thread.run_sync(create_relative_links)
-
+    async def get_current_status(self):
+        state = await self.docker.get_status(self.CONTAINER_NAME)
+        version = "unknown"
+        if state == "running":
+            try:
+                version_raw = await self.docker.exec(self.CONTAINER_NAME, "nginx -version")
+                if version_raw: version = version_raw.split(' ')[2].split('/')[1]
+            except: pass
+        return {"container": self.CONTAINER_NAME, "status": state, "version": version}
+        
     async def apply_all(self):
         await self.ensure_directories()
         await self.generate_main_nginx_conf()
