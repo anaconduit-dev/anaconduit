@@ -229,17 +229,17 @@ const getEmptyForm = () => ({
         xver: 0 
       }
     ];
-    const finalListen = form.hideBehindNginx ? "127.0.0.1" : form.listen;
+     
     const payload = {
       tag: form.tag,
       protocol: form.protocol,
       port: form.port,
-      listen: finalListen,
+      listen: form.listen,
       settings: inboundSettings,
-      hide_behind_nginx: form.hideBehindNginx,
+      hide_behind_nginx: true,
       stream_settings: {
         network: form.network === "raw" ? "tcp" : form.network,
-        security: form.hideBehindNginx ? "none" : form.security,
+        security: form.security,
         
         // Добавляем rawSettings
         tcpSettings: form.network === "raw" ? {
@@ -740,44 +740,10 @@ const getEmptyForm = () => ({
           {/* TAB: SECURITY (REALITY/TLS) */}
           {activeTab === 'security' && (
             <div className="space-y-8 animate-in fade-in duration-300">
-              {/* НОВАЯ ОПЦИЯ: СКРЫТЬ ЗА NGINX */}
-              {(form.network === 'ws' || form.network === 'grpc' || form.network === 'xhttp') && (
-                <div className="bg-emerald-50 p-6 rounded-4xl border border-emerald-100 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm text-emerald-600">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-black text-emerald-900 uppercase">Скрыть за Nginx</h3>
-                      <p className="text-[10px] text-emerald-600/70 font-medium">Xray будет работать без SSL, шифрование возьмет на себя Nginx</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newValue = !form.hideBehindNginx;
-                      setForm({ 
-                        ...form, 
-                        hideBehindNginx: newValue,
-                        // Если скрываем за Nginx, принудительно ставим security: none
-                        security: newValue ? 'none' : form.security 
-                      });
-                    }}
-                    className={`w-14 h-7 rounded-full transition-all relative ${form.hideBehindNginx ? 'bg-emerald-500 shadow-inner' : 'bg-slate-200'}`}
-                  >
-                    <div className={`absolute top-1 left-1 bg-white w-5 h-5 rounded-full shadow-md transition-transform ${form.hideBehindNginx ? 'translate-x-7' : ''}`} />
-                  </button>
-                </div>
-              )}
+              
               {/* Кнопки выбора шифрования (Блокируем их, если включен Nginx) */}
-              <div className={`relative ${form.hideBehindNginx ? 'opacity-50 pointer-events-none' : ''}`}>
-                {form.hideBehindNginx && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center">
-                    <span className="bg-white/80 backdrop-blur-sm px-4 py-1 rounded-full text-[10px] font-bold text-emerald-600 border border-emerald-100 uppercase shadow-sm">
-                      Управляется через Nginx
-                    </span>
-                  </div>
-                )}
+              <div className={`relative 'opacity-50 pointer-events-none' : ''}`}>
+                
                 
                 <div className="grid grid-cols-3 gap-3">
                   {['none', 'tls', 'reality'].map((sec) => {
