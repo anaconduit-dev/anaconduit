@@ -127,8 +127,9 @@ server {{
 """
         domain_conf = f"""
 server {{
-    listen 7443 ssl http2 proxy_protocol;
-    listen [::]:7443 ssl http2 proxy_protocol;
+    listen 7443 ssl proxy_protocol;
+    listen [::]:7443 ssl proxy_protocol;
+    http2 on;
 
     server_name {self.domain};
 
@@ -155,8 +156,9 @@ server {{
 """
         reality_conf = f"""
 server {{
-    listen 9443 ssl http2;
-    listen [::]:9443 ssl http2;
+    llisten 9443 ssl;
+    listen [::]:9443 ssl;
+    http2 on;
 
     server_name {self.reality_domain};
 
