@@ -475,10 +475,10 @@ class XrayService:
         net = stream.get("network", "tcp")
         security = stream.get("security", "none")
     
-        # Порт учитывает Nginx
-        port = 443 if inbound.hide_behind_nginx else inbound.port
-        if inbound.hide_behind_nginx and security != "reality":
-            security = "tls"
+        # 🔹 Всегда отдаём 443, т.к. всё за Nginx
+        port = 443
+        if security != "reality":
+            security = "tls"  # TLS по умолчанию для Nginx
     
         # Базовые параметры
         params = {"security": security, "type": net}
@@ -507,7 +507,6 @@ class XrayService:
                 "sid": reality.get("shortIds", [""])[0] if reality.get("shortIds") else "",
                 "fp": reality.get("fingerprint", "chrome"),
             })
-            # Если TCP + Reality, принудительно flow
             if net == "tcp":
                 params["flow"] = "xtls-rprx-vision"
     
@@ -525,7 +524,6 @@ class XrayService:
             return f"vless://{client.uuid}@{domain}:{port}?{query_str}#{remark}"
     
         return ""
-
 
     def generate_subscription(self, client_links: List[str]) -> str:
         """Собирает список ссылок в Base64 строку (формат V2Ray подписки)"""
