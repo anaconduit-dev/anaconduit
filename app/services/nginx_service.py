@@ -22,8 +22,7 @@ class NginxService:
         self.snippets = self.base_dir / "snippets"
         self.certs_dir = self.base_dir / "certs"
 
-        for p in [self.conf_d, self.stream_d, self.snippets, self.certs_dir, self.sites_a_d, self.sites_e_d]:
-            p.mkdir(parents=True, exist_ok=True)
+        
 
         self.domain = settings.panel_domain
         self.reality_domain = settings.reality_dest_domain
