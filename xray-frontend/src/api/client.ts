@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: window.location.origin,
+  baseURL: '/',
 });
 
 export async function login(username: string, password: string) {
