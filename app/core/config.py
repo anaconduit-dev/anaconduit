@@ -43,9 +43,6 @@ class Settings(BaseSettings):
         """Принудительно создает структуру папок для всех сервисов"""
         subfolders = [
             "xray",
-            "nginx/conf.d",
-            "nginx/certs",
-            "nginx/html"
         ]
         for folder in subfolders:
             path = self.internal_data_path / folder
