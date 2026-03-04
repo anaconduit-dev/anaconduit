@@ -157,7 +157,7 @@ server {{
 """
         reality_conf = f"""
 server {{
-    llisten 9443 ssl;
+    listen 9443 ssl;
     listen [::]:9443 ssl;
     http2 on;
 
