@@ -167,7 +167,7 @@ app.add_middleware(
 # 1. Сначала подключаем API роутеры
 app.include_router(api_router, prefix=f"/{settings.panel_secret_path}")
 # Подписочный API (отдельный router)
-app.include_router(subscription_router, prefix=f"/{SUB_PATH}")
+app.include_router(subscription_router, prefix=f"/{settings.sub_path}")
 
 
 
