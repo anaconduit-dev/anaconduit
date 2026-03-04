@@ -475,10 +475,8 @@ class XrayService:
         net = stream.get("network", "tcp")
         security = stream.get("security", "none")
     
-        # 🔹 Всегда 443, т.к. Xray за Nginx
-        port = 443
-        if security != "reality":
-            security = "tls"  # TLS по умолчанию для Nginx
+        # Порт учитывает Nginx
+        port = 443 
     
         # Базовые параметры
         params = {"security": security, "type": net}
