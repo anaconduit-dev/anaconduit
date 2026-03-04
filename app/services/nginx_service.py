@@ -58,7 +58,32 @@ class NginxService:
     
         for d in dirs:
             d.mkdir(parents=True, exist_ok=True)
-        
+    async def generate_placeholder_page(self):
+        html_dir = self.base_dir / "www"
+        html_dir.mkdir(parents=True, exist_ok=True)
+    
+        index_file = html_dir / "index.html"
+        content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>    
+<meta charset="UTF-8">
+<title>Site Placeholder</title>
+<style>
+body {{ font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }}
+h1 {{ color: #333; }}
+p {{ color: #666; }}
+</style>
+</head>
+<body>
+<h1>Welcome to {self.domain}</h1>
+<p>This is a placeholder page.</p>
+</body>
+</html>
+"""
+        await self._write(index_file, content)
+        logger.info(f"📝 Placeholder page generated at {index_file}")
+    
     async def generate_main_nginx_conf(self):
         content = f"""
 user nginx;
@@ -148,8 +173,8 @@ server {{
     # Заглушка для корня
     location / {{
         root /var/www/html/;
-        index index.html index.htm;
-        try_files $uri $uri/ /index.html;
+        index index.html;
+        try_files $uri /index.html;
     }}
     
     location /{self.panel_path} {{
@@ -185,8 +210,8 @@ server {{
 
     location / {{
         root /var/www/html/;
-        index index.html index.htm;
-        try_files $uri $uri/ /index.html;
+        index index.html;
+        try_files $uri /index.html;
     }}
     location /xray_port/ {{
         proxy_pass http://anaconduit_xray:$fwdport;
@@ -277,6 +302,7 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
         
     async def apply_all(self):
         await self.ensure_directories()
+        await self.generate_placeholder_page()
         await self.generate_main_nginx_conf()
         await self.generate_stream_conf()
         await self.generate_sites_available_conf()
@@ -304,7 +330,7 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
             f"{host_nginx_dir}/stream-enabled": {"bind": "/etc/nginx/stream-enabled", "mode": "rw"},
             f"{host_nginx_dir}/snippets": {"bind": "/etc/nginx/snippets", "mode": "rw"},
             f"{host_nginx_dir}/certs": {"bind": "/etc/nginx/certs", "mode": "ro"},
-            f"{host_nginx_dir}/www": {"bind": "/var/www/certbot", "mode": "rw"},
+            f"{host_nginx_dir}/www": {"bind": "/var/www/html", "mode": "rw"},
             f"{host_nginx_dir}/sites-available": {"bind": "/etc/nginx/sites-available", "mode": "rw"},
             f"{host_nginx_dir}/sites-enabled": {"bind": "/etc/nginx/sites-enabled", "mode": "rw"},
         }
