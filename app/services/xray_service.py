@@ -169,7 +169,7 @@ class XrayService:
                     
                     # Если домен совпадает — подменяем на локальный порт
                     if settings.reality_dest_domain in current_dest:
-                        reality_settings["dest"] = "127.0.0.1:9443"
+                        reality_settings["dest"] = "nginx:9443"
                         # Убеждаемся, что изменения применились к словарю
                         clean_stream_settings["realitySettings"] = reality_settings
                 
