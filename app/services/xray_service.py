@@ -475,7 +475,7 @@ class XrayService:
         net = stream.get("network", "tcp")
         security = stream.get("security", "none")
     
-        # 🔹 Всегда отдаём 443, т.к. всё за Nginx
+        # 🔹 Всегда 443, т.к. Xray за Nginx
         port = 443
         if security != "reality":
             security = "tls"  # TLS по умолчанию для Nginx
@@ -507,6 +507,7 @@ class XrayService:
                 "sid": reality.get("shortIds", [""])[0] if reality.get("shortIds") else "",
                 "fp": reality.get("fingerprint", "chrome"),
             })
+            # Если TCP + Reality, принудительно flow
             if net == "tcp":
                 params["flow"] = "xtls-rprx-vision"
     
