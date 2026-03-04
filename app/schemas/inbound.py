@@ -116,33 +116,7 @@ class InboundCreate(BaseModel):
     sniffing: Sniffing
     is_active: bool = True
 
-    @model_validator(mode='before')
-    @classmethod
-    def validate_nginx_logic(cls, data: Any) -> Any:
-        if not isinstance(data, dict):
-            return data
-
-        hide_nginx = data.get("hide_behind_nginx", False)
-        stream = data.get("stream_settings")
-        
-        if hide_nginx:
-            # 1. Принудительно слушаем только локалхост
-            data["listen"] = "127.0.0.1"
-            
-            # 2. Если передан stream_settings, правим безопасность
-            if stream and isinstance(stream, dict):
-                # За Nginx шифрование Xray (TLS/Reality) должно быть отключено
-                stream["security"] = "none"
-                # Убираем настройки безопасности, если они просочились
-                stream.pop("tlsSettings", None)
-                stream.pop("realitySettings", None)
-                
-            # 3. Отключаем сниффинг (Nginx сам разбирает протоколы)
-            sniffing = data.get("sniffing")
-            if sniffing and isinstance(sniffing, dict):
-                sniffing["enabled"] = False
-
-        return data
+   
 
     @model_validator(mode='after')
     def check_protocol_compatibility(self) -> 'InboundCreate':
