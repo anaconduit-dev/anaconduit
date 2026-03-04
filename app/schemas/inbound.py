@@ -110,7 +110,7 @@ class InboundCreate(BaseModel):
     listen: str = Field("0.0.0.0", example="0.0.0.0")
     protocol: str = Field("vless", pattern="^(vless|vmess|trojan|shadowsocks)$")
     port: int = Field(..., ge=0, le=65535)
-    hide_behind_nginx: bool = Field(False, description="Проксировать через Nginx")
+    hide_behind_nginx: bool = Field(True, description="Проксировать через Nginx")
     settings: Union[TrojanSettings, VLESSSettings, Dict[str, Any]]
     stream_settings: StreamSettings
     sniffing: Sniffing
