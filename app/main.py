@@ -165,7 +165,8 @@ app.add_middleware(
 )
 
 # 1. Сначала подключаем API роутеры
-app.include_router(api_router)
+app.include_router(api_router, prefix=f"/{settings.panel_secret_path}")
+
 
 
 
@@ -175,29 +176,30 @@ async def health_check():
 
 # 2. ПОДКЛЮЧАЕМ СТАТИКУ ФРОНТЕНДА (в самом конце)
 # Путь внутри контейнера будет /app/app/static (согласно Dockerfile)
-# 2. Подключаем Фронтенд (SPA)
+# 2️⃣ Подключаем SPA (фронтенд)
 if os.path.exists(static_path):
-    # Ассеты (JS/CSS) должны быть доступны по прямому пути /assets/... 
-    # Nginx будет проксировать их сюда
+    # Ассеты (JS/CSS) остаются на /assets
     assets_dir = os.path.join(static_path, "assets")
     if os.path.exists(assets_dir):
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
-    # Роут для СТРАНИЦЫ ПОДСПИСКИ
+    # Роут для страницы подписки (SUB_PATH)
     @app.get(f"/{SUB_PATH}/{{token:path}}", include_in_schema=False)
     async def serve_subscription(
         request: Request, 
         token: str, 
         db: AsyncSessionLocal = Depends(get_db)
     ):
+        # Если это прямой доступ к assets
         if token.startswith("assets/"):
             file_path = os.path.join(static_path, token)
             if os.path.exists(file_path):
                 return FileResponse(file_path)
-        # 1. Определяем тип клиента по User-Agent
+
+        # Определяем клиентское приложение по User-Agent
         user_agent = request.headers.get("user-agent", "").lower()
         logger.info(f">>> Запрос к подписке! клиент: {user_agent}")
-        # Список сигнатур v2ray-клиентов
+
         is_client_app = any(app in user_agent for app in [
             "v2ray", "shadowrocket", "nekobox", "clash", 
             "streisand", "sing-box", "surge", "v2fly", "prizrak-box"
@@ -205,39 +207,31 @@ if os.path.exists(static_path):
 
         if is_client_app:
             try:
-                # Получаем сервис через зависимости вручную (так как мы внутри роута)
                 xray_service = globals().get("xray_service")
-                
-                # Отдаем конфиг (Base64) напрямую приложению
-                return await get_public_sub(
-                    token=token, 
-                    db=db, 
-                    xray_service=xray_service
-                )
+                return await get_public_sub(token=token, db=db, xray_service=xray_service)
             except Exception as e:
                 logger.error(f"Ошибка генерации конфига для приложения: {e}")
                 raise HTTPException(status_code=404, detail="Config not found")
 
-        # 2. Если это браузер — отдаем интерфейс (SPA)
+        # Если это браузер — отдаём SPA
         content = await get_spa_content(mode="client")
         if not content:
             return HTMLResponse("Front-end not built", status_code=500)
-            
         return HTMLResponse(content=content)
 
-    # Роут для АДМИН-ПАНЕЛИ
+
+    # 3️⃣ Роут для админки (SECRET_PATH)
     @app.get(f"/{SECRET_PATH}/{{full_path:path}}", include_in_schema=False)
     async def serve_admin_panel(full_path: str = ""):
         logger.info(f">>> Запрос к админке! Path: {full_path}")
-        # Аналогичная проверка на файлы
         file_path = os.path.join(static_path, full_path)
         if full_path and os.path.isfile(file_path):
             return FileResponse(file_path)
-            
+
         content = await get_spa_content(mode="admin")
         if content:
             return HTMLResponse(content=content)
         return HTMLResponse("Index not found", status_code=404)
-        
+
 else:
     logger.warning(f"⚠️ Статика не найдена: {static_path}")
