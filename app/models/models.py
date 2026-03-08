@@ -23,7 +23,6 @@ class Inbound(Base):
         "enabled": False,
         "destOverride": ["http", "tls", "quic"]
     })
-    hide_behind_nginx = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
 
 class User(Base):
