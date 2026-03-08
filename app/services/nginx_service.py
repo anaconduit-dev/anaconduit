@@ -132,7 +132,7 @@ http {{
         # Убираем порт, если есть
         sni = sni.split(":")[0]
         # Убираем www. в начале
-        sni = re.sub(r"^www\.", "", sni, flags=re.IGNORECASE)
+        sni = sni.lower()
         return sni
 
     async def load_reality_inbounds(self, session: AsyncSessionLocal):
