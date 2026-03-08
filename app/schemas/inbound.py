@@ -110,7 +110,6 @@ class InboundCreate(BaseModel):
     listen: str = Field("0.0.0.0", example="0.0.0.0")
     protocol: str = Field("vless", pattern="^(vless|vmess|trojan|shadowsocks)$")
     port: int = Field(..., ge=0, le=65535)
-    hide_behind_nginx: bool = Field(True, description="Проксировать через Nginx")
     settings: Union[TrojanSettings, VLESSSettings, Dict[str, Any]]
     stream_settings: StreamSettings
     sniffing: Sniffing
@@ -123,7 +122,14 @@ class InboundCreate(BaseModel):
         # Проверка: WS не дружит с Reality (уже на уровне схемы)
         if self.stream_settings.network == "ws" and self.stream_settings.security == "reality":
             raise ValueError("WS network does not support Reality security")
-        
-        
                 
         return self
+
+class InboundUpdate(BaseModel):
+    tag: str | None = None
+    port: int | None = None
+    protocol: str | None = None
+    settings: dict | None = None
+    stream_settings: dict | None = None
+    sniffing: dict | None = None
+    is_active: bool | None = None
