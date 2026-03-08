@@ -177,7 +177,8 @@ async def update_inbound_api(
     inbound_id: int, 
     obj_in: InboundUpdate, 
     db: AsyncSession = Depends(get_db),
-    xray_service: XrayService = Depends(get_xray_service), 
+    xray_service: XrayService = Depends(get_xray_service),
+    nginx_service: NginxService = Depends(get_nginx_service),
     admin: dict = Depends(get_current_admin)
 ):
     # 1. Сначала проверяем, существует ли сам инбаунд
@@ -223,6 +224,7 @@ async def update_inbound_api(
         
         # Наш новый транзакционный метод в сервисе
         await xray_service.update_inbound(inbound_id, update_data)
+        await nginx_service.apply_all()
         
     except ValueError as ve:
         # Это ошибки валидации конфига Xray
