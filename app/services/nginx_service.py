@@ -129,11 +129,11 @@ http {{
         await self._write(self.base_dir / "nginx.conf", content)
 
     def normalize_sni(self, sni: str) -> str:
-        # Убираем порт, если есть
+        if not sni:
+            return ""
+
         sni = sni.split(":")[0]
-        # Убираем www. в начале
-        sni = sni.lower()
-        return sni
+        return sni.lower().strip()
 
     async def load_reality_inbounds(self, session: AsyncSessionLocal):
         """
@@ -179,16 +179,13 @@ http {{
 
 
     def build_stream_blocks(self, inbounds):
-        """
-        Генерация map entries и upstream блоков для stream-конфига.
-        inbounds — это динамические записи из базы.
-        Статические записи self.static_inbounds добавляются всегда.
-        """
         all_inbounds = inbounds + self.static_inbounds
 
         map_entries = []
         upstreams = []
-        seen = set()
+
+        seen_sni = set()
+        seen_upstreams = set()
 
         for inbound in all_inbounds:
             sni = inbound["sni"]
@@ -196,18 +193,25 @@ http {{
             name = inbound.get("name", f"xray_{port}")
             backend_host = inbound.get("backend_host", "anaconduit_xray")
 
-            if sni in seen:
+            # --- SNI deduplicate ---
+            if sni in seen_sni:
                 logger.warning(f"⚠ Duplicate SNI detected: {sni}, skipping")
                 continue
-            seen.add(sni)
+            seen_sni.add(sni)
 
             map_entries.append(f"    {sni} {name};")
-            upstreams.append(f"""
+
+            # --- upstream deduplicate ---
+            if name not in seen_upstreams:
+                seen_upstreams.add(name)
+
+                upstreams.append(f"""
 upstream {name} {{
     zone {name} 64k;
     server {backend_host}:{port} resolve;
 }}
 """)
+
         return map_entries, upstreams
 
 
