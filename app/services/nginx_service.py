@@ -138,10 +138,10 @@ http {{
     async def load_reality_inbounds(self, session: AsyncSessionLocal):
         """
         Загружает список SNI/портов из базы.
-        Возвращает список словарей [{"sni": ..., "port": ...}, ...].
-        Если база пуста, возвращает fallback upstream.
+        Возвращает [{"sni": ..., "port": ...}]
         """
         inbounds = []
+
         try:
             result = await session.execute(
                 select(Inbound).filter_by(is_active=True)
@@ -150,25 +150,31 @@ http {{
 
             for ib in db_inbounds:
                 stream_settings = ib.stream_settings or {}
-                security_type = stream_settings.get("security", "none")
+                security_type = stream_settings.get("security")
 
-                if security_type == "reality":
-                    reality_settings = stream_settings.get("realitySettings", {})
-                    dest_sni = reality_settings.get("dest")
-                    if dest_sni:  # Только непустой SNI
-                        dest_sni = self.normalize_sni(dest_sni)
-                        inbounds.append({"sni": dest_sni, "port": ib.port})
-                    else:
-                        logger.warning(f"⚠ Inbound {ib.id} имеет security=reality, но dest пустой, пропускаем")
+                if security_type != "reality":
+                    continue
+
+                reality_settings = stream_settings.get("realitySettings", {})
+
+                server_names = reality_settings.get("serverNames", [])
+
+                for sni in server_names:
+                    sni = self.normalize_sni(sni)
+
+                    if sni:
+                        inbounds.append({
+                            "sni": sni,
+                            "port": ib.port
+                        })
 
         except Exception as e:
             logger.error(f"❌ Ошибка при получении inbounds из БД: {e}")
 
-        # fallback upstream, если база пуста
         if not inbounds:
             inbounds.append({"sni": "fallback", "port": 8443})
-            logger.warning("⚠ No reality inbounds found, using fallback xray_default upstream")
-        print(inbounds)
+            logger.warning("⚠ No reality inbounds found, using fallback")
+
         return inbounds
 
 
