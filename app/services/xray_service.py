@@ -37,6 +37,7 @@ class XrayService:
         self.internal_xray_dir = settings.xray_internal_path
         self.internal_xray_dir.mkdir(parents=True, exist_ok=True)
         self.host_xray_dir = f"{settings.host_data_path}/xray"
+        self.host_log_dir = os.path.join(os.path.dirname(self.host_xray_dir), "xray_log")
 
         self._version_cache = None
         self._cache_last_updated = 0
@@ -112,17 +113,18 @@ class XrayService:
             logger.error(f"Error in service get_stats: {e}")
             return []
 
-    async def generate_full_config(self):
-        # Внутри контейнера логи будут лежать здесь:
+    async def generate_full_config_dto(self, session: AsyncSessionLocal) -> dict:
+        """
+        Собирает структуру конфига Xray в словарь (dict), 
+        используя текущую сессию БД (видит изменения до commit).
+        """
+        # Внутри контейнера пути неизменны
         container_access_log = "/var/log/xray/access.log"
         container_error_log = "/var/log/xray/error.log"
 
+        # Базовая структура (переносим из твоего старого метода)
         config = {
-            "log": {
-                "loglevel": "warning",
-                "access": "none",
-                "error": "" 
-              },
+            "log": {"loglevel": "warning", "access": "none", "error": ""},
             "stats": {},
             "api": {
                 "tag": "api",
@@ -148,113 +150,85 @@ class XrayService:
         }
         
         FRONTEND_INTERNAL_PORT = 8080
-        
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(select(Inbound).where(Inbound.is_active == True))
-            db_inbounds = result.scalars().all()
+
+        # Получаем инбаунды ИМЕННО из переданной сессии
+        result = await session.execute(
+            select(Inbound).where(Inbound.is_active == True)
+        )
+        db_inbounds = result.scalars().all()
+
+        for ib in db_inbounds:
+            # --- Твоя логика обработки Nginx, Reality и Транспортов ---
+            # (Копируем всё из твоего generate_full_config сюда)
+            network_type = ib.stream_settings.get("network", "tcp")
+            security_type = ib.stream_settings.get("security", "none")
             
-            NGINX_INTERNAL_PORT = 80 
-            NGINX_HOST = "nginx"
+            clean_stream_settings = ib.stream_settings.copy()
 
-            for ib in db_inbounds:
-                network_type = ib.stream_settings.get("network", "tcp")
-                security_type = ib.stream_settings.get("security", "none")
+            # Reality & Nginx fix
+            if security_type == "reality":
+                reality_settings = clean_stream_settings.get("realitySettings", {})
+                if settings.reality_dest_domain in reality_settings.get("dest", ""):
+                    reality_settings["dest"] = "nginx:9443"
+                    clean_stream_settings["realitySettings"] = reality_settings
+            
+            # Proxied transport (WS/gRPC/xHTTP)
+            if network_type in ["ws", "grpc", "xhttp"] and security_type == "none":
+                ib.listen = "127.0.0.1"
 
-                clean_stream_settings = ib.stream_settings.copy()
-
-                # --- ЛОГИКА ВЗАИМОДЕЙСТВИЯ С NGINX ---
-                if security_type == "reality":
-                    reality_settings = clean_stream_settings.get("realitySettings", {})
-                    current_dest = reality_settings.get("dest", "")
-                    
-                    # Если домен совпадает — подменяем на локальный порт
-                    if settings.reality_dest_domain in current_dest:
-                        reality_settings["dest"] = "nginx:9443"
-                        # Убеждаемся, что изменения применились к словарю
-                        clean_stream_settings["realitySettings"] = reality_settings
-                
-                is_proxied = network_type in ["ws", "grpc", "xhttp"] and security_type == "none"
-                
-                if is_proxied:
-                    # Заставляем инбаунд слушать только локальные запросы от Nginx
-                    # В идеале тут использовать Unix Sockets: f"/dev/shm/{ib.tag}.sock,0666"
-                    ib.listen = "127.0.0.1" 
-                    
-                    # Убираем sniffing, так как Nginx уже расшифровал трафик
-                    ib.sniffing["enabled"] = False
-
-                client_result = await session.execute(
-                    select(Client)
-                    .join(User)
-                    .options(joinedload(Client.user))
-                    .where(Client.inbound_id == ib.id, Client.enable == True, User.is_active == True)
-                )
-                db_clients = client_result.scalars().all()
-                
-                # Используем наш генератор имен для консистентности
-                xray_clients = []
-                for c in db_clients:
-                    client_dict = {
-                        "email": self._get_xray_email(c.user.email, ib.tag),
-                        "level": c.level,
-                    }
-                    if ib.protocol == "vless":
-                        client_dict["id"] = c.uuid  # Для VLESS нужен именно 'id'
-                        # КРИТИЧНО: Flow только для VLESS + TCP/RAW + (Reality/TLS)
-                        if network_type == "tcp" and security_type in ["reality", "tls"]:
-                            client_dict["flow"] = c.flow if c.flow else ""
-                        else:
-                            # Для gRPC, WS и XHTTP поле flow должно отсутствовать
-                            if "flow" in client_dict: del client_dict["flow"]
-
-                    elif ib.protocol == "trojan":
-                        client_dict["password"] = c.uuid
-                    
-                    if c.reverse and isinstance(c.reverse, dict) and len(c.reverse) > 0:
-                        client_dict["reverse"] = c.reverse
-                    
-                    xray_clients.append(client_dict)
-                clean_stream_settings = ib.stream_settings.copy()
-                
-                # Удаляем настройки других транспортов, чтобы не было конфликтов
-                # Если выбрали xhttp, grpcSettings нам не нужны
-                transport_keys = ["tcpSettings", "wsSettings", "grpcSettings", "xhttpSettings"]
-                current_transport_key = f"{network_type}Settings"
-                
-                for key in transport_keys:
-                    if key != current_transport_key and key in clean_stream_settings:
-                        del clean_stream_settings[key]
-                inbound_settings = ib.settings.copy()
-
-                if ib.protocol == "vless" and network_type != "tcp":
-                    if "flow" in inbound_settings:
-                        del inbound_settings["flow"]
-                xray_inbound = {
-                    "listen": ib.listen,
-                    "tag": ib.tag,
-                    "port": ib.port,
-                    "protocol": ib.protocol,
-                    "settings": inbound_settings,
-                    "streamSettings": clean_stream_settings, # Используем очищенные настройки
-                    "sniffing": ib.sniffing or {"enabled": True, "destOverride": ["http", "tls"]}
+            # Сбор клиентов для этого инбаунда
+            client_result = await session.execute(
+                select(Client)
+                .join(User)
+                .options(joinedload(Client.user))
+                .where(Client.inbound_id == ib.id, Client.enable == True, User.is_active == True)
+            )
+            db_clients = client_result.scalars().all()
+            
+            xray_clients = []
+            for c in db_clients:
+                # Твоя логика формирования client_dict (email, id/password, flow)
+                client_dict = {
+                    "email": self._get_xray_email(c.user.email, ib.tag),
+                    "level": c.level,
                 }
+                if ib.protocol == "vless":
+                    client_dict["id"] = c.uuid
+                    if network_type == "tcp" and security_type in ["reality", "tls"]:
+                        client_dict["flow"] = c.flow or ""
+                elif ib.protocol == "trojan":
+                    client_dict["password"] = c.uuid
                 
-                xray_inbound["settings"]["clients"] = xray_clients
-                if "sniffing" in xray_inbound and "domainsExcluded" in xray_inbound["sniffing"]:
-                    # Очищаем список от пустых строк
-                    xray_inbound["sniffing"]["domainsExcluded"] = [
-                        d for d in xray_inbound["sniffing"]["domainsExcluded"] if d.strip() != ""
-                    ]
-                network_type = ib.stream_settings.get("network", "tcp") 
+                xray_clients.append(client_dict)
 
-                if network_type != "grpc" and not xray_inbound["settings"].get("fallbacks"):
-                    xray_inbound["settings"]["fallbacks"] = [{"dest": FRONTEND_INTERNAL_PORT, "xver": 0}]
+            # Формируем объект инбаунда для Xray
+            inbound_settings = ib.settings.copy()
+            inbound_settings["clients"] = xray_clients
 
-                config["inbounds"].append(xray_inbound)
+            xray_inbound = {
+                "listen": ib.listen,
+                "tag": ib.tag,
+                "port": ib.port,
+                "protocol": ib.protocol,
+                "settings": inbound_settings,
+                "streamSettings": clean_stream_settings,
+                "sniffing": ib.sniffing or {"enabled": True, "destOverride": ["http", "tls"]}
+            }
 
-        await self._save_config_async(config)
+            # Fallbacks logic
+            if network_type != "grpc" and not xray_inbound["settings"].get("fallbacks"):
+                xray_inbound["settings"]["fallbacks"] = [{"dest": FRONTEND_INTERNAL_PORT, "xver": 0}]
+
+            config["inbounds"].append(xray_inbound)
+
         return config
 
+    async def generate_full_config(self):
+        """Создает новую сессию, генерирует конфиг и пишет на диск."""
+        async with AsyncSessionLocal() as session:
+            config = await self.generate_full_config_dto(session)
+            await self._save_config_async(config)
+            return config
     # ---------- Dynamic API Management ----------
 
     async def add_client_to_xray(self, inbound_tag: str, user_email: str, client_key: str, flow: str = "", level: int = 0, reverse:dict = {}):
@@ -376,9 +350,8 @@ class XrayService:
         await self.generate_full_config()
         # 1. Настройка путей для логов
         # settings.host_data_path обычно указывает на /home/vpsadmin/data/anaconduit
-        host_log_dir = os.path.join(os.path.dirname(self.host_xray_dir), "xray_log")
         
-        os.makedirs(host_log_dir, exist_ok=True)
+        os.makedirs(self.host_log_dir, exist_ok=True)
         
         
             
@@ -403,7 +376,7 @@ class XrayService:
             ports={}, 
             volumes={
                 self.host_xray_dir: {"bind": "/etc/xray", "mode": "rw"},
-                host_log_dir: {"bind": "/var/log/xray", "mode": "rw"} 
+                self.host_log_dir: {"bind": "/var/log/xray", "mode": "rw"} 
             },
             network="anaconduit_net",
             restart_policy={"Name": "always"},
@@ -672,6 +645,34 @@ class XrayService:
             # Чистим за собой временный файл
             if test_path.exists():
                 test_path.unlink()
+                
+    async def update_inbound(self, inbound_id: int, update_data: Dict[str, Any]):
+        async with AsyncSessionLocal() as session:
+            # 1. Находим инбаунд в рамках ЭТОЙ сессии
+            result = await session.execute(select(Inbound).where(Inbound.id == inbound_id))
+            ib = result.scalars().first()
+            if not ib: raise ValueError("Inbound not found")
 
+            # 2. Обновляем объект в ПАМЯТИ (в БД еще старые данные)
+            for key, value in update_data.items():
+                if hasattr(ib, key):
+                    setattr(ib, key, value)
 
+            # 3. Генерируем DTO (он увидит обновленного ib благодаря переданной сессии)
+            test_config = await self.generate_full_config_dto(session)
+
+            # 4. Валидируем "мнимый" конфиг через временный запуск Xray
+            is_ok, error_msg = await self.validate_config(test_config)
+            
+            if not is_ok:
+                # ВАЖНО: Если тут ошибка, мы ничего не комитим!
+                logger.error(f"❌ Валидация не прошла: {error_msg}")
+                raise ValueError(f"Xray config is invalid: {error_msg}")
+
+            # 5. Если всё супер — сохраняем изменения в БД
+            await session.commit()
+            
+            # 6. Теперь можно смело писать на диск и рестартить
+            await self._save_config_async(test_config)
+            return await self.restart()
 

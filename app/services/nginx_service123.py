@@ -3,11 +3,8 @@ import logging
 import socket
 import os
 import re
-from sqlalchemy import select
-from app.models.models import Inbound
 from app.core.config import settings
 from app.services.docker_service import DockerService
-from app.core.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -35,14 +32,6 @@ class NginxService:
         self.sub_port = "8000"
         self.escaped_domain = re.escape(self.domain)
         self.escaped_reality = re.escape(self.reality_domain)
-        self.static_inbounds = [
-            {
-                "sni": self.domain,           
-                "port": 7443,
-                "name": "web",
-                "backend_host": "nginx"
-            }
-        ]
 
     async def _write(self, path, content: str):
         await anyio.to_thread.run_sync(lambda: path.write_text(content.strip()))
@@ -69,8 +58,6 @@ class NginxService:
     
         for d in dirs:
             d.mkdir(parents=True, exist_ok=True)
-
-
     async def generate_placeholder_page(self):
         html_dir = self.base_dir / "www"
         html_dir.mkdir(parents=True, exist_ok=True)
@@ -108,9 +95,7 @@ events {{
 }}
 
 stream {{
-    resolver 127.0.0.11 valid=30s;
     include /etc/nginx/stream-enabled/*.conf;
-
 }}
 
 http {{
@@ -128,115 +113,33 @@ http {{
 """
         await self._write(self.base_dir / "nginx.conf", content)
 
-    def normalize_sni(self, sni: str) -> str:
-        # Убираем порт, если есть
-        sni = sni.split(":")[0]
-        # Убираем www. в начале
-        sni = re.sub(r"^www\.", "", sni, flags=re.IGNORECASE)
-        return sni
-
-    async def load_reality_inbounds(self, session: AsyncSessionLocal):
-        """
-        Загружает список SNI/портов из базы.
-        Возвращает список словарей [{"sni": ..., "port": ...}, ...].
-        Если база пуста, возвращает fallback upstream.
-        """
-        inbounds = []
-        try:
-            result = await session.execute(
-                select(Inbound).filter_by(is_active=True)
-            )
-            db_inbounds = result.scalars().all()
-
-            for ib in db_inbounds:
-                stream_settings = ib.stream_settings or {}
-                security_type = stream_settings.get("security", "none")
-
-                if security_type == "reality":
-                    reality_settings = stream_settings.get("realitySettings", {})
-                    dest_sni = reality_settings.get("dest")
-                    if dest_sni:  # Только непустой SNI
-                        dest_sni = self.normalize_sni(dest_sni)
-                        inbounds.append({"sni": dest_sni, "port": ib.port})
-                    else:
-                        logger.warning(f"⚠ Inbound {ib.id} имеет security=reality, но dest пустой, пропускаем")
-
-        except Exception as e:
-            logger.error(f"❌ Ошибка при получении inbounds из БД: {e}")
-
-        # fallback upstream, если база пуста
-        if not inbounds:
-            inbounds.append({"sni": "fallback", "port": 8443})
-            logger.warning("⚠ No reality inbounds found, using fallback xray_default upstream")
-        print(inbounds)
-        return inbounds
-
-
-    def build_stream_blocks(self, inbounds):
-        """
-        Генерация map entries и upstream блоков для stream-конфига.
-        inbounds — это динамические записи из базы.
-        Статические записи self.static_inbounds добавляются всегда.
-        """
-        all_inbounds = inbounds + self.static_inbounds
-
-        map_entries = []
-        upstreams = []
-        seen = set()
-
-        for inbound in all_inbounds:
-            sni = inbound["sni"]
-            port = inbound["port"]
-            name = inbound.get("name", f"xray_{port}")
-            backend_host = inbound.get("backend_host", "anaconduit_xray")
-
-            if sni in seen:
-                logger.warning(f"⚠ Duplicate SNI detected: {sni}, skipping")
-                continue
-            seen.add(sni)
-
-            map_entries.append(f"    {sni} {name};")
-            upstreams.append(f"""
-upstream {name} {{
-    zone {name} 64k;
-    server {backend_host}:{port} resolve;
-}}
-""")
-        return map_entries, upstreams
-
-
     async def generate_stream_conf(self):
-        async with AsyncSessionLocal() as session:
-            inbounds = await self.load_reality_inbounds(session)
-        
-        map_entries, upstreams = self.build_stream_blocks(inbounds)
-
         content = f"""
 map $ssl_preread_server_name $backend_name {{
     hostnames;
 
-{chr(10).join(map_entries)}
+    {self.reality_domain}   xray;
+    {self.domain}           web;
 
-    default xray_default;
+    default                 xray;
 }}
 
-{chr(10).join(upstreams)}
+upstream xray {{
+    server anaconduit_xray:8443;
+}}
 
-upstream xray_default {{
-    zone xray_default 64k;
-    server anaconduit_xray:8443 resolve;
-    
+upstream web {{
+    server nginx:7443;
 }}
 
 server {{
-    listen 443;
-    proxy_pass $backend_name;
-    ssl_preread on;
+    listen          443;
+    proxy_pass      $backend_name;
+    ssl_preread     on;
     proxy_protocol  on;
 }}
 """
         await self._write(self.stream_d / "00-sni-router.conf", content)
-        logger.info("✅ Stream config generated with dynamic SNI + static panel")
 
     async def generate_sites_available_conf(self):
         redirect_conf = f"""

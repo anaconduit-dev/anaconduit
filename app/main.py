@@ -7,7 +7,6 @@ from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
-from app.api.endpoints.sub import get_public_sub
 from app.core.dependencies import get_xray_service, get_xray_client
 from app.core.config import settings
 from app.core.logging import setup_logging
@@ -20,6 +19,7 @@ from sqlalchemy import select
 from app.xray_api.client import XrayAPIClient
 from app.services.xray_service import XrayService
 from app.services.nginx_service import NginxService
+from app.api.endpoints import public_sub
 
 xray_client = XrayAPIClient()
 xray_service = XrayService(client=xray_client)
@@ -142,6 +142,9 @@ app = FastAPI(
     debug=settings.debug,
     version="0.1.0",
     lifespan=lifespan,
+    openapi_url="/api/v1/openapi.json" if settings.debug else None, # Отключает генерацию схемы openapi.json
+    docs_url="/api/v1/docs" if settings.debug else None,    # Отключает /docs (Swagger UI)
+    redoc_url="/api/v1/redoc" if settings.debug else None    # Отключает /redoc
 )
 
 # Настройка CORS (ВАЖНО для разработки фронта отдельно)
@@ -167,7 +170,7 @@ app.add_middleware(
 # 1. Сначала подключаем API роутеры
 app.include_router(api_router, prefix=f"/{settings.panel_secret_path}")
 # Подписочный API (отдельный router)
-app.include_router(api_router, prefix=f"/{settings.sub_path}")
+app.include_router(public_sub.router, prefix=f"/{settings.sub_path}")
 
 
 
