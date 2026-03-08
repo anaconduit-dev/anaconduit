@@ -254,7 +254,10 @@ async def update_user_limits(
     return {"status": "success", "is_active": user.is_active}
 
 @router.post("/users/{user_id}/reset-token")
-async def reset_subscription_token(user_id: int, db: AsyncSession = Depends(get_db)):
+async def reset_subscription_token(
+    user_id: int, db: AsyncSession = Depends(get_db),
+    admin: dict = Depends(get_current_admin)
+    ):
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404)
