@@ -3,7 +3,8 @@ import {
   X, Shield, Zap, Loader2, Search, Globe, Lock,
   Settings, Plus, Trash2, Cpu, Hash
 } from "lucide-react";
-import { generateXrayKeys, addInbound, addClient } from "../api/user";
+import { generateXrayKeys, addClient } from "../api/user";
+import {  addInbound } from "../api/inbound"
 
 const generateComplexPath = () => {
   const randomNum = Math.floor(Math.random() * 90000) + 10000; // 5 цифр
@@ -58,7 +59,7 @@ const getEmptyForm = () => ({
     // --- 2. Глобальные настройки Stream & Security ---
     network: "raw",
     security: "none",
-    hideBehindNginx: true,
+    
     
     // --- 3. Reality Settings ---
     show: false,
@@ -236,7 +237,6 @@ const getEmptyForm = () => ({
       port: form.port,
       listen: form.listen,
       settings: inboundSettings,
-      hide_behind_nginx: true,
       stream_settings: {
         network: form.network === "raw" ? "tcp" : form.network,
         security: form.security,

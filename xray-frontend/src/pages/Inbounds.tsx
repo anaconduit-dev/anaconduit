@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import AddInboundModal from "../components/AddInboundModal";
+// Импортируем нашу новую модалку
+import EditInboundModal from "../components/EditInboundModal"; 
 import { 
   Plus, 
   Trash2, 
@@ -9,9 +11,10 @@ import {
   Zap,
   Loader2,
   AlertCircle,
-  Users
+  Users,
+  Settings2 // Иконка для редактирования
 } from "lucide-react";
-import { getInbounds, deleteInbound } from "../api/user";
+import { getInbounds, deleteInbound } from "../api/inbound"; // Убедись, что путь правильный
 
 interface ContextType {
   refreshStatus?: () => Promise<void>;
@@ -24,7 +27,11 @@ export default function InboundsPage() {
   const [inbounds, setInbounds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Состояния для модалок
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedInboundId, setSelectedInboundId] = useState<number | null>(null);
 
   const loadInbounds = async () => {
     try {
@@ -42,7 +49,8 @@ export default function InboundsPage() {
 
   useEffect(() => { loadInbounds(); }, []);
 
-  const handleDelete = async (id: number, tag: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: number, tag: string) => {
+    e.stopPropagation(); // Чтобы не срабатывал клик по карточке, если он будет
     if (window.confirm(`Удалить инбаунд "${tag}"?`)) {
       try {
         await deleteInbound(id);
@@ -52,6 +60,11 @@ export default function InboundsPage() {
         alert("Не удалось удалить");
       }
     }
+  };
+
+  const handleEdit = (id: number) => {
+    setSelectedInboundId(id);
+    setIsEditModalOpen(true);
   };
 
   return (
@@ -65,7 +78,7 @@ export default function InboundsPage() {
           <p className="text-slate-500 font-medium">Активные порты Xray Core</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)} 
+          onClick={() => setIsAddModalOpen(true)} 
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-200"
         >
           <Plus size={20} />
@@ -88,12 +101,24 @@ export default function InboundsPage() {
                   <div className={`p-3 rounded-2xl ${inbound.is_running_in_xray ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-400'}`}>
                     <Zap size={24} fill={inbound.is_running_in_xray ? "currentColor" : "none"} />
                   </div>
-                  <button 
-                    onClick={() => handleDelete(inbound.id, inbound.tag)}
-                    className="p-2 text-slate-300 hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  
+                  {/* Группа кнопок управления */}
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={() => handleEdit(inbound.id)}
+                      className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                      title="Настроить"
+                    >
+                      <Settings2 size={18} />
+                    </button>
+                    <button 
+                      onClick={(e) => handleDelete(e, inbound.id, inbound.tag)}
+                      className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                      title="Удалить"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
 
                 <h3 className="text-lg font-bold text-slate-800 mb-1 truncate" title={inbound.tag}>
@@ -120,7 +145,6 @@ export default function InboundsPage() {
                 </div>
               </div>
 
-              {/* Статус-бар внизу */}
               <div className={`py-2 px-6 text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${inbound.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                 <div className={`w-1.5 h-1.5 rounded-full ${inbound.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
                 {inbound.is_active ? 'Active' : 'Disabled'}
@@ -130,10 +154,25 @@ export default function InboundsPage() {
         </div>
       )}
 
+      {/* Модалка добавления */}
       <AddInboundModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
         onSuccess={() => { loadInbounds(); if (refreshStatus) refreshStatus(); }} 
+      />
+
+      {/* Модалка редактирования */}
+      <EditInboundModal 
+        isOpen={isEditModalOpen} 
+        inboundId={selectedInboundId}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedInboundId(null);
+        }} 
+        onSuccess={() => { 
+          loadInbounds(); 
+          if (refreshStatus) refreshStatus(); 
+        }} 
       />
     </div>
   );

@@ -1,30 +1,5 @@
 import { api } from "./client";
 
-// --- INBOUNDS ---
-
-/** Получить список всех входящих подключений */
-export const getInbounds = async () => {
-  const res = await api.get("/inbound/get_inbounds");
-  return res.data;
-};
-
-/** Добавить новый инбаунд */
-export const addInbound = async (data: any) => {
-  const res = await api.post("/inbound/add", data);
-  return res.data;
-};
-
-/** Удалить инбаунд по ID */
-export const deleteInbound = async (id: number) => {
-  await api.delete(`/inbound/delete/${id}`);
-};
-
-/** Получить все активные ресурсы (порты, пути и т.д.) */
-export const getActiveResources = async () => {
-  const res = await api.get("/inbound/get_all_active_resources");
-  return res.data;
-};
-
 // --- CLIENTS (USERS) ---
 
 /** Получить список всех пользователей */
@@ -37,15 +12,19 @@ export const getUsers = async () => {
 export const addClient = async (
   inboundId: number, 
   email: string, 
-  clientUuid?: string, 
+  clientUuid: string, 
   flow: string = "", 
   level: number = 0
 ) => {
   const params = new URLSearchParams();
   params.append("email", email);
+  params.append("id_or_password", clientUuid);
   
-  if (clientUuid) params.append("id_or_password", clientUuid);
-  if (flow) params.append("flow", flow);
+  // Добавляем flow ТОЛЬКО если он не пустой
+  if (flow && flow.trim() !== "") {
+    params.append("flow", flow);
+  }
+  
   params.append("level", level.toString());
 
   const res = await api.post(`/client/${inboundId}/add-client?${params.toString()}`);
@@ -74,19 +53,6 @@ export const resetSubscriptionToken = async (userId: number) => {
   return res.data;
 };
 
-// --- CUSTOM CONFIG ---
-
-/** Получить кастомный конфиг Xray */
-export const getCustomConfig = async () => {
-  const res = await api.get("/custom_config/get_custom_config");
-  return res.data;
-};
-
-/** Обновить кастомный конфиг */
-export const updateCustomConfig = async (config: string) => {
-  const res = await api.post("/custom_config/update_custom_config", { config });
-  return res.data;
-};
 
 // --- TOOLS ---
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import UserDetailModal from "../components/UserDetailModal";
+import AddClientModal from "../components/AddClientModal"; 
 import { 
   UserPlus, 
   Trash2,
@@ -8,7 +9,8 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  Copy
+  Copy,
+  PlusCircle // Добавил иконку для привязки инбаунда
 } from "lucide-react";
 import { getUsers, deleteFullUser, resetSubscriptionToken } from "../api/user";
 
@@ -19,6 +21,10 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Состояние для модалки добавления
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [userForNewInbound, setUserForNewInbound] = useState<any | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -35,42 +41,48 @@ export default function UsersPage() {
   };
 
   useEffect(() => { loadData(); }, []);
-  const handleCopy = async (e: React.MouseEvent, text: string, tag: string) => {
-    e.stopPropagation(); // Важно! Чтобы не открылась модалка при клике на копирование
-    if (!text) return;
 
+  // Хендлер для открытия модалки создания нового
+  const handleAddNewUser = () => {
+    setUserForNewInbound(null); // Явно сбрасываем, чтобы модалка была пустой
+    setIsAddModalOpen(true);
+  };
+
+  // Хендлер для добавления инбаунда существующему
+  const handleAddInboundToExisting = (e: React.MouseEvent, user: any) => {
+    e.stopPropagation();
+    setUserForNewInbound(user);
+    setIsAddModalOpen(true);
+  };
+
+  const handleCopy = async (e: React.MouseEvent, text: string, tag: string) => {
+    e.stopPropagation();
+    if (!text) return;
     try {
-      // Универсальный метод копирования (HTTP/HTTPS)
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text);
       } else {
         const textArea = document.createElement("textarea");
         textArea.value = text;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-9999px";
         document.body.appendChild(textArea);
         textArea.select();
         document.execCommand('copy');
         textArea.remove();
       }
-      
-      // Показываем "галочку" на 2 секунды именно для этого ID
       setCopiedTag(tag);
       setTimeout(() => setCopiedTag(null), 2000);
-    } catch (err) {
-      console.error("Ошибка копирования", err);
-    }
+    } catch (err) { console.error("Ошибка копирования", err); }
   };
 
   const handleDelete = (e: React.MouseEvent, id: number, name: string) => {
-    e.stopPropagation(); // Чтобы не открывалась модалка при нажатии на корзину
+    e.stopPropagation();
     if (window.confirm(`Полностью удалить пользователя ${name}?`)) {
       deleteFullUser(id).then(() => loadData()).catch(() => alert("Ошибка при удалении"));
     }
   };
 
   const handleResetToken = (e: React.MouseEvent, id: number) => {
-    e.stopPropagation(); // Чтобы не открывалась модалка
+    e.stopPropagation();
     resetSubscriptionToken(id)
       .then(() => {
         alert("Токен успешно сброшен");
@@ -78,8 +90,6 @@ export default function UsersPage() {
       })
       .catch(() => alert("Ошибка при сбросе токена"));
   };
-
- 
 
   const filteredUsers = users.filter(u => 
     u.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -93,10 +103,6 @@ export default function UsersPage() {
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Пользователи</h1>
           <p className="text-slate-500 font-medium">Управление доступом и вложенными клиентами</p>
         </div>
-        <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-200 active:scale-95">
-          <UserPlus size={20} />
-          НОВЫЙ КЛИЕНТ
-        </button>
       </header>
 
       <div className="relative mb-6">
@@ -122,6 +128,18 @@ export default function UsersPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          
+          {/* КАРТОЧКА ПЛЮС (Добавление нового) */}
+          <div 
+            onClick={handleAddNewUser}
+            className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[24px] flex flex-col items-center justify-center p-5 group cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/50 transition-all min-h-[200px]"
+          >
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm mb-3">
+                <UserPlus size={24} />
+            </div>
+            <span className="text-xs font-black uppercase text-slate-400 group-hover:text-indigo-600">Добавить клиента</span>
+          </div>
+
           {filteredUsers.map((user) => {
             const used = (user.total_up + user.total_down) / (1024 ** 3);
             const limit = user.traffic_limit || 0;
@@ -137,6 +155,14 @@ export default function UsersPage() {
                   <div className="flex justify-between items-start mb-3">
                     <div className={`w-3 h-3 rounded-full ${user.is_active ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`} />
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* КНОПКА ДОБАВИТЬ ИНБАУНД */}
+                      <button 
+                        onClick={(e) => handleAddInboundToExisting(e, user)} 
+                        className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-400 hover:text-indigo-600"
+                        title="Добавить в другой инбаунд"
+                      >
+                        <PlusCircle size={14} />
+                      </button>
                       <button onClick={(e) => handleResetToken(e, user.id)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600">
                         <Key size={14} />
                       </button>
@@ -184,13 +210,27 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* Вызов модального окна */}
+      {/* Модалка детальной информации */}
       {selectedUser && (
         <UserDetailModal 
           user={selectedUser} 
           onClose={() => setSelectedUser(null)} 
+          onRefresh={loadData} // Передаем функцию загрузки данных
         />
       )}
+
+      {/* Модалка создания/привязки клиента */}
+      <AddClientModal 
+        isOpen={isAddModalOpen}
+        existingUser={userForNewInbound}
+        onClose={() => {
+            setIsAddModalOpen(false);
+            setUserForNewInbound(null);
+        }}
+        onSuccess={() => {
+            loadData(); // Перезагружаем список после добавления
+        }}
+      />
     </div>
   );
 }

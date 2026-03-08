@@ -15,6 +15,7 @@ export interface UserConfigResponse {
 
 /** * Получить список всех ссылок (конфигов) пользователя и строку подписки 
  * @param userId - ID пользователя в системе
+ * @param token
  */
 export const getUserConfigLinks = async (userId: number) => {
   const res = await api.get(`/subscribe/${userId}/config-links`);
@@ -24,9 +25,9 @@ export const getUserConfigLinks = async (userId: number) => {
 
 export const getSubscriptionInfo = async (token: string) => {
   try {
-    const response = await api.get("/subscribe/info", {
-      params: { token }
-    });
+    // Используем axios напрямую или чистый fetch, чтобы не подмешивать заголовки авторизации админа
+    // Путь теперь выглядит так: /secret_path/TOKEN/info
+    const response = await api.get(`/api/v1/${token}/info`); 
     return response.data;
   } catch (error) {
     console.error("Failed to fetch subscription:", error);
