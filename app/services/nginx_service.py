@@ -182,67 +182,46 @@ http {{
         all_inbounds = inbounds + self.static_inbounds
 
         map_entries = []
-        upstreams = []
-
-        seen_sni = set()
-        seen_upstreams = set()
+        seen = set()
 
         for inbound in all_inbounds:
             sni = inbound["sni"]
             port = inbound["port"]
-            name = inbound.get("name", f"xray_{port}")
             backend_host = inbound.get("backend_host", "anaconduit_xray")
 
-            # --- SNI deduplicate ---
-            if sni in seen_sni:
-                logger.warning(f"⚠ Duplicate SNI detected: {sni}, skipping")
+            if sni in seen:
                 continue
-            seen_sni.add(sni)
+            seen.add(sni)
 
-            map_entries.append(f"    {sni} {name};")
+            map_entries.append(
+                f"    {sni} {backend_host}:{port};"
+            )
 
-            # --- upstream deduplicate ---
-            if name not in seen_upstreams:
-                seen_upstreams.add(name)
-
-                upstreams.append(f"""
-upstream {name} {{
-    zone {name} 64k;
-    server {backend_host}:{port} resolve;
-}}
-""")
-
-        return map_entries, upstreams
+        return map_entries
 
 
     async def generate_stream_conf(self):
         async with AsyncSessionLocal() as session:
             inbounds = await self.load_reality_inbounds(session)
         
-        map_entries, upstreams = self.build_stream_blocks(inbounds)
+        map_entries = self.build_stream_blocks(inbounds)
 
         content = f"""
-map $ssl_preread_server_name $backend_name {{
+map $ssl_preread_server_name $backend {{
     hostnames;
 
 {chr(10).join(map_entries)}
 
-    default xray_default;
-}}
-
-{chr(10).join(upstreams)}
-
-upstream xray_default {{
-    zone xray_default 64k;
-    server anaconduit_xray:8443 resolve;
-    
+    default anaconduit_xray:8443;
 }}
 
 server {{
     listen 443;
-    proxy_pass $backend_name;
+
+    proxy_pass $backend;
+
     ssl_preread on;
-    proxy_protocol  on;
+    proxy_protocol on;
 }}
 """
         await self._write(self.stream_d / "00-sni-router.conf", content)
