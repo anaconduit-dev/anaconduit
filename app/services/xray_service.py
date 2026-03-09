@@ -441,34 +441,50 @@ class XrayService:
     
 
 
+    
+
     def generate_config_link(self, client: Client, user: User, inbound: Inbound) -> str:
         domain = settings.panel_domain
-    
-        stream = inbound.stream_settings
+        stream = inbound.stream_settings or {}
         net = stream.get("network", "tcp")
         security = stream.get("security", "none")
-    
-        # Порт учитывает Nginx
+        
+        # Порт для клиента всегда 443 (Nginx Frontend)
         port = 443 
-    
+        
         # Базовые параметры
-        params = {"security": security, "type": net}
-    
-        # Транспортные настройки
+        params = {
+            "security": security, 
+            "type": net,
+            "sni": domain # SNI по умолчанию для TLS
+        }
+
+        # ЛОГИКА PORT-IN-PATH (как в x-ui-pro)
+        # Вытаскиваем реальный внутренний порт инбаунда
+        inbound_port = inbound.port
+
         if net == "ws":
             ws = stream.get("wsSettings", {})
-            params["path"] = ws.get("path", "/")
+            original_path = ws.get("path", "/").lstrip("/")
+            # Формируем путь: /порт/оригинальный_путь
+            params["path"] = f"/{inbound_port}/{original_path}"
             params["host"] = ws.get("headers", {}).get("Host", domain)
+            
         elif net == "grpc":
             grpc = stream.get("grpcSettings", {})
-            params["serviceName"] = grpc.get("serviceName", "")
+            original_service = grpc.get("serviceName", "").lstrip("/")
+            # Для gRPC порт тоже идет первым сегментом serviceName
+            params["serviceName"] = f"{inbound_port}/{original_service}"
             params["mode"] = "multi" if grpc.get("multiMode") else "gun"
+            
         elif net == "xhttp":
             xhttp = stream.get("xhttpSettings", {})
-            params["path"] = xhttp.get("path", "/")
-            params["mode"] = xhttp.get("mode", "stream-up")
-    
-        # Reality
+            original_path = xhttp.get("path", "/").lstrip("/")
+            # Аналогично для xhttp
+            params["path"] = f"/{inbound_port}/{original_path}"
+            params["mode"] = xhttp.get("mode", "packet-up")
+
+        # Reality (остается без изменений, так как идет через Stream/TCP)
         if security == "reality":
             reality = stream.get("realitySettings", {})
             params.update({
@@ -478,23 +494,19 @@ class XrayService:
                 "sid": reality.get("shortIds", [""])[0] if reality.get("shortIds") else "",
                 "fp": reality.get("fingerprint", "chrome"),
             })
-            # Если TCP + Reality, принудительно flow
             if net == "tcp":
                 params["flow"] = "xtls-rprx-vision"
-    
-        # Очистка пустых параметров
+
+        # Очистка и сборка query string
         query_params = {k: v for k, v in params.items() if v}
         query_str = urllib.parse.urlencode(query_params)
-    
-        # Remark
         remark = urllib.parse.quote(f"{user.email}@{inbound.tag}")
-    
-        # Формат ссылки
+
         if inbound.protocol == "trojan":
             return f"trojan://{client.uuid}@{domain}:{port}?{query_str}#{remark}"
         elif inbound.protocol == "vless":
             return f"vless://{client.uuid}@{domain}:{port}?{query_str}#{remark}"
-    
+
         return ""
 
     def generate_subscription(self, client_links: List[str]) -> str:
