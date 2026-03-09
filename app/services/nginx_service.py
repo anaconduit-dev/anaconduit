@@ -1,6 +1,5 @@
 import anyio
 import logging
-import socket
 import os
 import re
 from sqlalchemy import select
@@ -25,8 +24,6 @@ class NginxService:
         self.snippets = self.base_dir / "snippets"
         self.certs_dir = self.base_dir / "certs"
 
-        
-
         self.domain = settings.panel_domain
         self.reality_domain = settings.reality_dest_domain
         self.panel_port = "8000"
@@ -35,13 +32,10 @@ class NginxService:
         self.sub_port = "8000"
         self.escaped_domain = re.escape(self.domain)
         self.escaped_reality = re.escape(self.reality_domain)
+
+        # статические SNI
         self.static_inbounds = [
-            {
-                "sni": self.domain,           
-                "port": 7443,
-                "name": "web",
-                "backend_host": "nginx"
-            }
+            {"sni": self.domain, "port": 7443, "name": "panel", "backend_host": "nginx"}
         ]
 
     async def _write(self, path, content: str):
@@ -50,36 +44,27 @@ class NginxService:
     async def _symlink(self, src, dst):
         def create():
             if not src.exists():
-                raise FileNotFoundError(f"Source file for symlink does not exist: {src}")
+                raise FileNotFoundError(f"Source file does not exist: {src}")
             if dst.exists() or dst.is_symlink():
                 dst.unlink()
             os.symlink(src.resolve(), dst)
         await anyio.to_thread.run_sync(create)
 
     async def ensure_directories(self):
-        dirs = [
-            self.base_dir,
-            self.conf_d,
-            self.stream_d,
-            self.sites_a_d,
-            self.sites_e_d,
-            self.snippets,
-            self.certs_dir,
-        ]
-    
-        for d in dirs:
+        for d in [
+            self.base_dir, self.conf_d, self.stream_d, 
+            self.sites_a_d, self.sites_e_d, self.snippets, self.certs_dir
+        ]:
             d.mkdir(parents=True, exist_ok=True)
-
 
     async def generate_placeholder_page(self):
         html_dir = self.base_dir / "www"
         html_dir.mkdir(parents=True, exist_ok=True)
-    
         index_file = html_dir / "index.html"
         content = f"""
 <!DOCTYPE html>
 <html lang="en">
-<head>    
+<head>
 <meta charset="UTF-8">
 <title>Site Placeholder</title>
 <style>
@@ -96,7 +81,7 @@ p {{ color: #666; }}
 """
         await self._write(index_file, content)
         logger.info(f"📝 Placeholder page generated at {index_file}")
-    
+
     async def generate_main_nginx_conf(self):
         content = f"""
 user nginx;
@@ -116,280 +101,227 @@ http {{
     include       mime.types;
     default_type  application/octet-stream;
 
-    # Маппинг для корректного WebSocket
-    map $http_upgrade $connection_upgrade {{
-        default upgrade;
-        ''      close;
-    }}
-
-    http2_max_concurrent_streams 1000;
-    
     sendfile on;
     tcp_nopush on;
     tcp_nodelay on;
 
     keepalive_timeout 65;
+
     include /etc/nginx/sites-enabled/*;
 }}
 """
         await self._write(self.base_dir / "nginx.conf", content)
 
     def normalize_sni(self, sni: str) -> str:
-        if not sni:
-            return ""
+        return sni.split(":")[0].lower().strip() if sni else ""
 
-        sni = sni.split(":")[0]
-        return sni.lower().strip()
-
-    async def load_reality_inbounds(self, session: AsyncSessionLocal):
+    async def load_transport_inbounds(self, session: AsyncSessionLocal):
         """
-        Загружает список SNI/портов из базы.
-        Возвращает [{"sni": ..., "port": ...}]
+        Загружает все inbounds (reality, grpc, ws, xhttp)
+        Возвращает список с полями: sni, port, transport, unix_socket
         """
         inbounds = []
 
         try:
-            result = await session.execute(
-                select(Inbound).filter_by(is_active=True)
-            )
+            result = await session.execute(select(Inbound).filter_by(is_active=True))
             db_inbounds = result.scalars().all()
 
             for ib in db_inbounds:
-                stream_settings = ib.stream_settings or {}
-                security_type = stream_settings.get("security")
+                stream = ib.stream_settings or {}
+                transport = stream.get("network")
+                sni_list = []
 
-                if security_type != "reality":
-                    continue
+                if transport == "reality" and stream.get("security") == "reality":
+                    sni_list = stream.get("realitySettings", {}).get("serverNames", [])
+                else:
+                    sni_list = stream.get("serverNames", [])
 
-                reality_settings = stream_settings.get("realitySettings", {})
-
-                server_names = reality_settings.get("serverNames", [])
-
-                for sni in server_names:
+                for sni in sni_list:
                     sni = self.normalize_sni(sni)
+                    if not sni:
+                        continue
 
-                    if sni:
-                        inbounds.append({
-                            "sni": sni,
-                            "port": ib.port
-                        })
+                    entry = {
+                        "sni": sni,
+                        "port": ib.port,
+                        "transport": transport
+                    }
+
+                    # если xhttp — используем unix-сокет
+                    if transport == "xhttp":
+                        entry["unix_socket"] = f"/var/run/xhttp-{ib.port}.sock"
+
+                    inbounds.append(entry)
 
         except Exception as e:
-            logger.error(f"❌ Ошибка при получении inbounds из БД: {e}")
+            logger.error(f"❌ Ошибка при получении inbounds: {e}")
 
         if not inbounds:
-            inbounds.append({"sni": "fallback", "port": 8443})
-            logger.warning("⚠ No reality inbounds found, using fallback")
+            # fallback
+            inbounds.append({"sni": "fallback", "port": 8443, "transport": "reality"})
 
         return inbounds
 
-
-    def build_stream_blocks(self, inbounds):
-        all_inbounds = inbounds + self.static_inbounds
-
-        map_entries = []
-        seen = set()
-
-        for inbound in all_inbounds:
-            sni = inbound["sni"]
-            port = inbound["port"]
-            backend_host = inbound.get("backend_host", "anaconduit_xray")
-
-            if sni in seen:
-                continue
-            seen.add(sni)
-
-            map_entries.append(
-                f"    {sni} {backend_host}:{port};"
-            )
-
-        return map_entries
-
-
     async def generate_stream_conf(self):
         async with AsyncSessionLocal() as session:
-            inbounds = await self.load_reality_inbounds(session)
-        
-        map_entries = self.build_stream_blocks(inbounds)
+            inbounds = await self.load_transport_inbounds(session)
+
+        map_entries = []
+        for ib in inbounds + self.static_inbounds:
+            sni = ib["sni"]
+            transport = ib.get("transport", "tcp")
+            backend = ""
+
+            if transport == "grpc":
+                backend = f"grpcs://anaconduit_xray:{ib['port']}"
+            elif transport == "xhttp":
+                backend = f"unix:{ib['unix_socket']}"
+            else:
+                backend = f"anaconduit_xray:{ib['port']}"
+
+            map_entries.append(f"    {sni} {backend};")
 
         content = f"""
 map $ssl_preread_server_name $backend {{
     hostnames;
-
 {chr(10).join(map_entries)}
-
     default anaconduit_xray:8443;
 }}
 
 server {{
-    listen 443;
+    listen 443 reuseport;
 
     proxy_pass $backend;
-
     ssl_preread on;
     proxy_protocol on;
 }}
 """
         await self._write(self.stream_d / "00-sni-router.conf", content)
-        logger.info("✅ Stream config generated with dynamic SNI + static panel")
+        logger.info("✅ Stream config generated with all transports (gRPC, WS, XHTTP, Reality)")
 
     async def generate_sites_available_conf(self):
+        # 80 redirect
         redirect_conf = f"""
 server {{
     listen 80;
     server_name {self.domain} {self.reality_domain};
-
     return 301 https://$host$request_uri;
 }}
 """
-        domain_conf = fr"""
+        # Panel
+        panel_conf = fr"""
 server {{
-    listen 7443 ssl proxy_protocol;
-    listen [::]:7443 ssl proxy_protocol;
-    http2 on;
-
+    listen 7443 ssl http2;
     server_name {self.domain};
-    port_in_redirect off;
 
-    root /var/www/html/;
-    index index.html index.htm;
-
-    ssl_protocols TLSv1.2 TLSv1.3;
     ssl_certificate     /etc/nginx/certs/{self.domain}/fullchain.pem;
     ssl_certificate_key /etc/nginx/certs/{self.domain}/privkey.pem;
-
+    ssl_protocols TLSv1.2 TLSv1.3;
     server_tokens off;
 
-    if ($host !~* ^(.+\.)?{self.escaped_domain}$ ){{ return 444; }}
-
-    # Заглушка для корня
     location / {{
         root /var/www/html/;
         index index.html;
-        try_files $uri /index.html;
     }}
-        
-    location /{self.panel_path} {{
+
+    location /{self.panel_path}/ {{
         proxy_pass http://anaconduit_backend:{self.panel_port};
         proxy_http_version 1.1;
-
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $proxy_protocol_addr;
-        proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }}
 
     include /etc/nginx/snippets/xui-common-locations.conf;
 }}
 """
+        # Reality
         reality_conf = fr"""
 server {{
-    listen 9443 ssl;
-    listen [::]:9443 ssl;
-    http2 on;
-
+    listen 9443 ssl http2;
     server_name {self.reality_domain};
-    root /var/www/html/;
-    index index.html index.htm;
 
-    ssl_protocols TLSv1.2 TLSv1.3;
     ssl_certificate     /etc/nginx/certs/{self.reality_domain}/fullchain.pem;
     ssl_certificate_key /etc/nginx/certs/{self.reality_domain}/privkey.pem;
-
+    ssl_protocols TLSv1.2 TLSv1.3;
     server_tokens off;
-
-    if ($host !~* ^(.+\.)?{self.escaped_reality}$ ){{ return 444; }}
 
     location / {{
         root /var/www/html/;
         index index.html;
-        try_files $uri /index.html;
     }}
+
     location /xray_port/ {{
         proxy_pass http://anaconduit_xray:$fwdport;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $proxy_protocol_addr;
-        proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }}
+
     include /etc/nginx/snippets/xui-common-locations.conf;
 }}
 """
         await self._write(self.sites_a_d / "80-redirect.conf", redirect_conf)
-        await self._write(self.sites_a_d / "main-domain.conf", domain_conf)
+        await self._write(self.sites_a_d / "main-domain.conf", panel_conf)
         await self._write(self.sites_a_d / "reality-domain.conf", reality_conf)
-    
-    
+
     async def generate_snippet(self):
         content = f"""
-location ~ ^/(?P<fwdport>\\d+)/ {{
-    resolver 127.0.0.11 valid=30s;
-    
+location /{self.panel_path}/ {{
+    proxy_pass http://anaconduit_backend:{self.panel_port};
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}}
+
+location /{self.sub_path}/ {{
+    proxy_pass http://anaconduit_backend:{self.sub_port};
+}}
+
+location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
-    proxy_set_header Host $http_host; 
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-    if ($content_type ~* "grpc") {{
-        grpc_pass grpc://anaconduit_xray:$fwdport;
-        break;
-    }}
-
-    # ВАЖНО: Мы убираем переменную из конца. 
-    # Nginx сам передаст полный оригинальный URI (например, /54420/57177/...)
     proxy_pass http://anaconduit_xray:$fwdport;
 }}
-"""    
+"""
         await self._write(self.snippets / "xui-common-locations.conf", content)
 
     async def generate_symlinks(self):
-        # Список файлов, которые нужно активировать
+        # упрощаем: только panel / reality / redirect
         configs = ["main-domain.conf", "reality-domain.conf", "80-redirect.conf"]
-        
-        def create_relative_links():
+        def create():
             for name in configs:
                 dst = self.sites_e_d / name
-                # Относительный путь: подняться на уровень выше и зайти в sites-available
-                # Это будет работать и на хосте, и внутри контейнера
-                src_relative = f"../sites-available/{name}"
-                
-                # Удаляем старый линк или файл, если он есть
+                src = f"../sites-available/{name}"
                 if dst.exists() or dst.is_symlink():
                     dst.unlink()
-                
-                # Создаем симлинк
-                os.symlink(src_relative, dst)
-                logger.info(f"🔗 Создан симлинк: {name} -> {src_relative}")
+                os.symlink(src, dst)
+                logger.info(f"🔗 Symlink created: {name} -> {src}")
+        await anyio.to_thread.run_sync(create)
 
-        await anyio.to_thread.run_sync(create_relative_links)
-    async def get_current_status(self):
-        state = await self.docker.get_status(self.CONTAINER_NAME)
-        version = "unknown"
-        if state == "running":
-            try:
-                version_raw = await self.docker.exec(self.CONTAINER_NAME, "nginx -version")
-                if version_raw: version = version_raw.split(' ')[2].split('/')[1]
-            except: pass
-        return {"container": self.CONTAINER_NAME, "status": state, "version": version}
-        
     async def apply_all(self):
         await self.ensure_directories()
         await self.generate_placeholder_page()
         await self.generate_main_nginx_conf()
         await self.generate_stream_conf()
         await self.generate_sites_available_conf()
-        await self.generate_snippet()        # сначала сниппеты
-        await self.generate_symlinks()       # потом симлинки
-        logger.info("✅ Конфиги Nginx сгенерированы")
+        await self.generate_snippet()
+        await self.generate_symlinks()
+        logger.info("✅ Nginx configs generated")
 
         if await self.docker.get_status(self.CONTAINER_NAME) == "running":
             await self.docker.exec(self.CONTAINER_NAME, "nginx -s reload")
-            logger.info("♻️ Nginx перезагружен")
+            logger.info("♻️ Nginx reloaded")
+
+    # методы управления контейнером остаются без изменений
 
     async def install_and_run(self):
         
