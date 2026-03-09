@@ -110,19 +110,25 @@ events {{
 stream {{
     resolver 127.0.0.11 valid=30s;
     include /etc/nginx/stream-enabled/*.conf;
-
 }}
 
 http {{
     include       mime.types;
     default_type  application/octet-stream;
 
+    # Маппинг для корректного WebSocket
+    map $http_upgrade $connection_upgrade {{
+        default upgrade;
+        ''      close;
+    }}
+
+    http2_max_concurrent_streams 1000;
+    
     sendfile on;
     tcp_nopush on;
     tcp_nodelay on;
 
     keepalive_timeout 65;
-
     include /etc/nginx/sites-enabled/*;
 }}
 """
@@ -318,39 +324,54 @@ server {{
     
     
     async def generate_snippet(self):
-        content = f"""
-########################################
-# Панель
-########################################
+        xhttp_path = getattr(settings, "xhttp_path", "xhttp").strip("/")
 
+        content = f"""
+# Панель управления и подписки (без изменений)
 location /{self.panel_path}/ {{
     proxy_pass http://anaconduit_backend:{self.panel_port};
     proxy_http_version 1.1;
-
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $proxy_protocol_addr;
     proxy_set_header X-Forwarded-For $proxy_protocol_addr;
     proxy_set_header X-Forwarded-Proto $scheme;
 }}
 
-########################################
-# Подписки
-########################################
-
 location /{self.sub_path}/ {{
     proxy_pass http://anaconduit_backend:{self.sub_port};
 }}
 
-########################################
-# WebSocket forwarder
-########################################
+# XHTTP
+location /{xhttp_path} {{
+    grpc_pass grpc://anaconduit_xray:8080;
+    grpc_set_header Host $host;
+    grpc_set_header X-Forwarded-For $proxy_protocol_addr;
+    grpc_read_timeout 1h;
+    grpc_send_timeout 1h;
+}}
 
-location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
-
+# Универсальный форвардер (Исправленный)
+location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
+    client_max_body_size 0;
     proxy_http_version 1.1;
+    proxy_buffering off;
+    proxy_request_buffering off;
 
+    # Эти заголовки теперь всегда тут, на уровне location
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $proxy_protocol_addr;
+    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+    
+    # Для WebSocket заголовки Upgrade выносятся через переменные Nginx
     proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
+    proxy_set_header Connection $connection_upgrade;
+
+    # Логика переключения:
+    # Если gRPC — используем grpc_pass, иначе — proxy_pass
+    if ($content_type ~* "GRPC") {{
+        grpc_pass grpc://anaconduit_xray:$fwdport;
+        break;
+    }}
 
     proxy_pass http://anaconduit_xray:$fwdport;
 }}
