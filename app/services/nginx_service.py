@@ -397,6 +397,14 @@ location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
     
     # gRPC
     if ($content_type ~* "GRPC") {{
+        grpc_set_header Host $host;
+        grpc_set_header X-Real-IP $proxy_protocol_addr;
+        
+        # Убираем лишние заголовки, которые могут мешать gRPC
+        proxy_hide_header Upgrade;
+        
+        # Передаем запрос. Важно: используем grpc:// (без s) 
+        # и прокидываем $request_uri для сохранения слеша
         grpc_pass grpc://anaconduit_xray:$fwdport$request_uri;
         break;
     }}
