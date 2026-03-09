@@ -372,7 +372,6 @@ location /{xhttp_path} {{
 # Универсальный роутер Xray
 location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
     resolver 127.0.0.11 valid=30s;
-    if (\$hack = 1) {{return 404;}}
     client_max_body_size 0;
     client_body_timeout 1d;
     grpc_read_timeout 1d;
