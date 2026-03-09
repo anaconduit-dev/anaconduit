@@ -124,11 +124,7 @@ class XrayService:
 
         # Базовая структура (переносим из твоего старого метода)
         config = {
-            "log": {
-                    "loglevel": "debug",
-                    "access": "/var/log/xray/access.log",
-                    "error": "/var/log/xray/error.log"
-                },
+            "log": {"loglevel": "warning", "access": "none", "error": ""},
             "stats": {},
             "api": {
                 "tag": "api",
@@ -174,6 +170,7 @@ class XrayService:
             if network_type == "ws":
                 ws_settings = clean_stream_settings.get("wsSettings", {})
                 clean_settings["fallbacks"] = []
+                
                 # 1. Путь с портом
                 raw_path = ws_settings.get("path", "/").lstrip("/")
                 ws_settings["path"] = f"/{ib.port}/{raw_path}"
@@ -229,6 +226,7 @@ class XrayService:
                     client_dict["password"] = c.uuid
                 
                 xray_clients.append(client_dict)
+            
             # Формируем объект инбаунда для Xray
             inbound_settings = clean_settings
             inbound_settings["clients"] = xray_clients
@@ -486,6 +484,8 @@ class XrayService:
         }
 
         # ЛОГИКА PORT-IN-PATH (как в x-ui-pro)
+        if net in ["ws", "grpc", "xhttp"] and security == "none":
+            params["security"] = "tls"
         # Вытаскиваем реальный внутренний порт инбаунда
         inbound_port = inbound.port
 
