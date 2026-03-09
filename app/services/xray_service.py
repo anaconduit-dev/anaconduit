@@ -124,7 +124,11 @@ class XrayService:
 
         # Базовая структура (переносим из твоего старого метода)
         config = {
-            "log": {"loglevel": "warning", "access": "none", "error": ""},
+            "log": {
+                    "loglevel": "debug",
+                    "access": "/var/log/xray/access.log",
+                    "error": "/var/log/xray/error.log"
+                },
             "stats": {},
             "api": {
                 "tag": "api",
