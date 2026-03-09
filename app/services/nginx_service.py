@@ -353,20 +353,26 @@ location /{self.sub_path}/ {{
 }}
 
 
-# XHTTP
 location /{xhttp_path} {{
     resolver 127.0.0.11 valid=30s;
-    grpc_pass grpc://anaconduit_xray:8080;
+    
+    # Используем прокси, а не gRPC!
+    proxy_pass http://anaconduit_xray:8080; 
 
-    grpc_buffer_size 16k;
-    grpc_socket_keepalive on;
+    proxy_http_version 1.1;
+    proxy_buffering off;
+    proxy_request_buffering off;
 
-    grpc_read_timeout 1h;
-    grpc_send_timeout 1h;
+    # Эти заголовки обязательны для xHTTP
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $proxy_protocol_addr;
+    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
 
-    grpc_set_header Connection "";
-    grpc_set_header Host $host;
-    grpc_set_header X-Forwarded-For $proxy_protocol_addr;
+    proxy_read_timeout 1h;
+    proxy_send_timeout 1h;
 }}
 
 # Универсальный роутер Xray (Transparent Proxy)
