@@ -324,13 +324,9 @@ server {{
     
     
     async def generate_snippet(self):
-        xhttp_path = getattr(settings, "xhttp_path", "xhttp").strip("/")
-    
         content = f"""
-# ... (блоки панели и подписок остаются прежними) ...
-
 # Универсальный форвардер
-location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
+location ~ ^/(?P<fwdport>\\d+)(?P<truepath>/.*)$ {{
     client_max_body_size 0;
     proxy_http_version 1.1;
     proxy_buffering off;
@@ -339,19 +335,27 @@ location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $proxy_protocol_addr;
     proxy_set_header X-Forwarded-For $proxy_protocol_addr;
-    
-    # WebSocket заголовки (передаются только если они есть в запросе)
+
+    # WebSocket заголовки
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
 
-    # Улучшенная проверка на gRPC (ищет подстроку grpc)
+    # Логика для gRPC
+    # Если в пути есть признаки gRPC или Content-Type соответствующий
     if ($content_type ~* "grpc") {{
         grpc_pass grpc://anaconduit_xray:$fwdport;
         break;
     }}
+    
+    # Дополнительная проверка gRPC по пути (часто для Trojan-gRPC)
+    if ($uri ~* "Tunnel.Analytics") {{
+        grpc_pass grpc://anaconduit_xray:$fwdport;
+        break;
+    }}
 
-    # Все остальное (WS и обычный HTTP)
-    proxy_pass http://anaconduit_xray:$fwdport;
+    # Для WS и обычного HTTP
+    # Мы передаем только $truepath (все, что идет после порта в URL)
+    proxy_pass http://anaconduit_xray:$fwdport$truepath;
 }}
 """
         await self._write(self.snippets / "xui-common-locations.conf", content)
