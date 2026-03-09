@@ -170,7 +170,6 @@ class XrayService:
             if network_type == "ws":
                 ws_settings = clean_stream_settings.get("wsSettings", {})
                 clean_settings["fallbacks"] = []
-                print(clean_settings)
                 # 1. Путь с портом
                 raw_path = ws_settings.get("path", "/").lstrip("/")
                 ws_settings["path"] = f"/{ib.port}/{raw_path}"
@@ -226,7 +225,6 @@ class XrayService:
                     client_dict["password"] = c.uuid
                 
                 xray_clients.append(client_dict)
-            print(clean_settings)
             # Формируем объект инбаунда для Xray
             inbound_settings = clean_settings
             inbound_settings["clients"] = xray_clients
