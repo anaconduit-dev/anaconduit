@@ -167,14 +167,19 @@ class XrayService:
 
             if network_type == "ws":
                 ws_settings = clean_stream_settings.get("wsSettings", {})
-                path = ws_settings.get("path", "/")
                 
-                # Добавляем порт в начало пути, если его там еще нет
-                port_prefix = f"/{ib.port}"
-                if not path.startswith(port_prefix):
-                    # Превращаем "/my-path" в "/54420/my-path"
-                    ws_settings["path"] = f"{port_prefix}/{path.lstrip('/')}"
-                    clean_stream_settings["wsSettings"] = ws_settings
+                # 1. Путь с портом
+                raw_path = ws_settings.get("path", "/").lstrip("/")
+                ws_settings["path"] = f"/{ib.port}/{raw_path}"
+                
+                # 2. Чистим Host (согласно логам Xray)
+                if "headers" in ws_settings and "Host" in ws_settings["headers"]:
+                    ws_settings["host"] = ws_settings["headers"]["Host"]
+                    del ws_settings["headers"]["Host"] # Убираем из headers, оставляем в корне wsSettings
+                    if not ws_settings["headers"]: # Если headers пуст, удаляем его совсем
+                        del ws_settings["headers"]
+
+                clean_stream_settings["wsSettings"] = ws_settings
 
             elif network_type == "grpc":
                 grpc_settings = clean_stream_settings.get("grpcSettings", {})
