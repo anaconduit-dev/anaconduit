@@ -372,46 +372,42 @@ location /{xhttp_path} {{
 # Универсальный роутер Xray
 location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
     resolver 127.0.0.11 valid=30s;
+    if (\$hack = 1) {{return 404;}}
     client_max_body_size 0;
-
+    client_body_timeout 1d;
+    grpc_read_timeout 1d;
+    grpc_socket_keepalive on;
+    proxy_read_timeout 1d;
     proxy_http_version 1.1;
     proxy_buffering off;
     proxy_request_buffering off;
     proxy_socket_keepalive on;
-
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection $connection_upgrade;
-
-    proxy_set_header Host $host;
-    # Если используешь PROXY protocol в stream секции:
-    proxy_set_header X-Real-IP $proxy_protocol_addr;
-    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
-
-    # Настройки для стабильного gRPC
-    grpc_read_timeout 1h;
-    grpc_send_timeout 1h;
-    grpc_socket_keepalive on;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
 
     # Важно: пробрасываем путь целиком, включая аргументы
     
     
-    # gRPC
+    
     # gRPC
     if ($content_type ~* "GRPC") {{
-        grpc_set_header Host $host;
-        grpc_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         
         # Добавляем / перед $fwdpath
         grpc_pass grpc://anaconduit_xray:$fwdport/$fwdpath;
-        
-        grpc_read_timeout 31536000s;
-        grpc_send_timeout 31536000s;
         break;
     }}
-
-    # WS + HTTP
-    # Здесь тоже добавляем / между портом и путем
-    proxy_pass http://anaconduit_xray:$fwdport/$fwdpath;
+    if (\$http_upgrade ~* "(WEBSOCKET|WS)") {{
+        proxy_pass http://anaconduit_xray:$fwdport/$fwdpath;
+        break;
+    }}
+    if (\$request_method ~* ^(PUT|POST|GET)\$) {{
+        proxy_pass http://anaconduit_xray:$fwdport/$fwdpath;
+        break;
+    }}
+    
 }}
 """
         await self._write(self.snippets / "xui-common-locations.conf", content)
