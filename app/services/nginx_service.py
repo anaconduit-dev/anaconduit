@@ -393,20 +393,26 @@ location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
     grpc_socket_keepalive on;
 
     # Важно: пробрасываем путь целиком, включая аргументы
-    # Мы используем $request_uri, чтобы сохранить оригинальный путь для Xray
+    
     
     # gRPC
     if ($content_type ~* "GRPC") {{
         grpc_set_header Host $host;
-        # Передаем в Xray путь БЕЗ порта в начале, так как порт 
-        # нужен только Nginx-у для маршрутизации
-        grpc_pass grpc://anaconduit_xray:$fwdport/$actual_path;
+        grpc_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        
+        # Передаем БЕЗ порта в пути (так как в конфиге Xray порта теперь нет)
+        # Обязательно grpc:// (не grpcs://), так как в Xray security: none
+        grpc_pass grpc://anaconduit_xray:$fwdport$fwdpath;
+        
+        # Добавляем таймауты, чтобы Nginx не закрывал поток раньше времени
+        grpc_read_timeout 31536000s;
+        grpc_send_timeout 31536000s;
         break;
     }}
 
     # WS + HTTP
     # Добавляем оригинальный URI, чтобы Xray увидел свой путь (напр. /54420/abc)
-    proxy_pass http://anaconduit_xray:$fwdport$request_uri;
+    proxy_pass http://anaconduit_xray:$fwdport$fwdpath;
 }}
 """
         await self._write(self.snippets / "xui-common-locations.conf", content)
