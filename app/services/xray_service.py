@@ -172,9 +172,6 @@ class XrayService:
                     reality_settings["dest"] = "nginx:9443"
                     clean_stream_settings["realitySettings"] = reality_settings
             
-            # Proxied transport (WS/gRPC/xHTTP)
-            if network_type in ["ws", "grpc", "xhttp"] and security_type == "none":
-                ib.listen = "127.0.0.1"
 
             # Сбор клиентов для этого инбаунда
             client_result = await session.execute(
