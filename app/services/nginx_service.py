@@ -393,19 +393,12 @@ location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
     
     # gRPC
     if ($content_type ~* "GRPC") {{
-        
-        # Добавляем / перед $fwdpath
         grpc_pass grpc://anaconduit_xray:$fwdport/$fwdpath;
         break;
     }}
-    if (\$http_upgrade ~* "(WEBSOCKET|WS)") {{
-        proxy_pass http://anaconduit_xray:$fwdport/$fwdpath;
-        break;
-    }}
-    if (\$request_method ~* ^(PUT|POST|GET)\$) {{
-        proxy_pass http://anaconduit_xray:$fwdport/$fwdpath;
-        break;
-    }}
+
+    # По умолчанию для всего остального (WS, GET, POST и т.д.)
+    proxy_pass http://anaconduit_xray:$fwdport/$fwdpath;
     
 }}
 """
