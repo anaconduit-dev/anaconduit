@@ -370,36 +370,38 @@ location /{xhttp_path} {{
 }}
 
 # Универсальный роутер Xray
-location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
+location ~ ^/(?P<fwdport>\\d+)(?P<fwdpath>/.*)$ {{
     resolver 127.0.0.11 valid=30s;
     client_max_body_size 0;
-    client_body_timeout 1d;
-    grpc_read_timeout 1d;
-    grpc_socket_keepalive on;
-    proxy_read_timeout 1d;
+
     proxy_http_version 1.1;
     proxy_buffering off;
     proxy_request_buffering off;
     proxy_socket_keepalive on;
-    proxy_set_header Upgrade \$http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host \$host;
-    proxy_set_header X-Real-IP \$remote_addr;
-    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
 
-    # Важно: пробрасываем путь целиком, включая аргументы
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $proxy_protocol_addr;
+    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+
+    # gRPC настройки
+    grpc_set_header Host $host;
+    grpc_read_timeout 1h;
+    grpc_socket_keepalive on;
+
+    # ВАЖНО: Мы изменили регулярку выше. Теперь $fwdpath включает начальный слеш.
+    # Чтобы Nginx не менял путь, в proxy_pass НЕ ДОЛЖНО быть пути в конце.
     
-    
-    
-    # gRPC
     if ($content_type ~* "GRPC") {{
-        grpc_pass grpc://anaconduit_xray:$fwdport/$fwdpath;
+        # Используем только переменную порта. Путь прокинется из $uri автоматически.
+        grpc_pass grpc://anaconduit_xray:$fwdport;
         break;
     }}
 
-    # По умолчанию для всего остального (WS, GET, POST и т.д.)
-    proxy_pass http://anaconduit_xray:$fwdport/$fwdpath;
-    
+    # Для WS/HTTP тоже передаем только до порта. 
+    # Nginx сам отправит оригинальный /54420/path в Xray.
+    proxy_pass http://anaconduit_xray:$fwdport;
 }}
 """
         await self._write(self.snippets / "xui-common-locations.conf", content)
