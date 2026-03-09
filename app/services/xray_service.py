@@ -191,7 +191,7 @@ class XrayService:
                 # Для gRPC логика такая же: порт должен быть частью serviceName
                 port_prefix_no_slash = f"{ib.port}"
                 if service and not service.startswith(port_prefix_no_slash):
-                    grpc_settings["serviceName"] = f"{port_prefix_no_slash}/{service.lstrip('/')}"
+                    grpc_settings["serviceName"] = f"/{port_prefix_no_slash}/{service.lstrip('/')}"
                     clean_stream_settings["grpcSettings"] = grpc_settings
 
             # Reality & Nginx fix
