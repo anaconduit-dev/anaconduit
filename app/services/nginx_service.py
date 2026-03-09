@@ -329,6 +329,7 @@ server {{
         content = f"""
 # Панель управления
 location /{self.panel_path}/ {{
+    resolver 127.0.0.11 valid=30s;
     proxy_pass http://anaconduit_backend:{self.panel_port};
     proxy_http_version 1.1;
 
@@ -343,6 +344,7 @@ location /{self.panel_path}/ {{
 
 # Подписки
 location /{self.sub_path}/ {{
+    resolver 127.0.0.11 valid=30s;
     proxy_pass http://anaconduit_backend:{self.sub_port};
 
     proxy_set_header Host $host;
@@ -353,6 +355,7 @@ location /{self.sub_path}/ {{
 
 # XHTTP
 location /{xhttp_path} {{
+    resolver 127.0.0.11 valid=30s;
     grpc_pass grpc://anaconduit_xray:8080;
 
     grpc_buffer_size 16k;
@@ -368,7 +371,7 @@ location /{xhttp_path} {{
 
 # Универсальный роутер Xray
 location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
-
+    resolver 127.0.0.11 valid=30s;
     client_max_body_size 0;
 
     proxy_http_version 1.1;
