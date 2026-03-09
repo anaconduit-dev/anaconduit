@@ -325,32 +325,27 @@ server {{
     
     async def generate_snippet(self):
         content = f"""
-location ~ ^/(?P<fwdport>\\d+)(?P<truepath>/.*)$ {{
+location ~ ^/(?P<fwdport>\\d+)/ {{
     resolver 127.0.0.11 valid=30s;
     
-    client_max_body_size 0;
     proxy_http_version 1.1;
-    proxy_buffering off;
-    proxy_request_buffering off;
-
-    # Пробуем передать переменную $http_host, которую прислал клиент
-    proxy_set_header Host $http_host;
-    proxy_set_header X-Real-IP $proxy_protocol_addr;
-    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
-    
     proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade"; # Принудительно ставим upgrade для теста
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $http_host;
+    
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
     if ($content_type ~* "grpc") {{
         grpc_pass grpc://anaconduit_xray:$fwdport;
         break;
     }}
 
-    # Используем переменную $request_uri, она содержит путь именно так, 
-    # как его прислал клиент, без изменений Nginx
+    # ВАЖНО: Мы убираем переменную из конца. 
+    # Nginx сам передаст полный оригинальный URI (например, /54420/57177/...)
     proxy_pass http://anaconduit_xray:$fwdport;
 }}
-"""
+"""    
         await self._write(self.snippets / "xui-common-locations.conf", content)
 
     async def generate_symlinks(self):
