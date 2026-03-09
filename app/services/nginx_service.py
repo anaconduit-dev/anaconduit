@@ -386,7 +386,7 @@ location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
     # Если используешь PROXY protocol в stream секции:
     proxy_set_header X-Real-IP $proxy_protocol_addr;
     proxy_set_header X-Forwarded-For $proxy_protocol_addr;
-    
+
     # Настройки для стабильного gRPC
     grpc_read_timeout 1h;
     grpc_send_timeout 1h;
@@ -397,7 +397,7 @@ location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
     
     # gRPC
     if ($content_type ~* "GRPC") {{
-        grpc_pass grpc://anaconduit_xray:$fwdport;
+        grpc_pass grpc://anaconduit_xray:$fwdport$request_uri;
         break;
     }}
 
