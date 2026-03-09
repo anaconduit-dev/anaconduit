@@ -178,7 +178,7 @@ class XrayService:
                 
                 # 2. Чистим Host (согласно логам Xray)
                 if "headers" in ws_settings and "Host" in ws_settings["headers"]:
-                    ws_settings["host"] = ws_settings["headers"]["Host"]
+                    
                     del ws_settings["headers"]["Host"] # Убираем из headers, оставляем в корне wsSettings
                     if not ws_settings["headers"]: # Если headers пуст, удаляем его совсем
                         del ws_settings["headers"]
