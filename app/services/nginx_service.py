@@ -370,24 +370,26 @@ location /{xhttp_path} {{
 }}
 
 # Универсальный роутер Xray
-location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
+location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
     resolver 127.0.0.11 valid=30s;
     client_max_body_size 0;
 
     proxy_http_version 1.1;
     proxy_buffering off;
     proxy_request_buffering off;
-
     proxy_socket_keepalive on;
-    grpc_socket_keepalive on;
 
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
 
     proxy_set_header Host $host;
+    # Если используешь PROXY protocol в stream секции:
     proxy_set_header X-Real-IP $proxy_protocol_addr;
     proxy_set_header X-Forwarded-For $proxy_protocol_addr;
 
+    # Важно: пробрасываем путь целиком, включая аргументы
+    # Мы используем $request_uri, чтобы сохранить оригинальный путь для Xray
+    
     # gRPC
     if ($content_type ~* "GRPC") {{
         grpc_pass grpc://anaconduit_xray:$fwdport;
@@ -395,7 +397,8 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
     }}
 
     # WS + HTTP
-    proxy_pass http://anaconduit_xray:$fwdport;
+    # Добавляем оригинальный URI, чтобы Xray увидел свой путь (напр. /54420/abc)
+    proxy_pass http://anaconduit_xray:$fwdport$request_uri;
 }}
 """
         await self._write(self.snippets / "xui-common-locations.conf", content)
@@ -496,3 +499,4 @@ location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
         else:
             logger.info("🚀 Запуск Nginx контейнера")
             await self.install_and_run()
+
