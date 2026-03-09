@@ -19,7 +19,7 @@ class ShadowsocksSettings(BaseModel):
 
 class VLESSSettings(BaseModel):
     decryption: str = "none"
-    flow: Optional[str] = "xtls-rprx-vision"
+    flow: Optional[str] = ""
     clients: List[Dict[str, Any]] = []
     fallbacks: List[Fallback] = []
 
