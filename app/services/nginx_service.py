@@ -325,9 +325,8 @@ server {{
     
     async def generate_snippet(self):
         content = f"""
-# Универсальный форвардер (Logic: /port/path)
+# Универсальный форвардер
 location ~ ^/(?P<fwdport>\\d+)(?P<truepath>/.*)$ {{
-    # Обязательно для работы переменных в proxy_pass внутри Docker
     resolver 127.0.0.11 valid=30s;
     
     client_max_body_size 0;
@@ -335,25 +334,26 @@ location ~ ^/(?P<fwdport>\\d+)(?P<truepath>/.*)$ {{
     proxy_buffering off;
     proxy_request_buffering off;
 
+    # Стандартные заголовки проксирования
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $proxy_protocol_addr;
     proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
     
-    # Поддержка WebSocket
+    # WebSocket (используем маппинг из nginx.conf)
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
 
-    # 1. Логика для gRPC
+    # 1. Логика для gRPC (уже работает)
     if ($content_type ~* "grpc") {{
-        # ВАЖНО: gRPC обычно ожидает полный путь из ссылки
         grpc_pass grpc://anaconduit_xray:$fwdport;
         break;
     }}
 
     # 2. Логика для WS и HTTP
-    # Мы передаем ВЕСЬ путь (включая порт), так как Xray 
-    # в твоем конфиге настроен именно на путь "/порт/секрет"
-    proxy_pass http://anaconduit_xray:$fwdport$uri;
+    # Используем переменную $fwdport для выбора порта 
+    # и $uri для передачи полного пути
+    proxy_pass http://anaconduit_xray:$fwdport;
 }}
 """
         await self._write(self.snippets / "xui-common-locations.conf", content)
