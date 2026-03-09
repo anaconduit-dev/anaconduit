@@ -165,6 +165,27 @@ class XrayService:
             
             clean_stream_settings = ib.stream_settings.copy()
 
+            if network_type == "ws":
+                ws_settings = clean_stream_settings.get("wsSettings", {})
+                path = ws_settings.get("path", "/")
+                
+                # Добавляем порт в начало пути, если его там еще нет
+                port_prefix = f"/{ib.port}"
+                if not path.startswith(port_prefix):
+                    # Превращаем "/my-path" в "/54420/my-path"
+                    ws_settings["path"] = f"{port_prefix}/{path.lstrip('/')}"
+                    clean_stream_settings["wsSettings"] = ws_settings
+
+            elif network_type == "grpc":
+                grpc_settings = clean_stream_settings.get("grpcSettings", {})
+                service = grpc_settings.get("serviceName", "")
+                
+                # Для gRPC логика такая же: порт должен быть частью serviceName
+                port_prefix_no_slash = f"{ib.port}"
+                if service and not service.startswith(port_prefix_no_slash):
+                    grpc_settings["serviceName"] = f"{port_prefix_no_slash}/{service.lstrip('/')}"
+                    clean_stream_settings["grpcSettings"] = grpc_settings
+
             # Reality & Nginx fix
             if security_type == "reality":
                 reality_settings = clean_stream_settings.get("realitySettings", {})
