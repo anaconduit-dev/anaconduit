@@ -325,7 +325,6 @@ server {{
     
     async def generate_snippet(self):
         content = f"""
-# Универсальный форвардер
 location ~ ^/(?P<fwdport>\\d+)(?P<truepath>/.*)$ {{
     resolver 127.0.0.11 valid=30s;
     
@@ -334,25 +333,21 @@ location ~ ^/(?P<fwdport>\\d+)(?P<truepath>/.*)$ {{
     proxy_buffering off;
     proxy_request_buffering off;
 
-    # Стандартные заголовки проксирования
-    proxy_set_header Host $host;
+    # Пробуем передать переменную $http_host, которую прислал клиент
+    proxy_set_header Host $http_host;
     proxy_set_header X-Real-IP $proxy_protocol_addr;
     proxy_set_header X-Forwarded-For $proxy_protocol_addr;
-    proxy_set_header X-Forwarded-Proto $scheme;
     
-    # WebSocket (используем маппинг из nginx.conf)
     proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection $connection_upgrade;
+    proxy_set_header Connection "upgrade"; # Принудительно ставим upgrade для теста
 
-    # 1. Логика для gRPC (уже работает)
     if ($content_type ~* "grpc") {{
         grpc_pass grpc://anaconduit_xray:$fwdport;
         break;
     }}
 
-    # 2. Логика для WS и HTTP
-    # Используем переменную $fwdport для выбора порта 
-    # и $uri для передачи полного пути
+    # Используем переменную $request_uri, она содержит путь именно так, 
+    # как его прислал клиент, без изменений Nginx
     proxy_pass http://anaconduit_xray:$fwdport;
 }}
 """
