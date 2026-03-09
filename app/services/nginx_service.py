@@ -393,6 +393,8 @@ location ~ ^/(?P<fwdport>\\d+)/ {{
     grpc_set_header Host $host;
     grpc_set_header X-Real-IP $proxy_protocol_addr;
     grpc_read_timeout 1h;
+    grpc_send_timeout 1h;
+    grpc_buffer_size 128k;
     grpc_socket_keepalive on;
 
     # Если это gRPC, передаем полный URI (включая /порт/...) в Xray
