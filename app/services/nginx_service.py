@@ -386,6 +386,11 @@ location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
     # Если используешь PROXY protocol в stream секции:
     proxy_set_header X-Real-IP $proxy_protocol_addr;
     proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+    
+    # Настройки для стабильного gRPC
+    grpc_read_timeout 1h;
+    grpc_send_timeout 1h;
+    grpc_socket_keepalive on;
 
     # Важно: пробрасываем путь целиком, включая аргументы
     # Мы используем $request_uri, чтобы сохранить оригинальный путь для Xray
