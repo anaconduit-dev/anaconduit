@@ -402,7 +402,7 @@ location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
         
         # Передаем БЕЗ порта в пути (так как в конфиге Xray порта теперь нет)
         # Обязательно grpc:// (не grpcs://), так как в Xray security: none
-        grpc_pass grpc://anaconduit_xray:$fwdport$fwdpath;
+        grpc_pass grpc://anaconduit_xray:$fwdport/$fwdpath;
         
         # Добавляем таймауты, чтобы Nginx не закрывал поток раньше времени
         grpc_read_timeout 31536000s;
