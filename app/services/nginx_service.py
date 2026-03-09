@@ -325,8 +325,11 @@ server {{
     
     async def generate_snippet(self):
         content = f"""
-# Универсальный форвардер
+# Универсальный форвардер (Logic: /port/path)
 location ~ ^/(?P<fwdport>\\d+)(?P<truepath>/.*)$ {{
+    # Обязательно для работы переменных в proxy_pass внутри Docker
+    resolver 127.0.0.11 valid=30s;
+    
     client_max_body_size 0;
     proxy_http_version 1.1;
     proxy_buffering off;
@@ -335,27 +338,22 @@ location ~ ^/(?P<fwdport>\\d+)(?P<truepath>/.*)$ {{
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $proxy_protocol_addr;
     proxy_set_header X-Forwarded-For $proxy_protocol_addr;
-
-    # WebSocket заголовки
+    
+    # Поддержка WebSocket
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
 
-    # Логика для gRPC
-    # Если в пути есть признаки gRPC или Content-Type соответствующий
+    # 1. Логика для gRPC
     if ($content_type ~* "grpc") {{
-        grpc_pass grpc://anaconduit_xray:$fwdport;
-        break;
-    }}
-    
-    # Дополнительная проверка gRPC по пути (часто для Trojan-gRPC)
-    if ($uri ~* "Tunnel.Analytics") {{
+        # ВАЖНО: gRPC обычно ожидает полный путь из ссылки
         grpc_pass grpc://anaconduit_xray:$fwdport;
         break;
     }}
 
-    # Для WS и обычного HTTP
-    # Мы передаем только $truepath (все, что идет после порта в URL)
-    proxy_pass http://anaconduit_xray:$fwdport$truepath;
+    # 2. Логика для WS и HTTP
+    # Мы передаем ВЕСЬ путь (включая порт), так как Xray 
+    # в твоем конфиге настроен именно на путь "/порт/секрет"
+    proxy_pass http://anaconduit_xray:$fwdport$uri;
 }}
 """
         await self._write(self.snippets / "xui-common-locations.conf", content)
