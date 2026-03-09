@@ -327,52 +327,71 @@ server {{
         xhttp_path = getattr(settings, "xhttp_path", "xhttp").strip("/")
 
         content = f"""
-# Панель управления и подписки (без изменений)
+# Панель управления
 location /{self.panel_path}/ {{
     proxy_pass http://anaconduit_backend:{self.panel_port};
     proxy_http_version 1.1;
+
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $proxy_protocol_addr;
     proxy_set_header X-Forwarded-For $proxy_protocol_addr;
     proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
 }}
 
+# Подписки
 location /{self.sub_path}/ {{
     proxy_pass http://anaconduit_backend:{self.sub_port};
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $proxy_protocol_addr;
+    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
 }}
+
 
 # XHTTP
 location /{xhttp_path} {{
     grpc_pass grpc://anaconduit_xray:8080;
-    grpc_set_header Host $host;
-    grpc_set_header X-Forwarded-For $proxy_protocol_addr;
+
+    grpc_buffer_size 16k;
+    grpc_socket_keepalive on;
+
     grpc_read_timeout 1h;
     grpc_send_timeout 1h;
+
+    grpc_set_header Connection "";
+    grpc_set_header Host $host;
+    grpc_set_header X-Forwarded-For $proxy_protocol_addr;
 }}
 
-# Универсальный форвардер (Исправленный)
-location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
+# Универсальный роутер Xray
+location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
+
     client_max_body_size 0;
+
     proxy_http_version 1.1;
     proxy_buffering off;
     proxy_request_buffering off;
 
-    # Эти заголовки теперь всегда тут, на уровне location
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $proxy_protocol_addr;
-    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
-    
-    # Для WebSocket заголовки Upgrade выносятся через переменные Nginx
+    proxy_socket_keepalive on;
+    grpc_socket_keepalive on;
+
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
 
-    # Логика переключения:
-    # Если gRPC — используем grpc_pass, иначе — proxy_pass
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $proxy_protocol_addr;
+    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+
+    # gRPC
     if ($content_type ~* "GRPC") {{
         grpc_pass grpc://anaconduit_xray:$fwdport;
         break;
     }}
 
+    # WS + HTTP
     proxy_pass http://anaconduit_xray:$fwdport;
 }}
 """
