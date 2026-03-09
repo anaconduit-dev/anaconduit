@@ -500,16 +500,16 @@ class XrayService:
             grpc = stream.get("grpcSettings", {})
             raw_service = grpc.get("serviceName", "").lstrip("/")
             
-            # ВАЖНО: Nginx ожидает путь /порт/serviceName
-            # Но клиент в поле serviceName должен указать полный путь от корня, 
-            # чтобы Nginx-локация ~ ^/(?P<fwdport>\\d+)/ сработала.
-            params["serviceName"] = f"{inbound_port}/{raw_service}"
+            # 1. Добавляем ВЕДУЩИЙ СЛЕШ, как в скрипте
+            params["serviceName"] = f"/{inbound_port}/{raw_service}"
             
-            # gRPC через Nginx ВСЕГДА требует TLS и HTTP/2
+            # 2. Добавляем authority (критично для gRPC)
+            params["authority"] = domain
+            
+            # 3. SNI тоже оставляем для TLS хендшейка
+            params["sni"] = domain
             params["security"] = "tls"
             params["mode"] = "multi" if grpc.get("multiMode") else "gun"
-            # Для Trojan/VLESS gRPC иногда полезно явно указать тип транспорта
-            params["type"] = "grpc"
             
         elif net == "xhttp":
             xhttp = stream.get("xhttpSettings", {})
