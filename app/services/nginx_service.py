@@ -412,7 +412,7 @@ location ~ ^/(?P<fwdport>\\d+)/(?P<fwdpath>.*)$ {{
 
     # WS + HTTP
     # Добавляем оригинальный URI, чтобы Xray увидел свой путь (напр. /54420/abc)
-    proxy_pass http://anaconduit_xray:$fwdport$fwdpath;
+    proxy_pass http://anaconduit_xray:$fwdport/$fwdpath;
 }}
 """
         await self._write(self.snippets / "xui-common-locations.conf", content)
