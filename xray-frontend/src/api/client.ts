@@ -33,3 +33,22 @@ api.interceptors.request.use(config => {
 
   return config;
 });
+
+// Перехватчик ответов для обработки истекшего токена
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("token");
+
+      // Берем basename из глобального конфига, который прокинул сервер
+      const basename = window.__PANEL_CONFIG__?.basename || "/";
+      
+      // Убеждаемся, что путь не превращается в //login
+      const cleanBasename = basename.endsWith('/') ? basename : `${basename}/`;
+      
+      window.location.href = `${cleanBasename}login`;
+    }
+    return Promise.reject(error);
+  }
+);

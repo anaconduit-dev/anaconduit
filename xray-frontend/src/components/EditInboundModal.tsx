@@ -49,7 +49,7 @@ const mapInboundToForm = (inbound: any) => {
   
   return {
     tag: inbound.tag || "",
-    port: inbound.port || 443,
+    port: inbound.port,
     listen: inbound.listen || "0.0.0.0",
     protocol: (inbound.protocol || "vless").toLowerCase(),
     flow: ins.flow || "",
@@ -133,6 +133,7 @@ export default function EditInboundModal({ isOpen, onClose, onSuccess, inboundId
       setForm(null); // Важно: очищаем при размонтировании
     };
   }, [isOpen, inboundId]);
+  
 
   if (!isOpen) return null;
 
@@ -145,7 +146,7 @@ export default function EditInboundModal({ isOpen, onClose, onSuccess, inboundId
     const payload = {
       tag: form.tag,
       protocol: form.protocol,
-      port: Number(form.port),
+      port: form.port,
       listen: form.listen,
       settings: {
         decryption: form.decryption,

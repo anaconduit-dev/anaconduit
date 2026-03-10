@@ -52,7 +52,7 @@ const getEmptyForm = () => ({
     port: 443,
     listen: "0.0.0.0",
     protocol: "vless",
-    flow: "xtls-rprx-vision", 
+    flow: "", 
     decryption: "none",
     fallbackDest: "80",
     
@@ -159,22 +159,53 @@ const getEmptyForm = () => ({
     setActiveTab('base');    // Возвращаем на первую вкладку
     onClose();
   };
-  useEffect(() => {
-    if (form.network === 'xhttp') {
-      setForm(prev => ({ ...prev, enableSockopt: true }));
+  
+  // Эффект для xHTTP сокетов
+useEffect(() => {
+  const isXHttp = form.network === 'xhttp';
+  
+  setForm(prev => {
+    const updates: any = {};
+
+    if (isXHttp) {
+      // Для xHTTP принудительно ставим порт 0 и путь к сокету
+      updates.port = 0;
+      updates.listen = prev.tag ? `/run/xray/${prev.tag}.sock` : "/run/xray/default.sock";
+      updates.enableSockopt = true;
+    } else {
+      // Если ушли с xHTTP на что-то другое (включая grpc), возвращаем стандартные значения
+      // только если там стоял "сокетовый" режим
+      if (prev.port === 0) updates.port = 443;
+      if (prev.listen.startsWith('/run/xray/')) updates.listen = "0.0.0.0";
     }
-  }, [form.network]);
-  useEffect(() => {
-    if (form.network === 'grpc') {
-      setForm(prev => ({ 
-        ...prev, 
-        sniffingEnabled: false, // Выключаем сниффинг для gRPC
-        enableSockopt: true     // Включаем BBR/TFO, так как gRPC любит стабильный TCP
-      }));
-    } else if (form.network === 'xhttp') {
-      setForm(prev => ({ ...prev, enableSockopt: true }));
+
+    if (Object.keys(updates).length > 0) {
+      return { ...prev, ...updates };
     }
-  }, [form.network]);
+    return prev;
+  });
+}, [form.network]);
+
+// Эффект для синхронизации пути сокета с Tag (только для xHTTP)
+useEffect(() => {
+  if (form.network === 'xhttp' && form.tag) {
+    setForm(prev => ({
+      ...prev,
+      listen: `/run/xray/${form.tag}.sock`
+    }));
+  }
+}, [form.tag]);
+
+// Отдельный эффект для специфики gRPC (без сокетов)
+useEffect(() => {
+  if (form.network === 'grpc') {
+    setForm(prev => ({ 
+      ...prev, 
+      sniffingEnabled: true, 
+      enableSockopt: true 
+    }));
+  }
+}, [form.network]);
   useEffect(() => {
     if (form.network === 'ws' && form.security === 'reality') {
       // Если пользователь выбрал WS, принудительно ставим безопасность TLS или None
@@ -423,15 +454,50 @@ const getEmptyForm = () => ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Tag (Уникальный)</label>
-                  <input required className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm focus:border-indigo-500 transition-all outline-none" value={form.tag} onChange={e => setForm({...form, tag: e.target.value})} placeholder="VLESS_REALITY" />
+                  <input 
+                    required 
+                    className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm focus:border-indigo-500 transition-all outline-none" 
+                    value={form.tag} 
+                    onChange={e => setForm({...form, tag: e.target.value})} 
+                    placeholder="VLESS_REALITY" 
+                  />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Порт</label>
-                  <input type="number" className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-mono font-bold text-sm focus:border-indigo-500 transition-all outline-none" value={form.port} onChange={e => setForm({...form, port: parseInt(e.target.value)})} />
+                
+                {/* Поле ПОРТ */}
+                <div className="space-y-1 relative">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex justify-between">
+                    Порт
+                    {form.network === 'xhttp' && <Lock size={10} className="text-indigo-500" />}
+                  </label>
+                  <input 
+                    type="number" 
+                    disabled={form.network === 'xhttp'}
+                    className={`w-full p-4 border rounded-2xl font-mono font-bold text-sm transition-all outline-none ${
+                      form.network === 'xhttp' 
+                        ? 'bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed opacity-60' 
+                        : 'bg-white border-slate-100 text-slate-700 focus:border-indigo-500'
+                    }`} 
+                    value={form.port} 
+                    onChange={e => setForm({...form, port: parseInt(e.target.value) || 0})} 
+                  />
                 </div>
+
+                {/* Поле LISTEN */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">IP прослушивания</label>
-                  <input className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-mono text-sm focus:border-indigo-500 transition-all outline-none" value={form.listen} onChange={e => setForm({...form, listen: e.target.value})} />
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex justify-between">
+                    { form.network === 'xhttp' ? "Путь к сокету (UDS)" : "IP прослушивания" }
+                    {form.network === 'xhttp' && <Zap size={10} className="text-emerald-500" />}
+                  </label>
+                  <input 
+                    readOnly={form.network === 'xhttp'}
+                    className={`w-full p-4 border rounded-2xl font-mono text-sm transition-all outline-none ${
+                      form.network === 'xhttp' 
+                        ? 'bg-indigo-50/50 text-indigo-600 border-indigo-100 cursor-default italic' 
+                        : 'bg-white border-slate-100 text-slate-700 focus:border-indigo-500'
+                    }`} 
+                    value={form.listen} 
+                    onChange={e => setForm({...form, listen: e.target.value})} 
+                  />
                 </div>
               </div>
 
@@ -733,7 +799,16 @@ const getEmptyForm = () => ({
                   </p>
                 </div>
               )}
-              
+              {(form.network === 'xhttp') && (
+                <div className="mt-2 p-3 bg-indigo-50 rounded-xl border border-indigo-100 flex items-start gap-3 animate-in zoom-in-95 duration-200">
+                  <div className="mt-0.5 text-indigo-600"><Settings size={14} /></div>
+                  <p className="text-[10px] text-indigo-700 leading-tight">
+                    Для сети <strong>{form.network.toUpperCase()}</strong> автоматически включен режим <strong>Unix Domain Socket</strong>. 
+                    Взаимодействие с Nginx будет происходить через файл в оперативной памяти, что быстрее и безопаснее.
+                  </p>
+                </div>
+              )}
+                            
             </div>
           )}
 
