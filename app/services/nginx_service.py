@@ -349,21 +349,23 @@ server {{
             xhttp_inbounds = await self.load_xhttp_inbounds(session)
 
         xhttp_locations = []
-        for xi in xhttp_inbounds:
-            # Важно: проксируем на unix сокет, который мы смонтировали в /run/xray/
+       for xi in xhttp_inbounds:
+            # Чистим путь от ведущего слеша, если он есть
+            clean_path = xi['path'].lstrip('/')
+            
             xhttp_locations.append(f"""
-location /{xi['path']} {{
-    proxy_pass http://unix:/run/xray/{xi['tag']}.sock;
-    proxy_http_version 1.1;
-    proxy_buffering off;
-    proxy_request_buffering off;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection $connection_upgrade;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $proxy_protocol_addr;
-    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
-    proxy_read_timeout 1h;
-    proxy_send_timeout 1h;
+location /{clean_path} {{
+    grpc_pass grpc://unix:/run/xray/{xi['tag']}.sock;
+    grpc_buffer_size          16k;
+    grpc_socket_keepalive     on;
+    grpc_read_timeout         1h;
+    grpc_send_timeout         1h;
+    
+    # gRPC требует пустой Connection для корректной работы stream
+    grpc_set_header Connection         "";
+    grpc_set_header Host               $host;
+    grpc_set_header X-Forwarded-For    $proxy_add_x_forwarded_for;
+    grpc_set_header X-Forwarded-Proto  $scheme;
 }}""")
 
         xhttp_content = "\n".join(xhttp_locations)
