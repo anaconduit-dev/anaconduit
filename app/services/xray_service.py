@@ -169,6 +169,7 @@ class XrayService:
             
             clean_stream_settings = ib.stream_settings.copy()
             clean_settings = ib.settings.copy()
+            listen_address = ib.listen
             
 
             if network_type == "ws":
@@ -199,6 +200,8 @@ class XrayService:
                     clean_stream_settings["grpcSettings"] = grpc_settings
 
             elif network_type == "xhttp":
+                if listen_address.startswith("/") and "," not in listen_address:
+                    listen_address = f"{listen_address},0666"
                 # Добавляем или обновляем sockopt для Unix Socket
                 if "sockopt" not in clean_stream_settings:
                     clean_stream_settings["sockopt"] = {}
@@ -240,7 +243,7 @@ class XrayService:
             inbound_settings["clients"] = xray_clients
 
             xray_inbound = {
-                "listen": ib.listen,
+                "listen": listen_address,
                 "tag": ib.tag,
                 "port": ib.port,
                 "protocol": ib.protocol,
