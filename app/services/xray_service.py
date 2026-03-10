@@ -38,6 +38,10 @@ class XrayService:
         self.internal_xray_dir.mkdir(parents=True, exist_ok=True)
         self.host_xray_dir = f"{settings.host_data_path}/xray"
         self.host_log_dir = os.path.join(os.path.dirname(self.host_xray_dir), "xray_log")
+        self.host_sockets_dir = f"{settings.host_data_path}/run"
+        os.makedirs(self.host_sockets_dir, exist_ok=True)
+        # Важно: даем права, чтобы контейнеры могли писать/читать сокеты
+        os.chmod(self.host_sockets_dir, 0o777)
 
         self._version_cache = None
         self._cache_last_updated = 0
@@ -193,24 +197,11 @@ class XrayService:
                 if service and not service.startswith(port_prefix_no_slash):
                     grpc_settings["serviceName"] = f"/{port_prefix_no_slash}/{service.lstrip('/')}"
                     clean_stream_settings["grpcSettings"] = grpc_settings
-                    
+
             elif network_type == "xhttp":
-                x_settings = clean_stream_settings.get("xhttpSettings", {})
-                
-                # 1. Формируем путь: /порт/путь
-                raw_path = x_settings.get("path", "/").lstrip("/")
-                x_settings["path"] = f"/{ib.port}/{raw_path}"
-                
-                # 2. Убеждаемся, что mode передается правильно
-                # (Если на фронте mode лежит в корне stream_settings, 
-                # переносим его внутрь xhttpSettings для Xray)
-                if "xhttpMode" in clean_stream_settings:
-                    x_settings["mode"] = clean_stream_settings.pop("xhttpMode")
-                elif "mode" not in x_settings:
-                    x_settings["mode"] = "packet-up" # Дефолт для твоих ссылок
-
-                clean_stream_settings["xhttpSettings"] = x_settings
-
+                # Добавляем или обновляем sockopt для Unix Socket
+                if "sockopt" not in clean_stream_settings:
+                    clean_stream_settings["sockopt"] = {}
             # Reality & Nginx fix
             if security_type == "reality":
                 reality_settings = clean_stream_settings.get("realitySettings", {})
@@ -417,7 +408,8 @@ class XrayService:
             ports={}, 
             volumes={
                 self.host_xray_dir: {"bind": "/etc/xray", "mode": "rw"},
-                self.host_log_dir: {"bind": "/var/log/xray", "mode": "rw"} 
+                self.host_log_dir: {"bind": "/var/log/xray", "mode": "rw"},
+                self.host_sockets_dir: {"bind": "/run/xray", "mode": "rw"}
             },
             network="anaconduit_net",
             restart_policy={"Name": "always"},
@@ -531,9 +523,13 @@ class XrayService:
         elif net == "xhttp":
             xhttp = stream.get("xhttpSettings", {})
             original_path = xhttp.get("path", "/").lstrip("/")
-            # Аналогично для xhttp
-            params["path"] = f"/{inbound_port}/{original_path}"
+            
+            # ДЛЯ xHTTP БОЛЬШЕ НЕ НУЖЕН /ПОРТ/ В НАЧАЛЕ
+            params["path"] = f"/{original_path}"
             params["mode"] = xhttp.get("mode", "packet-up")
+            # xHTTP за Nginx всегда требует TLS (или смену на h2)
+            params["security"] = "tls" 
+            params["sni"] = domain
 
         # Reality (остается без изменений, так как идет через Stream/TCP)
         if security == "reality":
@@ -684,7 +680,8 @@ class XrayService:
                         command="xray -test -confdir /etc/xray",  # <--- Исправлено здесь
                         volumes={
                             self.host_xray_dir: {"bind": "/etc/xray", "mode": "ro"},
-                            self.host_log_dir: {"bind": "/var/log/xray", "mode": "ro"} # Используем реальный путь
+                            self.host_log_dir: {"bind": "/var/log/xray", "mode": "ro"}, # Используем реальный путь
+                            self.host_sockets_dir: {"bind": "/run/xray", "mode": "ro"}
                         },
                         remove=True,
                         network_disabled=True

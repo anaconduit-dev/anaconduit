@@ -24,10 +24,6 @@ class NginxService:
         self.sites_e_d = self.base_dir / "sites-enabled"
         self.snippets = self.base_dir / "snippets"
         self.certs_dir = self.base_dir / "certs"
-        self.host_sockets_dir = f"{settings.host_data_path}/run"
-        os.makedirs(self.host_sockets_dir, exist_ok=True)
-        # Важно: даем права, чтобы контейнеры могли писать/читать сокеты
-        os.chmod(self.host_sockets_dir, 0o777)
 
         
 
@@ -114,25 +110,19 @@ events {{
 stream {{
     resolver 127.0.0.11 valid=30s;
     include /etc/nginx/stream-enabled/*.conf;
+
 }}
 
 http {{
     include       mime.types;
     default_type  application/octet-stream;
 
-    # Маппинг для корректного WebSocket
-    map $http_upgrade $connection_upgrade {{
-        default upgrade;
-        ''      close;
-    }}
-
-    http2_max_concurrent_streams 1000;
-    
     sendfile on;
     tcp_nopush on;
     tcp_nodelay on;
 
     keepalive_timeout 65;
+
     include /etc/nginx/sites-enabled/*;
 }}
 """
@@ -325,53 +315,15 @@ server {{
         await self._write(self.sites_a_d / "80-redirect.conf", redirect_conf)
         await self._write(self.sites_a_d / "main-domain.conf", domain_conf)
         await self._write(self.sites_a_d / "reality-domain.conf", reality_conf)
-
-
-    async def load_xhttp_inbounds(self, session: AsyncSessionLocal):
-        """Возвращает [{"tag": ..., "path": ...}] для xHTTP"""
-        results = []
-        try:
-            res = await session.execute(select(Inbound).filter_by(is_active=True))
-            db_inbounds = res.scalars().all()
-            for ib in db_inbounds:
-                stream = ib.stream_settings or {}
-                if stream.get("network") == "xhttp":
-                    xsettings = stream.get("xhttpSettings", {})
-                    path = xsettings.get("path", "").strip("/")
-                    if path:
-                        results.append({"tag": ib.tag, "path": path})
-        except Exception as e:
-            logger.error(f"❌ Error loading xhttp inbounds: {e}")
-        return results
+    
     
     async def generate_snippet(self):
-        async with AsyncSessionLocal() as session:
-            xhttp_inbounds = await self.load_xhttp_inbounds(session)
-
-        xhttp_locations = []
-        for xi in xhttp_inbounds:
-            # Важно: проксируем на unix сокет, который мы смонтировали в /run/xray/
-            xhttp_locations.append(f"""
-location /{xi['path']} {{
-    proxy_pass http://unix:/run/xray/{xi['tag']}.sock;
-    proxy_http_version 1.1;
-    proxy_buffering off;
-    proxy_request_buffering off;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection $connection_upgrade;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $proxy_protocol_addr;
-    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
-    proxy_read_timeout 1h;
-    proxy_send_timeout 1h;
-}}""")
-
-        xhttp_content = "\n".join(xhttp_locations)
-
         content = f"""
-# Панель управления
+########################################
+# Панель
+########################################
+
 location /{self.panel_path}/ {{
-    resolver 127.0.0.11 valid=30s;
     proxy_pass http://anaconduit_backend:{self.panel_port};
     proxy_http_version 1.1;
 
@@ -379,62 +331,27 @@ location /{self.panel_path}/ {{
     proxy_set_header X-Real-IP $proxy_protocol_addr;
     proxy_set_header X-Forwarded-For $proxy_protocol_addr;
     proxy_set_header X-Forwarded-Proto $scheme;
-
-    proxy_read_timeout 3600s;
-    proxy_send_timeout 3600s;
 }}
 
+########################################
 # Подписки
-location /{self.sub_path}/ {{
-    resolver 127.0.0.11 valid=30s;
-    proxy_pass http://anaconduit_backend:{self.sub_port};
+########################################
 
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $proxy_protocol_addr;
-    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+location /{self.sub_path}/ {{
+    proxy_pass http://anaconduit_backend:{self.sub_port};
 }}
 
+########################################
+# WebSocket forwarder
+########################################
 
-# Динамические xHTTP локации (через сокеты)
-{xhttp_content}
+location ~ ^/(?<fwdport>\\d+)/(?<fwdpath>.*)$ {{
 
-# Универсальный роутер Xray (Transparent Proxy)
-location ~ ^/(?P<fwdport>\\d+)/ {{
-    resolver 127.0.0.11 valid=30s;
-    client_max_body_size 0;
-
-    # Общие настройки прокси
     proxy_http_version 1.1;
-    proxy_buffering off;
-    proxy_request_buffering off;
-    proxy_socket_keepalive on;
 
-    # Заголовки идентификации клиента
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $proxy_protocol_addr;
-    proxy_set_header X-Forwarded-For $proxy_protocol_addr;
-    
-    # Поддержка WebSocket (через твой map в nginx.conf)
     proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection $connection_upgrade;
+    proxy_set_header Connection "upgrade";
 
-    # Настройки gRPC
-    grpc_set_header Host $host;
-    grpc_set_header X-Real-IP $proxy_protocol_addr;
-    grpc_read_timeout 1h;
-    grpc_send_timeout 1h;
-    grpc_buffer_size 128k;
-    grpc_socket_keepalive on;
-
-    # Если это gRPC, передаем полный URI (включая /порт/...) в Xray
-    if ($content_type ~* "GRPC") {{
-        # ВАЖНО: без пути в конце, чтобы Nginx не менял оригинальный URI запроса
-        grpc_pass grpc://anaconduit_xray:$fwdport;
-        break;
-    }}
-
-    # Для WS/HTTP (Trojan-WS, VLESS-WS и т.д.)
-    # Аналогично: передаем только до порта, сохраняя путь /24396/...
     proxy_pass http://anaconduit_xray:$fwdport;
 }}
 """
@@ -504,7 +421,6 @@ location ~ ^/(?P<fwdport>\\d+)/ {{
             f"{host_nginx_dir}/sites-available": {"bind": "/etc/nginx/sites-available", "mode": "rw"},
             f"{host_nginx_dir}/sites-enabled": {"bind": "/etc/nginx/sites-enabled", "mode": "rw"},
         }
-        volumes[self.host_sockets_dir] = {"bind": "/run/xray", "mode": "ro"}
 
         await self.docker.remove_container(self.CONTAINER_NAME)
         container = await self.docker.run_container(

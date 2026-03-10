@@ -4,8 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
 from app.models.models import Admin
-from app.core.security import verify_password
-from app.core.auth import create_access_token
+from app.core.security import create_access_token, verify_password
 
 router = APIRouter()
 
@@ -27,4 +26,5 @@ async def login(
 
     # Генерируем токен
     access_token = create_access_token(data={"sub": admin.username})
+    
     return {"access_token": access_token, "token_type": "bearer"}

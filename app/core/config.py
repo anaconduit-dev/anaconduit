@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # --- Безопасность (если используешь JWT) ---
     secret_key: str = "your-super-secret-key-change-it"
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60  # 7 дней
+    access_token_expire_minutes: int = 30
 
     # --- Pydantic Settings Config ---
     model_config = SettingsConfigDict(
