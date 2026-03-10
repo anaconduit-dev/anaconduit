@@ -349,7 +349,7 @@ server {{
             xhttp_inbounds = await self.load_xhttp_inbounds(session)
 
         xhttp_locations = []
-       for xi in xhttp_inbounds:
+        for xi in xhttp_inbounds:
             # Чистим путь от ведущего слеша, если он есть
             clean_path = xi['path'].lstrip('/')
             
