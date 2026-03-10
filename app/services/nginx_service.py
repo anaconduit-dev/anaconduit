@@ -350,22 +350,19 @@ server {{
 
         xhttp_locations = []
         for xi in xhttp_inbounds:
-            # Чистим путь от ведущего слеша, если он есть
-            clean_path = xi['path'].lstrip('/')
-            
             xhttp_locations.append(f"""
-location /{clean_path} {{
+location /{xi['path'].lstrip('/')} {{
     grpc_pass grpc://unix:/run/xray/{xi['tag']}.sock;
-    grpc_buffer_size          16k;
-    grpc_socket_keepalive     on;
-    grpc_read_timeout         1h;
-    grpc_send_timeout         1h;
+    grpc_set_header Host $host;
+    grpc_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     
-    # gRPC требует пустой Connection для корректной работы stream
-    grpc_set_header Connection         "";
-    grpc_set_header Host               $host;
-    grpc_set_header X-Forwarded-For    $proxy_add_x_forwarded_for;
-    grpc_set_header X-Forwarded-Proto  $scheme;
+    # Отключаем таймауты для долгоживущих соединений
+    grpc_read_timeout 1h;
+    grpc_send_timeout 1h;
+    
+    # Важно для xhttp/grpc
+    grpc_buffer_size 16k;
+    grpc_socket_keepalive on;
 }}""")
 
         xhttp_content = "\n".join(xhttp_locations)
