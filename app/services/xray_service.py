@@ -193,6 +193,23 @@ class XrayService:
                 if service and not service.startswith(port_prefix_no_slash):
                     grpc_settings["serviceName"] = f"/{port_prefix_no_slash}/{service.lstrip('/')}"
                     clean_stream_settings["grpcSettings"] = grpc_settings
+                    
+            elif network_type == "xhttp":
+                x_settings = clean_stream_settings.get("xhttpSettings", {})
+                
+                # 1. Формируем путь: /порт/путь
+                raw_path = x_settings.get("path", "/").lstrip("/")
+                x_settings["path"] = f"/{ib.port}/{raw_path}"
+                
+                # 2. Убеждаемся, что mode передается правильно
+                # (Если на фронте mode лежит в корне stream_settings, 
+                # переносим его внутрь xhttpSettings для Xray)
+                if "xhttpMode" in clean_stream_settings:
+                    x_settings["mode"] = clean_stream_settings.pop("xhttpMode")
+                elif "mode" not in x_settings:
+                    x_settings["mode"] = "packet-up" # Дефолт для твоих ссылок
+
+                clean_stream_settings["xhttpSettings"] = x_settings
 
             # Reality & Nginx fix
             if security_type == "reality":
