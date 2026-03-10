@@ -170,11 +170,19 @@ class XrayService:
             clean_stream_settings = ib.stream_settings.copy()
             clean_settings = ib.settings.copy()
             listen_address = ib.listen
-            
+            if "fallbacks" in clean_settings:
+                for fb in clean_settings["fallbacks"]:
+                    dest = str(fb.get("dest", ""))
+                    # Если в dest только порт (например, "80" или "443"), добавляем имя контейнера
+                    if dest.isdigit():
+                        fb["dest"] = f"nginx:{dest}"
+                    # Если там 127.0.0.1:80, тоже меняем на nginx:80
+                    elif "127.0.0.1" in dest or "localhost" in dest:
+                        fb["dest"] = dest.replace("127.0.0.1", "nginx").replace("localhost", "nginx")
 
             if network_type == "ws":
                 ws_settings = clean_stream_settings.get("wsSettings", {})
-                clean_settings["fallbacks"] = []
+                
                 
                 # 1. Путь с портом
                 raw_path = ws_settings.get("path", "/").lstrip("/")

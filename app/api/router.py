@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.api import xray, docker
-from app.api.endpoints import auth, inbounds, clients, config, sub, nginx
+from app.api.endpoints import auth, inbounds, clients, config, sub, nginx, stats
 
 
 
@@ -47,4 +47,10 @@ api_router.include_router(
     nginx.router, 
     prefix="/nginx", 
     tags=["nginx"]
+)
+
+api_router.include_router(
+    stats.router, 
+    prefix="/stats", 
+    tags=["stats"]
 )
