@@ -52,7 +52,7 @@ const mapInboundToForm = (inbound: any) => {
     port: inbound.port || 443,
     listen: inbound.listen || "0.0.0.0",
     protocol: (inbound.protocol || "vless").toLowerCase(),
-    flow: ins.flow || "xtls-rprx-vision",
+    flow: ins.flow || "",
     decryption: ins.decryption || "none",
     fallbackDest: ins.fallbacks?.[0]?.dest?.toString() || "80",
     network: s.network === "tcp" ? "raw" : s.network,
@@ -141,7 +141,7 @@ export default function EditInboundModal({ isOpen, onClose, onSuccess, inboundId
     if (!form) return;
     setLoading(true);
 
-    const canUseFlow = form.protocol === "vless" && form.network === "raw";
+    
     const payload = {
       tag: form.tag,
       protocol: form.protocol,
@@ -149,7 +149,7 @@ export default function EditInboundModal({ isOpen, onClose, onSuccess, inboundId
       listen: form.listen,
       settings: {
         decryption: form.decryption,
-        flow: canUseFlow ? form.flow : undefined,
+        flow: form.flow,
         fallbacks: form.network === "grpc" ? [] : [
             { 
                 dest: String(form.fallbackDest), 
@@ -190,6 +190,13 @@ export default function EditInboundModal({ isOpen, onClose, onSuccess, inboundId
           maxTimediff: form.maxTimediff || 0,
           fingerprint: form.fingerprint, spiderX: form.spiderX,
         } : undefined,
+        xhttpSettings: form.network === "xhttp" ? {
+            path: form.xhttpPath,
+            mode: form.xhttpMode,
+            extra: {
+                padding: form.xhttpPadding
+            }
+            } : undefined,
         ...(form.enableSockopt && {
           sockopt: {
             tcpFastOpen: form.tcpFastOpen, tcpNoDelay: form.noDelay,

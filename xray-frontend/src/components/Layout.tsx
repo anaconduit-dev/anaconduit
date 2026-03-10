@@ -55,7 +55,7 @@ export default function Layout() {
 
   useEffect(() => {
     refreshStatus();
-    const interval = setInterval(refreshStatus, 10000);
+    const interval = setInterval(refreshStatus, 2000);
     return () => clearInterval(interval);
   }, [refreshStatus]);
 
