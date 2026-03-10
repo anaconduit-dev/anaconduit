@@ -259,8 +259,8 @@ server {{
     index index.html index.htm;
 
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_certificate     /etc/nginx/certs/{self.domain}/fullchain.pem;
-    ssl_certificate_key /etc/nginx/certs/{self.domain}/privkey.pem;
+    ssl_certificate     /etc/nginx/certs/live/{self.domain}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/live/{self.domain}/privkey.pem;
 
     server_tokens off;
 
@@ -297,8 +297,8 @@ server {{
     index index.html index.htm;
 
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_certificate     /etc/nginx/certs/{self.reality_domain}/fullchain.pem;
-    ssl_certificate_key /etc/nginx/certs/{self.reality_domain}/privkey.pem;
+    ssl_certificate     /etc/nginx/certs/live/{self.reality_domain}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/live/{self.reality_domain}/privkey.pem;
 
     server_tokens off;
 
