@@ -349,7 +349,7 @@ export default function EditInboundModal({ isOpen, onClose, onSuccess, inboundId
                                 onChange={e => setForm({...form, flow: e.target.value})}
                             >
                                 <option value="xtls-rprx-vision">XTLS Vision (Best)</option>
-                                <option value="xtls-rprx-vision-udp443">XTLS Vision UDP443</option>
+                                {/*<option value="xtls-rprx-vision-udp443">XTLS Vision UDP443</option>*/}
                                 <option value="">None (Legacy)</option>
                             </select>
                             </div>

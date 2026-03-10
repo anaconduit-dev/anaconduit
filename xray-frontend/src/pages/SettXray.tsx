@@ -13,6 +13,7 @@ import {
   Cpu
 } from "lucide-react";
 import { startXray, stopXray, restartXray, getXrayVersions, installXrayVersion } from "../api/xray";
+import { XrayLogs } from "../components/XrayLogs";
 
 interface ContextType {
   xrayStatus: any; 
@@ -174,6 +175,8 @@ export default function SettXray() {
                </div>
             )}
           </div>
+          {/* НОВЫЙ БЛОК ЛОГОВ ТУТ */}
+          <XrayLogs />
         </div>
 
         {/* ПРАВАЯ КОЛОНКА: Версии */}

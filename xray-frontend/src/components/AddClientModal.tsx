@@ -59,7 +59,7 @@ export default function AddClientModal({ isOpen, onClose, onSuccess, existingUse
       ...form, 
       inboundId: id, 
       uuid: generateSecret(selected.protocol),
-      flow: isVless ? 'xtls-rprx-vision' : ''
+      flow: isVless ? '' : ''
     });
   };
 
@@ -177,7 +177,7 @@ export default function AddClientModal({ isOpen, onClose, onSuccess, existingUse
                 >
                   <option value="">None</option>
                   <option value="xtls-rprx-vision">Vision</option>
-                  <option value="xtls-rprx-vision-udp443">Vision UDP</option>
+                  {/*<option value="xtls-rprx-vision-udp443">Vision UDP</option>*/}
                 </select>
               </div>
             ) : (

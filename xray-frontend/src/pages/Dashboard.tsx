@@ -1,23 +1,68 @@
-import { 
-  Users, 
-  BarChart3, 
-  Activity 
-  // Добавим иконку часов
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Users, BarChart3, Activity, HardDrive } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
-// Импортируем тип для контекста, если нужно
+import { getStats, getStatsSystem } from "../api/stats"; // Импортируем твой новый метод
 import type { DockerListResponse } from "../api/docker";
 
+// Утилита для красивого форматирования байт
+const formatBytes = (bytes: number) => {
+  if (!bytes) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+
 export default function Dashboard() {
-  // Извлекаем dockerData из контекста Layout
   const { xrayStatus, dockerData } = useOutletContext<{ 
     xrayStatus: any; 
     dockerData: DockerListResponse | null 
   }>();
 
+  // Локальное состояние для данных бэкенда
+  const [summary, setSummary] = useState<{
+    total_clients: number;
+    new_today: number;
+    total_traffic_bytes: number;
+  } | null>(null);
+
+  const [systemStats, setSystemStats] = useState<any>(null);
+
+  useEffect(() => {
+    // 1. Загрузка статистики БД
+    const fetchDbStats = () => getStats().then(setSummary).catch(console.error);
+    
+    // 2. Загрузка системных метрик сервера
+    const fetchSystemStats = () => getStatsSystem().then(setSystemStats).catch(console.error);
+
+    fetchDbStats();
+    fetchSystemStats();
+
+    // Обновляем БД раз в минуту, а систему чуть чаще (например, раз в 15 секунд)
+    const dbTimer = setInterval(fetchDbStats, 60000);
+    const sysTimer = setInterval(fetchSystemStats, 15000);
+
+    return () => {
+      clearInterval(dbTimer);
+      clearInterval(sysTimer);
+    };
+  }, []);
+
   const stats = [
-    { name: "Клиенты Xray", value: "24", sub: "+3 сегодня", icon: <Users size={20}/>, color: "bg-blue-500" },
-    { name: "Трафик", value: "1.2 TB", sub: "За 30 дней", icon: <BarChart3 size={20}/>, color: "bg-emerald-500" },
+    { 
+      name: "Клиенты Xray", 
+      value: summary?.total_clients ?? "...", 
+      sub: `+${summary?.new_today ?? 0} сегодня`, 
+      icon: <Users size={20}/>, 
+      color: "bg-blue-500" 
+    },
+    { 
+      name: "Трафик", 
+      value: summary ? formatBytes(summary.total_traffic_bytes) : "...", 
+      sub: "", 
+      icon: <BarChart3 size={20}/>, 
+      color: "bg-emerald-500" 
+    },
     { 
       name: "Uptime Системы", 
       value: xrayStatus.status === 'running' ? "ONLINE" : "OFFLINE", 
@@ -37,16 +82,14 @@ export default function Dashboard() {
         </div>
       )
     },
-    // НОВАЯ КАРТОЧКА: ЗАГРУЗКА СЕРВЕРА
     { 
-      name: "Загрузка проекта", 
+      name: "Нагрузка проекта", 
       value: `${dockerData?.total.cpu_percent || 0}%`, 
       sub: "Среднее CPU", 
       icon: <BarChart3 size={20}/>, 
       color: (dockerData?.total.cpu_percent || 0) > 80 ? "bg-red-500" : "bg-purple-500",
       customContent: (
         <div className="mt-2 pt-2 border-t border-slate-100 space-y-3">
-          {/* Мини-бар для CPU */}
           <div className="space-y-1">
              <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase">
                 <span>Процессор</span>
@@ -59,8 +102,6 @@ export default function Dashboard() {
                 />
              </div>
           </div>
-          
-          {/* Данные по RAM */}
           <div className="space-y-1">
              <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase">
                 <span>Память ({dockerData?.total.mem_usage_percent}%)</span>
@@ -76,18 +117,68 @@ export default function Dashboard() {
         </div>
       )
     },
+    { 
+      name: "Ресурсы Сервера", 
+      value: `${systemStats?.system?.cpu_percent ?? 0}%`, 
+      sub: "Load Avg", 
+      icon: <HardDrive size={20}/>, 
+      color: (systemStats?.system?.cpu_percent > 80) ? "bg-red-600" : "bg-purple-600",
+      customContent: (
+        <div className="mt-2 pt-2 border-t border-slate-100 space-y-3">
+          {/* CPU Сервера */}
+          <div className="space-y-1">
+             <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase">
+                <span>Процессор (Host)</span>
+                <span>{systemStats?.system?.cpu_percent}%</span>
+             </div>
+             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-purple-500 transition-all duration-500" 
+                  style={{ width: `${systemStats?.system?.cpu_percent || 0}%` }}
+                />
+             </div>
+          </div>
+          
+          {/* RAM Сервера */}
+          <div className="space-y-1">
+             <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase">
+                <span>Память ({systemStats?.system?.mem_percent}%)</span>
+                <span>Сервер</span>
+             </div>
+             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-indigo-500 transition-all duration-500" 
+                  style={{ width: `${systemStats?.system?.mem_percent || 0}%` }}
+                />
+             </div>
+          </div>
+
+          {/* Disk Сервера */}
+          <div className="space-y-1">
+             <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase">
+                <span>Диск ({systemStats?.system?.disk_percent}%)</span>
+                <span>Root FS</span>
+             </div>
+             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-slate-400 transition-all duration-500" 
+                  style={{ width: `${systemStats?.system?.disk_percent || 0}%` }}
+                />
+             </div>
+          </div>
+        </div>
+      )
+    },
   ];
 
   return (
     <div className="p-8 overflow-y-auto">
       <div className="max-w-6xl mx-auto">
-        
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 italic">Anaconduit!</h1>
           <p className="text-slate-500">Система работает на ядре Xray-core {xrayStatus.version}</p>
         </header>
 
-        {/* Карточки статистики */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((s, i) => (
             <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
@@ -105,15 +196,10 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-              
-              {/* Рендерим доп. контент (список аптаймов), если он есть */}
               {s.customContent && s.customContent}
             </div>
           ))}
         </div>
-
-        {/* Секция событий (без изменений) */}
-        {/* ... */}
       </div>
     </div>
   );
