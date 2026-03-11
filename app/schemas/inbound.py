@@ -3,8 +3,8 @@ from typing import Optional, List, Dict, Any, Union, Annotated
 
 
 class Fallback(BaseModel):
-    dest: Any  # Может быть числом (80) или строкой ("127.0.0.1:80")
-    xver: int = 0
+    dest: Optional[Any]  # Может быть числом (80) или строкой ("127.0.0.1:80")
+    xver: Optional[int] = 0
     alpn: Optional[str] = None
     path: Optional[str] = None
 
@@ -133,3 +133,4 @@ class InboundUpdate(BaseModel):
     stream_settings: dict | None = None
     sniffing: dict | None = None
     is_active: bool | None = None
+

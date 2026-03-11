@@ -18,7 +18,6 @@ class NginxService:
     def __init__(self):
         self.docker = DockerService()
         self.base_dir = settings.internal_data_path / "nginx"
-        self.conf_d = self.base_dir / "conf.d"
         self.stream_d = self.base_dir / "stream-enabled"
         self.sites_a_d = self.base_dir / "sites-available"
         self.sites_e_d = self.base_dir / "sites-enabled"
@@ -63,7 +62,6 @@ class NginxService:
     async def ensure_directories(self):
         dirs = [
             self.base_dir,
-            self.conf_d,
             self.stream_d,
             self.sites_a_d,
             self.sites_e_d,
@@ -462,6 +460,7 @@ location ~ ^/(?P<fwdport>\\d+)/ {{
                 logger.info(f"🔗 Создан симлинк: {name} -> {src_relative}")
 
         await anyio.to_thread.run_sync(create_relative_links)
+
     async def get_current_status(self):
         state = await self.docker.get_status(self.CONTAINER_NAME)
         version = "unknown"
@@ -498,7 +497,6 @@ location ~ ^/(?P<fwdport>\\d+)/ {{
 
         volumes = {
             f"{host_nginx_dir}/nginx.conf": {"bind": "/etc/nginx/nginx.conf", "mode": "ro"},
-            f"{host_nginx_dir}/conf.d": {"bind": "/etc/nginx/conf.d", "mode": "rw"},
             f"{host_nginx_dir}/stream-enabled": {"bind": "/etc/nginx/stream-enabled", "mode": "rw"},
             f"{host_nginx_dir}/snippets": {"bind": "/etc/nginx/snippets", "mode": "rw"},
             f"{host_nginx_dir}/certs": {"bind": "/etc/nginx/certs", "mode": "ro"},
