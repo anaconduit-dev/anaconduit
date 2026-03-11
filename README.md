@@ -30,34 +30,33 @@ cat << 'EOF' > README.md
 ```bash
 sudo bash -c "$(curl -sL [https://github.com/anaconduit-dev/anaconduit-script/raw/main/install.sh](https://github.com/anaconduit-dev/anaconduit-script/raw/main/install.sh))" @ install
 ```
-🛠 Технологический стек
+## 🛠 Технологический стек
 
-    Backend: Python 3.10+, FastAPI, Docker SDK.
+* Backend: Python 3.10+, FastAPI, Docker SDK.
 
-    Frontend: React 18, TypeScript, Tailwind CSS, Lucide Icons.
+* Frontend: React 18, TypeScript, Tailwind CSS, Lucide Icons.
 
-    Proxy Core: Xray Core (VLESS, gRPC, XTLS-Vision).
+* Proxy Core: Xray Core (VLESS, gRPC, XTLS-Vision).
 
-    Web Server: Nginx (Reverse Proxy & SSL Offloading).
+* Web Server: Nginx (Reverse Proxy & SSL Offloading).
 
-🛡️ Архитектура сети и безопасность
+## 🛡️ Архитектура сети и безопасность
 
-Anaconduit придерживается принципа "минимальной поверхности атаки":
+# Anaconduit придерживается принципа "минимальной поверхности атаки":
 
-    Единая точка входа: Весь внешний трафик принимает Nginx на портах 80/443.
+* Единая точка входа: Весь внешний трафик принимает Nginx на портах 80/443.
 
-    Внутренняя сеть: Контейнеры API и Xray Core общаются внутри изолированной сети Docker.
+* Внутренняя сеть: Контейнеры API и Xray Core общаются внутри изолированной сети Docker.
 
-    Закрытые порты: Благодаря проксированию через Nginx, нет необходимости открывать дополнительные порты в UFW для каждого инбаунда.
+* Закрытые порты: Благодаря проксированию через Nginx, нет необходимости открывать дополнительные порты в UFW для каждого инбаунда.
 
 
 
-🚧 Roadmap
+## 🚧 Roadmap
+* [ ] Интеграция Telegram-бота для управления и уведомлений.
 
-    [ ] Интеграция Telegram-бота для управления и уведомлений.
+* [ ] Multi-node: управление несколькими серверами из одной панели.
 
-    [ ] Multi-node: управление несколькими серверами из одной панели.
+* [ ] Расширенная аналитика потребления трафика по дням.
 
-    [ ] Расширенная аналитика потребления трафика по дням.
-
-    [ ] Модуль автоматической очистки логов и оптимизации БД.
+* [ ] Модуль автоматической очистки логов и оптимизации БД.
