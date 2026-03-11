@@ -58,14 +58,3 @@ sudo bash -c "$(curl -sL [https://github.com/anaconduit-dev/anaconduit-script/ra
 
     [ ] Расширенная статистика по дням/месяцам.
 
-🤝 Контрибьютинг
-
-Мы рады любой помощи! Если вы нашли баг или хотите предложить фичу:
-
-    Форкните репозиторий.
-
-    Создайте ветку (git checkout -b feature/AmazingFeature).
-
-    Закоммитьте изменения (git commit -m 'Add AmazingFeature').
-
-    Откройте Pull Request.
