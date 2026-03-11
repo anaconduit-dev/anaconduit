@@ -82,7 +82,7 @@ const getEmptyForm = () => ({
     clients: [
       {
         uuid: generateUUID(),
-        email: "user@xray",
+        email: "",
         flow: "",
         alterId: 0,
         security: "auto",

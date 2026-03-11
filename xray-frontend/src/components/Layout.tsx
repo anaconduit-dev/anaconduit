@@ -101,8 +101,8 @@ export default function Layout() {
           {[
             { name: "Главная", path: "/dashboard", icon: <Activity size={18} /> },
             { name: "Конфиг Xray", path: "/settxray", icon: <ShieldCheck size={18} /> },
-            { name: "Пользователи", path: "/users", icon: <Users size={18} /> },
             { name: "Подключения", path: "/inbounds", icon: <Users size={18} /> },
+            { name: "Пользователи", path: "/users", icon: <Users size={18} /> },
             { name: "Nginx", path: "/nginx", icon: <Settings size={18} /> },
             { name: "Настройки", path: "/settings", icon: <Settings size={18} /> },
           ].map((item) => (

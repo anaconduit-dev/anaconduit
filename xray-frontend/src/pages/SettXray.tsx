@@ -12,8 +12,8 @@ import {
   Loader2,
   Cpu
 } from "lucide-react";
-import { startXray, stopXray, restartXray, getXrayVersions, installXrayVersion } from "../api/xray";
-import { XrayLogs } from "../components/XrayLogs";
+import { startXray, stopXray, restartXray, getXrayVersions, installXrayVersion, getXrayLogs } from "../api/xray";
+import LogTerminal from "../components/LogTerminal";
 
 interface ContextType {
   xrayStatus: any; 
@@ -176,7 +176,10 @@ export default function SettXray() {
             )}
           </div>
           {/* НОВЫЙ БЛОК ЛОГОВ ТУТ */}
-          <XrayLogs />
+          <LogTerminal 
+            title="Xray Access & Error Logs" 
+            fetchFn={getXrayLogs} 
+          />
         </div>
 
         {/* ПРАВАЯ КОЛОНКА: Версии */}

@@ -21,4 +21,9 @@ export const startNginx = async () => {
 
 export const stopNginx = () => api.post('/nginx/stop');
 export const restartNginx = () => api.post('/nginx/restart'); // или reload
-export const setupNginx = (use_ssl: boolean) => api.post(`/nginx/setup?use_ssl=${use_ssl}`);
+export const applyNginx = () => api.post('/nginx/apply');
+
+export const getNginxLogs = async (tail: number = 100) => {
+  const res = await api.get(`/nginx/logs?tail=${tail}`);
+  return res.data; // Ожидаем массив строк или одну большую строку
+};

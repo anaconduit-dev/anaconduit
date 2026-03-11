@@ -42,11 +42,15 @@ export const removeUserFromInbound = async (userId: number, inboundId: number) =
 };
 
 /** Обновить лимиты трафика или дату истечения */
-export const updateLimits = async (userId: number, limits: any) => {
-  const res = await api.patch(`/client/update-limits/${userId}`, limits);
+export const updateLimits = async (userId: number, trafficGb: number | null, expiryDays: number | null) => {
+  // Формируем query параметры вручную или через URLSearchParams
+  const params = new URLSearchParams();
+  if (trafficGb !== null) params.append('traffic_gb', trafficGb.toString());
+  if (expiryDays !== null) params.append('expiry_days', expiryDays.toString());
+
+  const res = await api.patch(`/client/update-limits/${userId}?${params.toString()}`);
   return res.data;
 };
-
 /** Сбросить токен подписки (сгенерировать новую ссылку) */
 export const resetSubscriptionToken = async (userId: number) => {
   const res = await api.post(`/client/users/${userId}/reset-token`);
