@@ -1,4 +1,4 @@
-cat << 'EOF' > README.md
+
 # 🐍 Anaconduit
 
 **The Modern Xray Core Management Engine** *Панель управления инфраструктурой Xray на базе Docker, FastAPI и React.*
