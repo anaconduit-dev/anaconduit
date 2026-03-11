@@ -238,7 +238,7 @@ async def update_user_limits(
                     await xray_service.add_client_to_xray(
                         inbound_tag=client.inbound.tag,
                         user_email=user.email,
-                        client_uuid=client.uuid,
+                        client_key=client.uuid,
                         flow=client.flow,   
                         level=client.level  
                         )
