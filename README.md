@@ -23,9 +23,22 @@
 * 🔄 **Zero-Maintenance SSL** — автоматическое продление сертификатов Let's Encrypt через Cron с управлением жизненным циклом контейнеров.
 * 📊 **Universal Log Terminal** — живой просмотр логов Nginx и Xray с умной подсветкой статус-кодов и ошибок.
 
-## 🚀 Быстрый старт
+## 🚀 Быстрый старт (Installation)
 
-Установка на чистый сервер (Ubuntu 20.04+):
+Для развертывания Anaconduit вам потребуется чистый сервер с Ubuntu 22.04/24.04 или Arch Linux, а также два подготовленных домена.
+1. Предварительные требования (Pre-requisites)
+
+Перед запуском скрипта убедитесь, что у вас есть:
+
+ * Основной домен (Panel): Используется для доступа к админ-панели и выдачи SSL. (например, manage.yourdomain.com)
+
+ * Reality домен (Mask): Используется как маскировка для Xray. (например, content.yourdomain.com или любой популярный иностранный ресурс).
+
+ * Порты: Убедитесь, что порты 80 и 443 свободны и открыты в Firewall (UFW/iptables).
+
+2. Установка (One-line Install)
+
+Запустите команду установки. Скрипт автоматически установит Docker, настроит Nginx и подготовит конфигурации Xray:
 
 ```bash
 sudo bash -c "$(curl -sL [https://github.com/anaconduit-dev/anaconduit-script/raw/main/install.sh](https://github.com/anaconduit-dev/anaconduit-script/raw/main/install.sh))" @ install
