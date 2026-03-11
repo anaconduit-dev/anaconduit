@@ -25,7 +25,7 @@
 
 ## 🚀 Быстрый старт
 
-Для установки на чистый сервер (Ubuntu 20.04+ / Arch Linux) выполните:
+Для установки на чистый сервер (Ubuntu 20.04+) выполните:
 
 ```bash
 sudo bash -c "$(curl -sL [https://github.com/anaconduit-dev/anaconduit-script/raw/main/install.sh](https://github.com/anaconduit-dev/anaconduit-script/raw/main/install.sh))" @ install
