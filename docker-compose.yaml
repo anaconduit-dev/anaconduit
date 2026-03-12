@@ -13,10 +13,11 @@ services:
     env_file:
       - .env
     environment:
-      HOST_DATA_PATH: ${HOST_DATA_PATH}
-      # Явно прокидываем DATABASE_URL, чтобы SQLAlchemy её видела
-      DATABASE_URL: ${DATABASE_URL}
+      - HOST_DATA_PATH=${HOST_DATA_PATH}
+      - DATABASE_URL=${DATABASE_URL}
+      - PROJECT_ROOT=/repo
     volumes:
+      - /opt/anaconduit:/repo
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_DATA_PATH}:/app/data
     networks:
