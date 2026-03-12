@@ -7,6 +7,7 @@ import SettXray from "./pages/SettXray";
 import Users from "./pages/Users";
 import Inbounds from "./pages/Inbounds";
 import SettNginx from "./pages/SettNginx";
+import Settings from "./pages/Settings";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import { getToken } from "./store/auth";
 
@@ -64,7 +65,7 @@ export default function App() {
           <Route path="/users" element={<Users />} />
           <Route path="/inbounds" element={<Inbounds />} />
           <Route path="/nginx" element={<SettNginx />} />
-          <Route path="/settings" element={<div>Настройки</div>} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" />} />
