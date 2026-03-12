@@ -18,14 +18,16 @@ while true; do
     
     if [ $EXIT_CODE -eq 100 ]; then
         echo "--- [UPDATE] Получен сигнал на пересборку (Код 100) ---"
-        echo "Запуск docker compose up -d --build изнутри контейнера..."
+        cd /repo
         
-        # Выполняем команду пересборки через проброшенный сокет
-        # Мы запускаем её на хосте, находясь в папке /repo
-        cd /repo && docker compose up -d --build
+        # Пробуем вызвать новый Compose
+        if docker compose version > /dev/null 2>&1; then
+            docker compose up -d --build
+        else
+            # Если плагин не подцепился, пробуем старый способ
+            docker-compose up -d --build
+        fi
         
-        # После этой команды текущий контейнер будет убит самим Докером, 
-        # так как образ обновится. Но на всякий случай выходим.
         exit 0
     else
         echo "--- [STOP] Приложение завершилось с кодом $EXIT_CODE ---"
