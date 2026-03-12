@@ -21,7 +21,7 @@ RUN uv pip install --system --no-cache .
 RUN apt-get update && apt-get install -y \
     git \
     docker.io \
-    docker-compose-v2 \
+    docker-compose \
     && rm -rf /var/lib/apt/lists/*
 # Копируем всё остальное (включая папку alembic и alembic.ini)
 COPY . .

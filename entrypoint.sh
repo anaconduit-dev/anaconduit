@@ -19,15 +19,8 @@ while true; do
     if [ $EXIT_CODE -eq 100 ]; then
         echo "--- [UPDATE] Получен сигнал на пересборку (Код 100) ---"
         cd /repo
-        
-        # Пробуем вызвать новый Compose
-        if docker compose version > /dev/null 2>&1; then
-            docker compose up -d --build
-        else
-            # Если плагин не подцепился, пробуем старый способ
-            docker-compose up -d --build
-        fi
-        
+        # Используем docker-compose через дефис
+        docker-compose up -d --build
         exit 0
     else
         echo "--- [STOP] Приложение завершилось с кодом $EXIT_CODE ---"
