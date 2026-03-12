@@ -3,6 +3,8 @@ import { logout } from "../store/auth";
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { getDockerContainers, type DockerListResponse } from "../api/docker";
 import { getNginxStatus, type NginxStatus} from "../api/nginx";
+import { getSystemStatus, getLatestVersion } from "../api/app";
+import { UpdateSection } from "../components/UpdateSection";
 import { 
   Users, Activity, Settings, LogOut, Globe, ShieldCheck, RefreshCw, Cpu, HardDrive, Menu, X 
 } from "lucide-react";
@@ -21,37 +23,77 @@ export default function Layout() {
     cpu: 0,
     mem: 0
   });
+  const [systemVersion, setSystemVersion] = useState({
+    current: "",
+    latest: "",
+    hasUpdate: false
+  });
   const [nginxStatus, setNginxStatus] = useState<NginxStatus>({
     container: "nginx",
     status: "loading",
     version: ""
   });
 
-  const refreshStatus = useCallback(async () => {
-    try {
-      const [dockerData, nginxData] = await Promise.all([
-        getDockerContainers(),
-        getNginxStatus()
-      ]);
-      setDockerData(dockerData);
-      setNginxStatus(nginxData);
-      const xray = dockerData.containers.find(c => c.name === "anaconduit_xray");
-      
-      if (xray) {
-        setXrayStatus({
-          status: xray.status,
-          version: "v" + (xray.image[0]?.split(':').pop() || "latest"),
-          cpu: xray.cpu_percent,
-          mem: xray.memory.percent
-        });
-      } else {
-        setXrayStatus(prev => ({ ...prev, status: "not_found" }));
-      }
-    } catch (error) {
-      setXrayStatus(prev => ({ ...prev, status: "error" }));
-      setNginxStatus(prev => ({ ...prev, status: "error" }));
+  // 1. Быстрый интервал для метрик (2 сек)
+const refreshStatus = useCallback(async () => {
+  try {
+    const [dData, nData, sData] = await Promise.all([
+      getDockerContainers(),
+      getNginxStatus(),
+      getSystemStatus()
+    ]);
+
+    setDockerData(dData);
+    setNginxStatus(nData);
+    
+    // Обновляем текущую версию бэкенда (без Гитхаба)
+    setSystemVersion(prev => ({
+      ...prev,
+      current: sData.version
+    }));
+
+    const xray = dData.containers.find(c => c.name === "anaconduit_xray");
+    if (xray) {
+      setXrayStatus({
+        status: xray.status,
+        version: "v" + (xray.image[0]?.split(':').pop() || "latest"),
+        cpu: xray.cpu_percent,
+        mem: xray.memory.percent
+      });
     }
-  }, []);
+  } catch (error) {
+    console.error("Polling error:", error);
+  }
+}, []);
+
+// 2. РЕДКАЯ проверка обновлений (только при загрузке)
+useEffect(() => {
+  const checkGitHub = async () => {
+    try {
+      const latestRelease = await getLatestVersion();
+      
+      // Очищаем теги от префикса 'v', чтобы сравнение было честным
+      const githubTag = latestRelease.tag_name.replace(/^v/, ''); 
+      const localTag = systemVersion.current.replace(/^v/, '');
+
+      console.log("🚀 Чистый тег GitHub:", githubTag);
+      console.log("🏠 Чистый тег системы:", localTag);
+
+      setSystemVersion(prev => ({
+        ...prev,
+        latest: githubTag,
+        hasUpdate: localTag !== "" && githubTag !== localTag 
+      }));
+    } catch (e) {
+      console.error("❌ Ошибка при проверке GitHub:", e);
+    }
+  };
+
+  // Запускаем проверку только когда получили версию от бэкенда
+  if (systemVersion.current) {
+    checkGitHub();
+  }
+}, [systemVersion.current]);// Добавляем current в зависимости, чтобы сравнить сразу как он придет
 
   useEffect(() => {
     refreshStatus();
@@ -120,7 +162,14 @@ export default function Layout() {
             </Link>
           ))}
         </nav>
-
+        {/* --- НОВАЯ СЕКЦИЯ ОБНОВЛЕНИЯ --- */}
+        <div className="px-4 pb-2">
+            <UpdateSection 
+                currentVersion={systemVersion.current}
+                latestVersion={systemVersion.latest}
+                hasUpdate={systemVersion.hasUpdate}
+            />
+        </div>
         {/* Мини-статистика в сайдбаре */}
         {dockerData && (
           <div className="px-6 py-4 space-y-3 border-t border-slate-800/50">
@@ -144,9 +193,25 @@ export default function Layout() {
         )}
 
         <div className="p-4 px-6 text-[10px] text-slate-500 border-t border-slate-800 shrink-0">
-          <p className="uppercase tracking-widest font-bold">Ядро Xray</p>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <p className="uppercase tracking-widest font-bold text-indigo-400">Anaconduit</p>
+              <p className="mt-1 text-slate-300 font-mono tracking-tighter">
+                {systemVersion.current || "v1.0.01"}
+              </p>
+            </div>
+            {systemVersion.hasUpdate && (
+              <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full animate-pulse border border-amber-500/20">
+                <RefreshCw size={8} />
+                <span className="font-bold">UPDATE</span>
+              </div>
+            )}
+          </div>
+
+          <p className="mt-3 uppercase tracking-widest font-bold">Ядро Xray</p>
           <p className="mt-1 text-slate-400 font-mono tracking-tighter">{xrayStatus.version || "---"}</p>
-          <p className="mt-1 uppercase tracking-widest font-bold">Nginx</p>
+          
+          <p className="mt-2 uppercase tracking-widest font-bold">Nginx</p>
           <p className="text-slate-400 font-mono tracking-tighter">{nginxStatus.version || "---"}</p>
         </div>
 
