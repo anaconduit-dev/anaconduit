@@ -12,23 +12,25 @@ FROM python:3.13-slim
 # Установка uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+# Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Кеширование зависимостей бэкенда
+# Копируем зависимости и устанавливаем их в систему
 COPY pyproject.toml uv.lock ./
 RUN uv pip install --system --no-cache .
 
-# Копируем код бэкенда
+# Копируем всё остальное (включая папку alembic и alembic.ini)
 COPY . .
 
-# Копируем собранный фронтенд из первого этапа в папку static бэкенда
-# (Убедись, что папка dist соответствует настройкам твоего фронтенда)
+# Копируем собранный фронтенд
 COPY --from=frontend-builder /build/dist ./app/static
 
-# Создаём папку для данных
-RUN mkdir -p /app/data
+# Настройка прав и папок
+RUN mkdir -p /app/data && \
+    chmod +x /app/entrypoint.sh
 
+# Открываем порт
 EXPOSE 8000
 
-# Запуск. Обрати внимание: теперь бэкенд должен уметь отдавать статику
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Используем ENTRYPOINT для запуска скрипта инициализации
+ENTRYPOINT ["/app/entrypoint.sh"]
