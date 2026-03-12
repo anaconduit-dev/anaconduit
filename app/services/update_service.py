@@ -21,7 +21,7 @@ class UpdateService:
             # 2. Теперь выполняем fetch
             logger.info(f"Fetching tags in {self.repo_path}...")
             subprocess.run(
-                ["git", "fetch", "--tags"], 
+                ["git", "fetch", "--tags", "-f"], 
                 cwd=self.repo_path, 
                 check=True,
                 capture_output=True,
