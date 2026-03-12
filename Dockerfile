@@ -13,12 +13,12 @@ FROM python:3.13-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Используем кэш для apt, чтобы не качать всё заново при каждом билде
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y \
+# Упрощенный вариант без BuildKit
+RUN apt-get update && apt-get install -y \
     git \
     docker.io \
-    docker-compose
+    docker-compose \
+    && rm -rf /var/lib/apt/lists/*
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
