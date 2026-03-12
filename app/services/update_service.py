@@ -11,15 +11,40 @@ class UpdateService:
 
     async def apply_update(self, version_tag: str) -> bool:
         try:
-            # Обновляем теги и принудительно переключаемся
-            # -f затирает локальные изменения (кроме тех, что в .gitignore)
-            subprocess.run(["git", "fetch", "--tags"], cwd=self.repo_path, check=True)
-            subprocess.run(["git", "checkout", "-f", version_tag], cwd=self.repo_path, check=True)
+            # 1. Сначала "лечим" проблему безопасности Git
+            # Добавляем /repo в список безопасных директорий
+            subprocess.run(
+                ["git", "config", "--global", "--add", "safe.directory", self.repo_path], 
+                check=True
+            )
+
+            # 2. Теперь выполняем fetch
+            logger.info(f"Fetching tags in {self.repo_path}...")
+            subprocess.run(
+                ["git", "fetch", "--tags"], 
+                cwd=self.repo_path, 
+                check=True,
+                capture_output=True,
+                text=True
+            )
+
+            # 3. Переключаемся на версию
+            logger.info(f"Checking out to {version_tag}...")
+            subprocess.run(
+                ["git", "checkout", "-f", version_tag], 
+                cwd=self.repo_path, 
+                check=True,
+                capture_output=True,
+                text=True
+            )
             
-            logger.info(f"Successfully checked out to {version_tag}")
             return True
         except subprocess.CalledProcessError as e:
-            logger.error(f"Git error: {e}")
+            # Теперь мы увидим реальную причину в логах, если что-то упадет
+            logger.error(f"Git error: {e.stderr if e.stderr else e}")
+            return False
+        except Exception as e:
+            logger.error(f"General error during update: {e}")
             return False
 
     def trigger_rebuild(self):
