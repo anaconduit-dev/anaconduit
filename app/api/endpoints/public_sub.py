@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload
 from app.core.database import get_db
 from app.models.models import User, Client
 from app.core.config import settings
-
+from sqlalchemy import text
 # Здесь НЕ используем зависимости авторизации админа!
 router = APIRouter(prefix="/api/v1")
 
@@ -37,3 +37,6 @@ async def get_subscription_info(token: str, db: AsyncSession = Depends(get_db)):
         "expire_date": user.expiry_time,
         "subscription_url": f"https://{settings.panel_domain}/{settings.sub_path}/{token}"
     }
+
+
+

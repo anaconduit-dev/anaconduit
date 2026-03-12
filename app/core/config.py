@@ -6,10 +6,13 @@ from pydantic import Field
 
 class Settings(BaseSettings):
     # --- Общие настройки ---
+    VERSION: str = "1.0.02"
+    GITHUB_REPO: str = "anaconduit-dev/anaconduit"
+
     app_name: str = "Anaconduit"
     debug: bool = False
     log_level: str = "INFO"
-    
+
     # --- Пути (Docker Sync) ---
     # Значение из .env (HOST_DATA_PATH). Используется в Docker SDK.
     host_data_path: str
