@@ -15,9 +15,7 @@ services:
     environment:
       - HOST_DATA_PATH=${HOST_DATA_PATH}
       - DATABASE_URL=${DATABASE_URL}
-      - PROJECT_ROOT=/repo
     volumes:
-      - .:/repo  # 🔹 Теперь и на хосте, и в контейнере путь будет резолвиться правильно
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_DATA_PATH}:/app/data
     networks:
