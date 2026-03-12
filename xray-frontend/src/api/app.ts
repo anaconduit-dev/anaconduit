@@ -26,14 +26,3 @@ export const getLatestVersion = async () => {
     if (!latest) throw new Error('Релизы не найдены');
     return latest; 
 };
-
-export const triggerUpdate = async (versionTag: string) => {
-  // Axios автоматически конвертирует объект во вторую переменную в JSON 
-  // и ставит нужные заголовки
-  const response = await api.post('/app/update', { 
-    version_tag: versionTag 
-  });
-
-  // В Axios данные лежат в .data
-  return response.data;
-};

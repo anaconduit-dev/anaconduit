@@ -4,7 +4,6 @@ import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { getDockerContainers, type DockerListResponse } from "../api/docker";
 import { getNginxStatus, type NginxStatus} from "../api/nginx";
 import { getSystemStatus, getLatestVersion } from "../api/app";
-import { UpdateSection } from "../components/UpdateSection";
 import { 
   Users, Activity, Settings, LogOut, Globe, ShieldCheck, RefreshCw, Cpu, HardDrive, Menu, X 
 } from "lucide-react";
@@ -162,14 +161,7 @@ useEffect(() => {
             </Link>
           ))}
         </nav>
-        {/* --- НОВАЯ СЕКЦИЯ ОБНОВЛЕНИЯ --- */}
-        <div className="px-4 pb-2">
-            <UpdateSection 
-                currentVersion={systemVersion.current}
-                latestVersion={systemVersion.latest}
-                hasUpdate={systemVersion.hasUpdate}
-            />
-        </div>
+      
         {/* Мини-статистика в сайдбаре */}
         {dockerData && (
           <div className="px-6 py-4 space-y-3 border-t border-slate-800/50">
