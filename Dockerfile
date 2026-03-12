@@ -12,17 +12,19 @@ FROM python:3.13-slim
 # Установка uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+# Используем кэш для apt, чтобы не качать всё заново при каждом билде
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
+    git \
+    docker.io \
+    docker-compose
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
 # Копируем зависимости и устанавливаем их в систему
 COPY pyproject.toml uv.lock ./
 RUN uv pip install --system --no-cache .
-RUN apt-get update && apt-get install -y \
-    git \
-    docker.io \
-    docker-compose \
-    && rm -rf /var/lib/apt/lists/*
 # Копируем всё остальное (включая папку alembic и alembic.ini)
 COPY . .
 

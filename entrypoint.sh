@@ -17,10 +17,13 @@ while true; do
     EXIT_CODE=$?
     
     if [ $EXIT_CODE -eq 100 ]; then
+        # В блоке обновления в entrypoint.sh
         echo "--- [UPDATE] Получен сигнал на пересборку (Код 100) ---"
         cd /repo
-        # Используем docker-compose через дефис
-        docker-compose up -d --build
+        # Создаем сеть, если её нет (ошибка игнорируется через || true)
+        docker network create anaconduit_net || true
+        # Добавляем флаг --force-recreate
+        docker-compose up -d --build --force-recreate
         exit 0
     else
         echo "--- [STOP] Приложение завершилось с кодом $EXIT_CODE ---"

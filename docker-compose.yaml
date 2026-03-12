@@ -17,10 +17,11 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - PROJECT_ROOT=/repo
     volumes:
-      - /opt/anaconduit:/repo
+      - .:/repo  # 🔹 Теперь и на хосте, и в контейнере путь будет резолвиться правильно
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_DATA_PATH}:/app/data
     networks:
       - anaconduit_net  # 🔹 подключаем к сети
+          
 
 
