@@ -25,7 +25,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         "iat": datetime.now(timezone.utc),
         "iss": "anaconduit-api" # полезно добавить издателя
     })
-    
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 def hash_password(password: str) -> str:

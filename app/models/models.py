@@ -7,8 +7,10 @@ from sqlalchemy.orm import relationship
 class Admin(Base):
     __tablename__ = "admins"
     id = Column(Integer, primary_key=True)
-    username = Column(String, unique=True)
+    username = Column(String, unique=True, index=True)
     password_hash = Column(String)
+    # Добавляем версию токена
+    token_version = Column(Integer, default=1, server_default="1", nullable=False)
 
 class Inbound(Base):
     __tablename__ = "inbounds"

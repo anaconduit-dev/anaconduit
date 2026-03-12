@@ -1,6 +1,9 @@
 import logging
 from typing import Optional
-
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.core.database import get_db
+from app.models.models import Admin
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -32,41 +35,44 @@ oauth2_scheme = OAuth2PasswordBearer(
     auto_error=False # Чтобы мы могли сами обрабатывать отсутствие токена
 )
 
-async def get_current_admin(token: Optional[str] = Depends(oauth2_scheme)):
-    """
-    Зависимость для защиты админских эндпоинтов.
-    """
-    # 🟢 DEV MODE
+async def get_current_admin(
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db) # Добавляем сессию БД
+):
+    # 🟢 DEV MODE (здесь тоже лучше вернуть объект, а не dict, чтобы не ломать код)
     if settings.debug:
-        logger.debug("⚠️ DEBUG MODE: Skipping admin authentication")
-        return {"username": "admin_dev", "role": "admin"}
+        # Пытаемся найти любого админа для тестов
+        result = await db.execute(select(Admin))
+        admin = result.scalars().first()
+        return admin
 
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Необходима авторизация",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise HTTPException(status_code=401, detail="Необходима авторизация")
 
     try:
-        payload = jwt.decode(
-            token, 
-            settings.secret_key, 
-            algorithms=[settings.algorithm]
-        )
-        username: str | None = payload.get("sub")
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        username: str = payload.get("sub")
+        token_version_in_jwt: int = payload.get("v") # Извлекаем версию из токена
 
-        if username is None:
+        if username is None or token_version_in_jwt is None:
+            raise HTTPException(status_code=401, detail="Некорректный токен")
+        
+        # Запрашиваем админа из БД
+        result = await db.execute(select(Admin).where(Admin.username == username))
+        admin = result.scalars().first()
+
+        if admin is None:
+            raise HTTPException(status_code=401, detail="Администратор не найден")
+            
+        # ПРОВЕРКА ВЕРСИИ: Самый важный момент
+        if admin.token_version != token_version_in_jwt:
+            logger.warning(f"🚫 Сессия аннулирована для {username} (несовпадение версий)")
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Токен не содержит данных пользователя",
+                status_code=401, 
+                detail="Сессия истекла из-за смены пароля"
             )
-        return {"username": username, "role": "admin"}
+            
+        return admin
 
-    except JWTError as e:
-        logger.error(f"JWT Error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Токен недействителен или истек",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Токен недействителен")

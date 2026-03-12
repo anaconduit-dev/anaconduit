@@ -13,7 +13,6 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db)
 ):
-    # Ищем админа
     result = await db.execute(select(Admin).where(Admin.username == form_data.username))
     admin = result.scalars().first()
 
@@ -24,7 +23,12 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Генерируем токен
-    access_token = create_access_token(data={"sub": admin.username})
+    # Добавляем версию токена в payload под ключом "v"
+    access_token = create_access_token(
+        data={
+            "sub": admin.username,
+            "v": admin.token_version  # <--- Передаем текущую версию из БД
+        }
+    )
     
     return {"access_token": access_token, "token_type": "bearer"}

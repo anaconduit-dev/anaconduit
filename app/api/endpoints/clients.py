@@ -121,7 +121,7 @@ async def get_users(
     """Получить список всех пользователей с полной вложенностью данных"""
     result = await db.execute(
         select(User).options(
-            joinedload(User.clients).joinedload(Client.inbound) # <--- ВОТ ЭТО ИСПРАВЛЕНО
+            joinedload(User.clients).joinedload(Client.inbound) 
         )
     )
     return result.unique().scalars().all()

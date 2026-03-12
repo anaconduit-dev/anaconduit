@@ -16,7 +16,7 @@ from sqlalchemy import update, select
 from sqlalchemy.orm import joinedload
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import x25519
-
+from collections import defaultdict
 from app.models.models import Inbound, User, Client
 from app.xray_api.client import XrayAPIClient
 from app.services.docker_service import DockerService
@@ -336,56 +336,73 @@ class XrayService:
 
     async def update_stats_in_db(self):
         """
-        Запрашивает инкрементальную статистику (reset=True) и сохраняет в БД.
+        Запрашивает статистику и сохраняет в БД пачкой.
+        Исправлена ошибка KeyError за счет использования .get() или констант.
         """
-        # Запрашиваем статистику через gRPC. 
-        
         stats_list = await self.client.get_stats(reset=True) 
-        if not stats_list:
+        
+        if not stats_list or sum(int(item["value"]) for item in stats_list) <= 0:
             return
+
+        # Используем одинаковые ключи, которые приходят из Xray: 'uplink' и 'downlink'
+        client_updates = defaultdict(lambda: {"uplink": 0, "downlink": 0})
+        user_updates = defaultdict(lambda: {"uplink": 0, "downlink": 0})
 
         async with AsyncSessionLocal() as session:
             for item in stats_list:
-                # Парсим имя счетчика: "user>>>email@test.com#tag>>>traffic>>>downlink"
                 parts = item["name"].split(">>>")
-                if parts[0] != "user":
+                if parts[0] != "user" or "#" not in parts[1]:
                     continue
 
                 full_id = parts[1].lower()
-                direction = parts[3] # uplink или downlink
-                value = int(item["value"]) #байты
+                direction = parts[3] # Здесь прилетает 'uplink' или 'downlink'
+                value = int(item["value"])
 
-                if value <= 0 or "#" not in full_id:
+                if value <= 0:
                     continue
 
                 email, tag = full_id.split("#")
 
-                # Ищем клиента в БД
                 result = await session.execute(
-                    select(Client).join(User).join(Inbound)
+                    select(Client.id, Client.user_id)
+                    .join(User).join(Inbound)
                     .where(User.email == email, Inbound.tag == tag)
                 )
-                client = result.scalars().first()
+                row = result.fetchone()
 
-                if client:
-                    # 1. Обновляем статистику конкретного клиента (ключа)
-                    if direction == "uplink":
-                        client.up += value
-                    else:
-                        client.down += value
-                    
-                    # 2. Обновляем агрегированную статистику владельца (User)
-                    await session.execute(
-                        update(User)
-                        .where(User.id == client.user_id)
-                        .values(
-                            total_up=User.total_up + (value if direction == "uplink" else 0),
-                            total_down=User.total_down + (value if direction == "downlink" else 0)
-                        )
+                if row:
+                    c_id, u_id = row
+                    # Теперь ключи в словаре точно совпадают с переменной direction
+                    client_updates[c_id][direction] += value
+                    user_updates[u_id][direction] += value
+
+            if not client_updates:
+                return
+
+            # Применяем дельты к БД
+            for c_id, delta in client_updates.items():
+                await session.execute(
+                    update(Client)
+                    .where(Client.id == c_id)
+                    .values(
+                        up=Client.up + delta["uplink"],
+                        down=Client.down + delta["downlink"]
                     )
+                )
+
+            for u_id, delta in user_updates.items():
+                await session.execute(
+                    update(User)
+                    .where(User.id == u_id)
+                    .values(
+                        total_up=User.total_up + delta["uplink"],
+                        total_down=User.total_down + delta["downlink"]
+                    )
+                )
 
             await session.commit()
-            logger.info(f"📊 Статистика успешно синхронизирована с БД.")
+            logger.info(f"📊 Статистика синхронизирована ({len(client_updates)} активных ключей)")
+    
 
     # ---------- Контейнер и Жизненный цикл ----------
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.api import xray, docker
-from app.api.endpoints import auth, inbounds, clients, config, sub, nginx, stats
+from app.api.endpoints import auth, inbounds, clients, config, sub, nginx, stats, admin
 
 
 
@@ -12,6 +12,13 @@ api_router.include_router(
     prefix="/xray", 
     tags=["Xray Management"]
 )
+
+api_router.include_router(
+    admin.router, 
+    prefix="/admin", 
+    tags=["admin"]
+)
+
 
 api_router.include_router(
     docker.router, 

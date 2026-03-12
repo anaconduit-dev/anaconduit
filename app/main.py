@@ -85,7 +85,7 @@ async def stats_updater_task():
     xray_service = get_xray_service(client)
     while True:
         try:
-            await asyncio.sleep(30) 
+            await asyncio.sleep(10) 
             await xray_service.update_stats_in_db()
             await xray_service.check_limits_and_disable()
         except asyncio.CancelledError:
@@ -98,9 +98,6 @@ async def stats_updater_task():
 async def lifespan(app: FastAPI):
     logger.info("🚀 Приложение Anaconduit запускается")
 
-    # 1. Создание таблиц
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
 
     # 2. Создание начального админа
     try:
