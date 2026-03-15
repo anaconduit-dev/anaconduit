@@ -430,7 +430,7 @@ class XrayService:
         container = await self.docker.run_container(
             name=self.CONTAINER_NAME,
             image=image,
-            ccommand='sh -c "rm -f /run/xray/*.sock && xray -confdir /etc/xray"',
+            command='sh -c "rm -f /run/xray/*.sock && xray -confdir /etc/xray"',
             ports={}, 
             volumes={
                 self.host_xray_dir: {"bind": "/etc/xray", "mode": "rw"},
