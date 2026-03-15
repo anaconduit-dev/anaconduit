@@ -39,24 +39,20 @@ async def get_user_links(
         raise HTTPException(status_code=404, detail="User not found")
     
     individual_links = []
-    raw_links_list = []
 
     for client in user.clients:
         if client.inbound.protocol in ["vless", "trojan"]:
             link = xray_service.generate_config_link(client, user, client.inbound)
-            raw_links_list.append(link)
             individual_links.append({
                 "tag": client.inbound.tag,
                 "protocol": client.inbound.protocol,
                 "link": link
             })
     
-    subscription_base64 = xray_service.generate_subscription(raw_links_list)
     link_subscription = f"https://{settings.panel_domain}/{settings.sub_path}/{user.subscription_token}"
     return {
         "user_email": user.email,
         "links": individual_links,
-        "subscription": subscription_base64,
         "link_subscription": link_subscription
     }
 

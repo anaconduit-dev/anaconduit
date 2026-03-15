@@ -33,7 +33,7 @@ class User(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
-    token = Column(String, unique=True, index=True) # Можно использовать для доступа в ЛК
+    token = Column(String, unique=True, index=True) 
     
     # Общая статистика по всем инбаундам (агрегированная)
     total_up = Column(BigInteger, default=0)

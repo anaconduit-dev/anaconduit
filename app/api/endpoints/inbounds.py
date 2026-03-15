@@ -20,14 +20,15 @@ async def create_inbound(
     nginx_service: NginxService = Depends(get_nginx_service)
 ):
     # Проверяем, не занят ли порт другим активным инбаундом
-    port_check = await db.execute(
-        select(Inbound).where(Inbound.port == obj_in.port, Inbound.is_active == True)
-    )
-    if port_check.scalars().first():
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Порт {obj_in.port} уже используется другим активным инбаундом"
+    if obj_in.port != 0:
+        port_check = await db.execute(
+            select(Inbound).where(Inbound.port == obj_in.port, Inbound.is_active == True)
         )
+        if port_check.scalars().first():
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Порт {obj_in.port} уже используется другим активным инбаундом"
+            )
     # 1. Проверяем уникальность тега
     existing = await db.execute(select(Inbound).where(Inbound.tag == obj_in.tag))
     if existing.scalars().first():

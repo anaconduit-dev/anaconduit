@@ -6,7 +6,7 @@ from pydantic import Field
 
 class Settings(BaseSettings):
     # --- Общие настройки ---
-    VERSION: str = "1.0.03"
+    VERSION: str = "1.0.04"
     GITHUB_REPO: str = "anaconduit-dev/anaconduit"
 
     app_name: str = "Anaconduit"
@@ -66,4 +66,4 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # 2. СРАЗУ вызываем создание папок, не дожидаясь обращений к свойствам
-settings.ensure_folders()
+#settings.ensure_folders()

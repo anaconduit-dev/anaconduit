@@ -10,6 +10,8 @@ import os
 import asyncio
 import urllib.parse
 import time
+import shutil
+from fastapi import Response
 from typing import List, Dict, Any, Tuple
 from datetime import datetime, timezone
 from sqlalchemy import update, select
@@ -335,73 +337,60 @@ class XrayService:
     # app/services/xray_service.py
 
     async def update_stats_in_db(self):
-        """
-        Запрашивает статистику и сохраняет в БД пачкой.
-        Исправлена ошибка KeyError за счет использования .get() или констант.
-        """
-        stats_list = await self.client.get_stats(reset=True) 
-        
-        if not stats_list or sum(int(item["value"]) for item in stats_list) <= 0:
-            return
+        stats_list = await self.client.get_stats(reset=True)
+        if not stats_list: return
 
-        # Используем одинаковые ключи, которые приходят из Xray: 'uplink' и 'downlink'
-        client_updates = defaultdict(lambda: {"uplink": 0, "downlink": 0})
-        user_updates = defaultdict(lambda: {"uplink": 0, "downlink": 0})
+        # 1. Собираем все email и tag из статистики за один проход
+        needed_identifiers = set()
+        parsed_stats = []
+        for item in stats_list:
+            parts = item["name"].split(">>>")
+            if len(parts) >= 4 and "#" in parts[1]:
+                email, tag = parts[1].lower().split("#")
+                parsed_stats.append({
+                    "email": email, "tag": tag, 
+                    "dir": parts[3], "val": int(item["value"])
+                })
+                needed_identifiers.add(email)
+
+        if not parsed_stats: return
 
         async with AsyncSessionLocal() as session:
-            for item in stats_list:
-                parts = item["name"].split(">>>")
-                if parts[0] != "user" or "#" not in parts[1]:
-                    continue
+            # 2. Загружаем всех нужных клиентов ОДНИМ запросом
+            result = await session.execute(
+                select(Client.id, Client.user_id, User.email, Inbound.tag)
+                .join(User).join(Inbound)
+                .where(User.email.in_(needed_identifiers))
+            )
+            # Создаем карту для быстрого поиска: {(email, tag): (client_id, user_id)}
+            mapping = {(r.email, r.tag): (r.id, r.user_id) for r in result}
 
-                full_id = parts[1].lower()
-                direction = parts[3] # Здесь прилетает 'uplink' или 'downlink'
-                value = int(item["value"])
+            client_deltas = defaultdict(lambda: {"up": 0, "down": 0})
+            user_deltas = defaultdict(lambda: {"up": 0, "down": 0})
 
-                if value <= 0:
-                    continue
+            # 3. Распределяем трафик, используя карту в памяти
+            for s in parsed_stats:
+                ids = mapping.get((s["email"], s["tag"]))
+                if not ids: continue
+                
+                c_id, u_id = ids
+                key = "up" if "uplink" in s["dir"] else "down"
+                client_deltas[c_id][key] += s["val"]
+                user_deltas[u_id][key] += s["val"]
 
-                email, tag = full_id.split("#")
-
-                result = await session.execute(
-                    select(Client.id, Client.user_id)
-                    .join(User).join(Inbound)
-                    .where(User.email == email, Inbound.tag == tag)
-                )
-                row = result.fetchone()
-
-                if row:
-                    c_id, u_id = row
-                    # Теперь ключи в словаре точно совпадают с переменной direction
-                    client_updates[c_id][direction] += value
-                    user_updates[u_id][direction] += value
-
-            if not client_updates:
-                return
-
-            # Применяем дельты к БД
-            for c_id, delta in client_updates.items():
+            # 4. Выполняем обновления (тут можно оставить как есть или использовать bulk_update)
+            for c_id, d in client_deltas.items():
                 await session.execute(
-                    update(Client)
-                    .where(Client.id == c_id)
-                    .values(
-                        up=Client.up + delta["uplink"],
-                        down=Client.down + delta["downlink"]
-                    )
+                    update(Client).where(Client.id == c_id)
+                    .values(up=Client.up + d["up"], down=Client.down + d["down"])
                 )
-
-            for u_id, delta in user_updates.items():
+            for u_id, d in user_deltas.items():
                 await session.execute(
-                    update(User)
-                    .where(User.id == u_id)
-                    .values(
-                        total_up=User.total_up + delta["uplink"],
-                        total_down=User.total_down + delta["downlink"]
-                    )
+                    update(User).where(User.id == u_id)
+                    .values(total_up=User.total_up + d["up"], total_down=User.total_down + d["down"])
                 )
-
+            
             await session.commit()
-            logger.info(f"📊 Статистика синхронизирована ({len(client_updates)} активных ключей)")
     
 
     # ---------- Контейнер и Жизненный цикл ----------
@@ -422,7 +411,16 @@ class XrayService:
             with open(custom_config_path, "w") as f:
                 json.dump({"inbounds": []}, f)
             
-
+        
+        for filename in os.listdir(self.host_sockets_dir):
+            file_path = os.path.join(self.host_sockets_dir, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path) # Удаляем файлы сокетов
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f"Failed to delete {file_path}. Reason: {e}")
         # lstrip('v') гарантирует, что мы не получим 'teddysun/xray:vv1.8.4'
         clean_v = version.lstrip('v')
         image = f"teddysun/xray:{clean_v}"
@@ -432,7 +430,7 @@ class XrayService:
         container = await self.docker.run_container(
             name=self.CONTAINER_NAME,
             image=image,
-            command="xray -confdir /etc/xray",
+            ccommand='sh -c "rm -f /run/xray/*.sock && xray -confdir /etc/xray"',
             ports={}, 
             volumes={
                 self.host_xray_dir: {"bind": "/etc/xray", "mode": "rw"},
@@ -498,10 +496,6 @@ class XrayService:
             "private_key": b64_xray(private_key.private_bytes(encoding=serialization.Encoding.Raw, format=serialization.PrivateFormat.Raw, encryption_algorithm=serialization.NoEncryption())),
             "public_key": b64_xray(public_key.public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw))
         }
-
-    
-
-
     
 
     def generate_config_link(self, client: Client, user: User, inbound: Inbound) -> str:
@@ -584,10 +578,39 @@ class XrayService:
 
         return ""
 
-    def generate_subscription(self, client_links: List[str]) -> str:
-        """Собирает список ссылок в Base64 строку (формат V2Ray подписки)"""
-        combined = "\n".join(client_links)
-        return base64.b64encode(combined.encode('utf-8')).decode('utf-8')
+    async def generate_subscription(self, token: str, session: AsyncSessionLocal):
+        result = await session.execute(
+            select(User)
+            .where(User.subscription_token == token)
+            .options(joinedload(User.clients).joinedload(Client.inbound))
+        )
+        user = result.scalars().first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        raw_links_list = []
+
+        for client in user.clients:
+            if client.inbound.protocol in ["vless", "trojan"]:
+                link = self.generate_config_link(client, user, client.inbound)
+                raw_links_list.append(link)
+
+        payload = base64.b64encode("\n".join(raw_links_list).encode()).decode()
+        
+        # Заголовки для отображения трафика в приложении (v2rayNG и др.)
+        update_interval = 6 
+        remark = urllib.parse.quote(f"Anaconduit: {user.email}")
+        headers = {
+            "Subscription-Userinfo": (
+                f"upload={user.total_up}; download={user.total_down}; "
+                f"total={user.traffic_limit}; expire={int(user.expiry_time.timestamp()) if user.expiry_time else 0}"
+            ),
+            # Указываем клиенту интервал обновления в ЧАСАХ
+            "Profile-Update-Interval": str(update_interval),
+            "Content-Disposition": f'attachment; filename="{remark}"; filename*=UTF-8\'\'{remark}',
+            "Content-Type": "text/plain; charset=utf-8"
+        }
+        return Response(content=payload, headers=headers)
 
         
     async def get_active_tags(self) -> List[str]:

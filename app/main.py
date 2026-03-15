@@ -202,24 +202,24 @@ if os.path.exists(static_path):
         user_agent = request.headers.get("user-agent", "").lower()
         logger.info(f">>> Запрос к подписке! клиент: {user_agent}")
 
-        is_client_app = any(app in user_agent for app in [
-            "v2ray", "shadowrocket", "nekobox", "clash", 
-            "streisand", "sing-box", "surge", "v2fly", "prizrak-box"
-        ])
+        # 1. Проверяем, кто пришел (Браузер или Прокси-клиент)
+        is_browser = False
+        if user_agent:
+            ua = user_agent.lower()
+            if "mozilla" in ua or "chrome" in ua or "safari" in ua:
+                is_browser = True
+        # 2. Если браузер — отправляем на фронтенд (React)
+        if is_browser:
+            content = await get_spa_content(mode="client")
+            if not content:
+                return HTMLResponse("Front-end not built", status_code=500)
+            return HTMLResponse(content=content)
 
-        if is_client_app:
-            try:
-                xray_service = globals().get("xray_service")
-                return await get_public_sub(token=token, db=db, xray_service=xray_service)
-            except Exception as e:
-                logger.error(f"Ошибка генерации конфига для приложения: {e}")
-                raise HTTPException(status_code=404, detail="Config not found")
 
-        # Если это браузер — отдаём SPA
-        content = await get_spa_content(mode="client")
-        if not content:
-            return HTMLResponse("Front-end not built", status_code=500)
-        return HTMLResponse(content=content)
+        xray_service = globals().get("xray_service")
+        return await xray_service.generate_subscription(token, db)
+
+        
 
 
     # 3️⃣ Роут для админки (SECRET_PATH)
