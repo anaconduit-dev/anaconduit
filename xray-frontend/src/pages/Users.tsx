@@ -33,9 +33,8 @@ export default function UsersPage() {
     setIsLimitModalOpen(true);
   };
 
-  // Утилита для красивого вывода скорости
   const formatSpeed = (bytesPerSecond: number) => {
-    if (bytesPerSecond <= 0.1) return ""; // Игнорируем шум
+    if (bytesPerSecond <= 0.1) return ""; 
     const k = 1024;
     const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
     const i = Math.floor(Math.log(bytesPerSecond) / Math.log(k));
@@ -45,9 +44,7 @@ export default function UsersPage() {
   const loadData = useCallback(async () => {
     try {
       const now = Date.now();
-      // Вычисляем реальный интервал времени между запросами (в секундах)
       const interval = (now - lastFetchTime) / 1000; 
-      
       const data = await getUsers();
       const usersArray = Array.isArray(data) ? data : [];
       
@@ -84,8 +81,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Только при первой загрузке
+  }, []); 
 
   useEffect(() => {
     if (refreshInterval > 0) {
@@ -146,225 +142,219 @@ export default function UsersPage() {
   );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <header className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Пользователи</h1>
-          <p className="text-slate-500 font-medium">Управление доступом и мониторинг трафика</p>
-        </div>
+    <div className="p-8 h-full overflow-y-auto custom-scrollbar">
+      <div className="max-w-7xl mx-auto space-y-8">
         
-        <div className="flex items-center gap-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
-          <Clock size={16} className="text-slate-400 ml-2" />
-          <select 
-            value={refreshInterval} 
-            onChange={(e) => setRefreshInterval(Number(e.target.value))}
-            className="text-xs font-bold uppercase bg-transparent border-none focus:ring-0 cursor-pointer text-slate-600 outline-none"
-          >
-            <option value={0}>Обновление: ВЫКЛ</option>
-            <option value={5}>5 секунд</option>
-            <option value={15}>15 секунд</option>
-            <option value={60}>1 минута</option>
-          </select>
-          {refreshInterval > 0 && <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse mr-2" />}
-        </div>
-      </header>
-
-      <div className="relative mb-6">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-        <input 
-          type="text"
-          placeholder="Поиск по email или токену..."
-          className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-3xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-sm"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      {loading && users.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-slate-400 gap-3">
-          <Loader2 className="animate-spin text-indigo-500" size={32} />
-          <p className="text-xs font-bold uppercase tracking-widest">Загрузка базы...</p>
-        </div>
-      ) : error ? (
-        <div className="bg-red-50 border border-red-100 p-6 rounded-[32px] text-red-700 flex items-center gap-4">
-          <AlertCircle size={24} />
-          <p className="font-medium">{error}</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div 
-            onClick={handleAddNewUser}
-            className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[24px] flex flex-col items-center justify-center p-5 group cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/50 transition-all min-h-[200px]"
-          >
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm mb-3">
-                <UserPlus size={24} />
-            </div>
-            <span className="text-xs font-black uppercase text-slate-400 group-hover:text-indigo-600">Добавить клиента</span>
+        {/* Header */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-black text-base tracking-tighter uppercase italic">
+              Clients Monitor<span className="text-indigo-500">.</span>
+            </h1>
+            <p className="text-muted text-[10px] font-black uppercase tracking-[0.2em] ml-1">
+              Управление доступом и мониторинг трафика
+            </p>
           </div>
+          
+          <div className="flex items-center gap-3 bg-card border border-line p-2 pl-4 rounded-[1.5rem] shadow-xl">
+            <Clock size={14} className="text-indigo-500" />
+            <select 
+              value={refreshInterval} 
+              onChange={(e) => setRefreshInterval(Number(e.target.value))}
+              className="text-[10px] font-black uppercase bg-transparent border-none focus:ring-0 cursor-pointer text-base outline-none tracking-widest"
+            >
+              <option value={0} className="bg-main">Refresh: OFF</option>
+              <option value={5} className="bg-main">5 Seconds</option>
+              <option value={15} className="bg-main">15 Seconds</option>
+              <option value={60} className="bg-main">1 Minute</option>
+            </select>
+            {refreshInterval > 0 && (
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse mr-2 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+            )}
+          </div>
+        </header>
 
-          {filteredUsers.map((user) => {
-            // Вычисляем данные для отображения
-            const usedGB = (user.total_up + user.total_down) / (1024 ** 3);
+        {/* Search Bar */}
+        <div className="relative group">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-indigo-500 transition-colors" size={20} />
+          <input 
+            type="text"
+            placeholder="Поиск по email или токену..."
+            className="w-full pl-14 pr-6 py-5 bg-card border border-line rounded-[2rem] focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-lg text-sm font-bold tracking-tight text-base placeholder:text-muted/50 placeholder:font-normal"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {loading && users.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-muted gap-4">
+            <Loader2 className="animate-spin text-indigo-500" size={40} />
+            <p className="text-[10px] font-black uppercase tracking-[0.3em]">Синхронизация базы данных...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-red-500/5 border border-red-500/20 p-6 rounded-[2rem] text-red-500 flex items-center gap-4 animate-in zoom-in-95">
+            <AlertCircle size={24} />
+            <p className="text-sm font-black uppercase tracking-tight">{error}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             
-            // Конвертируем байты из БД в ГБ для отображения (как в модалке)
-            const limitGB = user.traffic_limit ? Math.floor(user.traffic_limit / (1024 ** 3)) : 0;
-            
-            const percent = limitGB > 0 ? Math.min((usedGB / limitGB) * 100, 100) : 0;
-            const isOnline = onlineUsers[user.id];
+            <div 
+              onClick={handleAddNewUser}
+              className="bg-main/40 border-2 border-dashed border-line rounded-[2.5rem] flex flex-col items-center justify-center p-8 group cursor-pointer hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all duration-300 min-h-[280px]"
+            >
+              <div className="w-16 h-16 bg-card border border-line rounded-[1.5rem] flex items-center justify-center text-muted group-hover:text-white group-hover:bg-indigo-600 group-hover:border-indigo-500 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-2xl mb-4">
+                  <UserPlus size={28} />
+              </div>
+              <span className="text-[10px] font-black uppercase text-muted tracking-[0.2em] group-hover:text-indigo-500 transition-colors">Новый клиент</span>
+            </div>
 
-            // Форматируем дату окончания
-            const expiryDate = user.expiry_time ? new Date(user.expiry_time).toLocaleDateString('ru-RU', {
-              day: '2-digit',
-              month: '2-digit',
-              year: '2-digit'
-            }) : null;
+            {filteredUsers.map((user) => {
+              const usedGB = (user.total_up + user.total_down) / (1024 ** 3);
+              const limitGB = user.traffic_limit ? Math.floor(user.traffic_limit / (1024 ** 3)) : 0;
+              const percent = limitGB > 0 ? Math.min((usedGB / limitGB) * 100, 100) : 0;
+              const isOnline = onlineUsers[user.id];
+              const expiryDate = user.expiry_time ? new Date(user.expiry_time).toLocaleDateString('ru-RU', {
+                day: '2-digit', month: '2-digit', year: '2-digit'
+              }) : null;
 
-            return (
-              <div 
-                key={user.id} 
-                onClick={() => setSelectedUser(user)}
-                className="bg-white rounded-[24px] border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all overflow-hidden group cursor-pointer"
-              >
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${user.is_active ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
-                      {isOnline && (
-                        <div className="flex flex-col items-start">
-                          <span className="flex items-center gap-1 text-[10px] font-black text-indigo-500 uppercase animate-pulse">
-                            <Zap size={10} fill="currentColor" /> Live
-                          </span>
-                          {userSpeeds[user.id] && (
-                            <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded-md border border-slate-100">
-                              {userSpeeds[user.id]}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={(e) => handleAddInboundToExisting(e, user)} 
-                        className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-400 hover:text-indigo-600"
-                        title="Добавить протокол"
-                      >
-                        <PlusCircle size={14} />
-                      </button>
-                      <button 
-                        onClick={(e) => handleOpenLimits(e, user)} 
-                        className="p-1.5 hover:bg-amber-50 rounded-lg text-slate-400 hover:text-amber-600"
-                        title="Лимиты"
-                      >
-                        <Activity size={14} />
-                      </button>
-                      <button onClick={(e) => handleResetToken(e, user.id)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600">
-                        <Key size={14} />
-                      </button>
-                      <button onClick={(e) => handleDelete(e, user.id, user.email)} className="p-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <h3 className="text-sm font-bold text-slate-800 mb-1 truncate">{user.email}</h3>
+              return (
+                <div 
+                  key={user.id} 
+                  onClick={() => setSelectedUser(user)}
+                  className="bg-card border border-line rounded-[2.5rem] shadow-sm hover:shadow-2xl hover:border-indigo-500/30 transition-all duration-300 overflow-hidden group cursor-pointer relative"
+                >
+                  <div className={`absolute top-0 left-0 w-full h-1 ${user.is_active ? 'bg-emerald-500/20' : 'bg-red-500/20'}`} />
                   
-                  <div className="flex items-center justify-between gap-2 mb-4 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                    <span className="text-[10px] font-mono text-slate-500 truncate">
-                      {user.subscription_token}
-                    </span>
-                    <button 
-                      onClick={(e) => handleCopy(e, user.subscription_token, `token-${user.id}`)}
-                      className={`p-2 rounded-lg transition-all active:scale-90 shrink-0 ${
-                        copiedTag === `token-${user.id}` 
-                          ? 'bg-emerald-500 text-white shadow-sm' 
-                          : 'bg-white text-indigo-500 hover:text-indigo-700 shadow-sm border border-slate-100'
-                      }`}
-                    >
-                      {copiedTag === `token-${user.id}` ? <CheckCircle2 size={14} /> : <Copy size={14} />}
-                    </button>
-                  </div>
-
-                  <div className="space-y-1.5 mb-4">
-                    <div className="flex justify-between text-[9px] font-black uppercase tracking-tighter text-slate-400">
-                      <div className="flex gap-2">
-                        <span className="text-slate-700">{usedGB.toFixed(1)} GB</span>
-                        <span>/</span>
-                        <span>{limitGB > 0 ? `${limitGB} GB` : '∞'}</span>
+                  <div className="p-6 pt-7 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full relative ${user.is_active ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                          {user.is_active && <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-40" />}
+                        </div>
+                        {isOnline && (
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter flex items-center gap-1">
+                              <Zap size={10} fill="currentColor" className="animate-pulse" /> Live
+                            </span>
+                            {userSpeeds[user.id] && (
+                              <span className="text-[8px] font-mono font-black text-muted tracking-tighter">
+                                {userSpeeds[user.id]}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      {expiryDate && (
-                        <span className={user.is_active ? "text-indigo-500" : "text-red-500"}>
-                          до {expiryDate}
+                      
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-y-1 group-hover:translate-y-0">
+                        <button onClick={(e) => {e.stopPropagation(); handleAddInboundToExisting(e, user)}} className="p-2 hover:bg-indigo-500/10 rounded-xl text-muted hover:text-indigo-500 transition-colors"><PlusCircle size={14} /></button>
+                        <button onClick={(e) => {e.stopPropagation(); handleOpenLimits(e, user)}} className="p-2 hover:bg-amber-500/10 rounded-xl text-muted hover:text-amber-500 transition-colors"><Activity size={14} /></button>
+                        <button onClick={(e) => {e.stopPropagation(); handleResetToken(e, user.id)}} className="p-2 hover:bg-indigo-500/10 rounded-xl text-muted hover:text-indigo-400 transition-colors"><Key size={14} /></button>
+                        <button onClick={(e) => {e.stopPropagation(); handleDelete(e, user.id, user.email)}} className="p-2 hover:bg-red-500/10 rounded-xl text-muted hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-black text-base uppercase tracking-tight truncate group-hover:text-indigo-400 transition-colors duration-300">
+                        {user.email.split('@')[0]}
+                        <span className="text-muted text-[10px] lowercase">@{user.email.split('@')[1]}</span>
+                      </h3>
+                      
+                      <div className="flex items-center justify-between gap-2 mt-3 bg-main/50 p-2.5 rounded-2xl border border-line">
+                        <span className="text-[9px] font-mono font-bold text-muted truncate">
+                          {user.subscription_token}
                         </span>
+                        <button 
+                          onClick={(e) => {e.stopPropagation(); handleCopy(e, user.subscription_token, `token-${user.id}`)}}
+                          className={`p-2 rounded-xl transition-all active:scale-90 shrink-0 shadow-lg ${
+                            copiedTag === `token-${user.id}` 
+                              ? 'bg-emerald-500 text-white' 
+                              : 'bg-card text-indigo-500 border border-line hover:border-indigo-500/50'
+                          }`}
+                        >
+                          {copiedTag === `token-${user.id}` ? <CheckCircle2 size={12} /> : <Copy size={12} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
+                        <div className="flex gap-1 items-center">
+                          <span className="text-base">{usedGB.toFixed(1)}</span>
+                          <span className="text-muted/40">/</span>
+                          <span className="text-muted">{limitGB > 0 ? `${limitGB} GB` : '∞'}</span>
+                        </div>
+                        {expiryDate && (
+                          <span className={user.is_active ? "text-indigo-400" : "text-red-500"}>
+                            {expiryDate}
+                          </span>
+                        )}
+                      </div>
+                      <div className="w-full h-1.5 bg-main rounded-full overflow-hidden border border-line p-[1px]">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-1000 ${
+                            !user.is_active ? 'bg-red-500/50' : percent > 85 ? 'bg-amber-500' : 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]'
+                          }`}
+                          style={{ width: `${limitGB > 0 ? percent : 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-2 space-y-1.5 border-t border-line/50">
+                      {user.clients && user.clients.length > 0 ? (
+                        user.clients.map((client: any) => (
+                          <div key={client.id} className="flex items-center justify-between bg-main/30 p-2 rounded-xl border border-line/30 group/item hover:bg-main/60 transition-colors">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-black text-indigo-500 uppercase px-1.5 py-0.5 bg-indigo-500/10 rounded-lg italic text-[8px] border border-indigo-500/20">
+                                {client.inbound?.protocol}
+                              </span>
+                              <span className="text-muted font-bold text-[10px] truncate group-hover/item:text-base transition-colors">{client.inbound?.tag}</span>
+                            </div>
+                            <span className="text-[9px] font-mono font-black text-muted group-hover/item:text-indigo-400">
+                              {formatSmallTraffic(client.up + client.down)}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-[9px] text-muted/40 font-black uppercase tracking-widest text-center py-2 italic">
+                          No active nodes
+                        </div>
                       )}
                     </div>
-                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-700 ${
-                          !user.is_active ? 'bg-red-400' : percent > 85 ? 'bg-amber-500' : 'bg-indigo-600'
-                        }`}
-                        style={{ width: `${limitGB > 0 ? percent : 100}%`, opacity: user.is_active ? 1 : 0.5 }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* ... (остальная часть с клиентами без изменений) */}
-
-                  <div className="space-y-1 border-t border-slate-50 pt-3">
-                    {user.clients && user.clients.length > 0 ? (
-                      user.clients.map((client: any) => (
-                        <div key={client.id} className="flex items-center justify-between text-[10px] bg-slate-50/50 p-1.5 rounded-lg border border-slate-100/50">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-black text-indigo-500 uppercase px-1 bg-indigo-50 rounded italic text-[8px]">
-                              {client.inbound?.protocol}
-                            </span>
-                            <span className="text-slate-600 font-medium truncate">{client.inbound?.tag}</span>
-                          </div>
-                          <span className="text-slate-400 font-mono shrink-0">
-                            {formatSmallTraffic(client.up + client.down)}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-[9px] text-slate-400 italic text-center py-1">
-                        Нет активных подключений
-                      </div>
-                    )}
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
 
-      {selectedUser && (
-        <UserDetailModal 
-          user={selectedUser} 
-          onClose={() => setSelectedUser(null)} 
-          onRefresh={loadData} 
+        {/* Modal Components */}
+        {selectedUser && (
+          <UserDetailModal 
+            user={selectedUser} 
+            onClose={() => setSelectedUser(null)} 
+            onRefresh={loadData} 
+          />
+        )}
+        <UpdateLimitsModal 
+          isOpen={isLimitModalOpen}
+          user={userForLimits}
+          onClose={() => {
+            setIsLimitModalOpen(false);
+            setUserForLimits(null);
+          }}
+          onSuccess={loadData}
         />
-      )}
-      <UpdateLimitsModal 
-        isOpen={isLimitModalOpen}
-        user={userForLimits}
-        onClose={() => {
-          setIsLimitModalOpen(false);
-          setUserForLimits(null);
-        }}
-        onSuccess={loadData}
-      />
-      <AddClientModal 
-        isOpen={isAddModalOpen}
-        existingUser={userForNewInbound}
-        onClose={() => {
-            setIsAddModalOpen(false);
-            setUserForNewInbound(null);
-        }}
-        onSuccess={() => {
-            loadData();
-        }}
-      />
+        <AddClientModal 
+          isOpen={isAddModalOpen}
+          existingUser={userForNewInbound}
+          onClose={() => {
+              setIsAddModalOpen(false);
+              setUserForNewInbound(null);
+          }}
+          onSuccess={loadData}
+        />
+      </div>
     </div>
   );
 }

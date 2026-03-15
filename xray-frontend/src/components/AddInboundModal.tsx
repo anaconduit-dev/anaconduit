@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
 import { 
   X, Shield, Zap, Loader2, Search, Globe, Lock,
-  Settings, Plus, Trash2, Cpu, Hash
+  Settings, Plus, Trash2, Cpu, Hash, Check
 } from "lucide-react";
 import { generateXrayKeys, addClient } from "../api/user";
 import {  addInbound } from "../api/inbound"
 
 const generateComplexPath = () => {
-  const randomNum = Math.floor(Math.random() * 90000) + 10000; // 5 цифр
   const randomStr = Math.random().toString(36).substring(2, 12); // 10 символов
-  return `/${randomNum}/${randomStr}`;
+  return `/${randomStr}`;
 };
 const generateUUID = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -403,13 +402,14 @@ useEffect(() => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4">
-      <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 transition-all">
+      {/* Основной контейнер: bg-card, border-line */}
+      <div className="bg-card w-full max-w-4xl rounded-[3rem] shadow-2xl border border-line overflow-hidden flex flex-col h-[90vh] transition-colors">
         
-        {/* Header */}
-        <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
-          <div className="flex items-center gap-4 text-slate-800">
-            <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-200">
+        {/* Header: bg-main/50 */}
+        <div className="p-6 bg-main/50 border-b border-line flex justify-between items-center">
+          <div className="flex items-center gap-4 text-base">
+            <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg dark:shadow-indigo-950/40 shadow-indigo-200">
               <Cpu size={24} />
             </div>
             <div>
@@ -417,11 +417,13 @@ useEffect(() => {
               <p className="text-[10px] font-bold text-indigo-500 uppercase">Версия ядра: v24.9.30+</p>
             </div>
           </div>
-          <button onClick={handleClose} className="p-2 hover:bg-slate-200 rounded-full"><X /></button>
+          <button onClick={handleClose} className="p-2 hover:bg-main rounded-full text-muted hover:text-base transition-colors">
+            <X />
+          </button>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex px-8 py-4 gap-2 bg-white border-b overflow-x-auto no-scrollbar">
+        {/* Navigation Tabs: bg-card */}
+        <div className="flex px-8 py-4 gap-2 bg-card border-b border-line overflow-x-auto no-scrollbar">
           {[
             { id: 'base', label: 'База', icon: Zap },
             { id: 'transport', label: 'Транспорт', icon: Globe },
@@ -429,13 +431,14 @@ useEffect(() => {
             { id: 'sniffing', label: 'Сниффинг', icon: Search },
             { id: 'sockopt', label: 'Сокеты', icon: Settings },
             { id: 'clients', label: 'Клиенты', icon: Lock },
-
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-[11px] uppercase transition-all ${
-                activeTab === tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-[11px] uppercase transition-all shrink-0 ${
+                activeTab === tab.id 
+                  ? 'bg-indigo-600 text-white shadow-lg dark:shadow-indigo-900/30 shadow-indigo-100' 
+                  : 'bg-main text-muted hover:bg-main/80 border border-transparent hover:border-line'
               }`}
             >
               <tab.icon size={14} /> {tab.label}
@@ -444,7 +447,7 @@ useEffect(() => {
         </div>
 
         {/* Main Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar bg-card">
           
           {/* TAB: BASE */}
           {activeTab === 'base' && (
@@ -453,10 +456,10 @@ useEffect(() => {
               {/* Сетка основных параметров */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Tag (Уникальный)</label>
+                  <label className="text-[10px] font-black text-muted uppercase ml-1">Tag (Уникальный)</label>
                   <input 
                     required 
-                    className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm focus:border-indigo-500 transition-all outline-none" 
+                    className="w-full p-4 bg-main border border-line rounded-2xl font-bold text-sm text-base focus:border-indigo-500 transition-all outline-none" 
                     value={form.tag} 
                     onChange={e => setForm({...form, tag: e.target.value})} 
                     placeholder="VLESS_REALITY" 
@@ -465,7 +468,7 @@ useEffect(() => {
                 
                 {/* Поле ПОРТ */}
                 <div className="space-y-1 relative">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex justify-between">
+                  <label className="text-[10px] font-black text-muted uppercase ml-1 flex justify-between">
                     Порт
                     {form.network === 'xhttp' && <Lock size={10} className="text-indigo-500" />}
                   </label>
@@ -474,8 +477,8 @@ useEffect(() => {
                     disabled={form.network === 'xhttp'}
                     className={`w-full p-4 border rounded-2xl font-mono font-bold text-sm transition-all outline-none ${
                       form.network === 'xhttp' 
-                        ? 'bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed opacity-60' 
-                        : 'bg-white border-slate-100 text-slate-700 focus:border-indigo-500'
+                        ? 'bg-main text-muted border-line cursor-not-allowed opacity-50' 
+                        : 'bg-card border-line text-base focus:border-indigo-500'
                     }`} 
                     value={form.port} 
                     onChange={e => setForm({...form, port: parseInt(e.target.value) || 0})} 
@@ -484,7 +487,7 @@ useEffect(() => {
 
                 {/* Поле LISTEN */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex justify-between">
+                  <label className="text-[10px] font-black text-muted uppercase ml-1 flex justify-between">
                     { form.network === 'xhttp' ? "Путь к сокету (UDS)" : "IP прослушивания" }
                     {form.network === 'xhttp' && <Zap size={10} className="text-emerald-500" />}
                   </label>
@@ -492,8 +495,8 @@ useEffect(() => {
                     readOnly={form.network === 'xhttp'}
                     className={`w-full p-4 border rounded-2xl font-mono text-sm transition-all outline-none ${
                       form.network === 'xhttp' 
-                        ? 'bg-indigo-50/50 text-indigo-600 border-indigo-100 cursor-default italic' 
-                        : 'bg-white border-slate-100 text-slate-700 focus:border-indigo-500'
+                        ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20 cursor-default italic' 
+                        : 'bg-card border-line text-base focus:border-indigo-500'
                     }`} 
                     value={form.listen} 
                     onChange={e => setForm({...form, listen: e.target.value})} 
@@ -501,14 +504,13 @@ useEffect(() => {
                 </div>
               </div>
 
-              <hr className="border-slate-50" />
+              <hr className="border-line opacity-50" />
 
-              {/* ВЫБОР ПРОТОКОЛА В СТИЛЕ КНОПОК */}
+              {/* ВЫБОР ПРОТОКОЛА */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Выбор протокола</label>
+                <label className="text-[10px] font-black text-muted uppercase ml-1">Выбор протокола</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {['vless', 'trojan', 'shadowsocks', 'vmess'].map((proto) => {
-                    // Пока что блокируем vmess и shadowsocks, если они не реализованы в бэке
                     const isLocked = proto === 'shadowsocks' || proto === 'vmess';
                     
                     return (
@@ -519,39 +521,36 @@ useEffect(() => {
                         onClick={() => setForm({ ...form, protocol: proto })}
                         className={`py-4 rounded-2xl font-black text-[11px] uppercase transition-all border ${
                           form.protocol === proto 
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100' 
-                            : 'bg-white text-slate-400 border-slate-100'
-                        } ${isLocked ? 'opacity-20 cursor-not-allowed grayscale' : 'hover:border-indigo-200'}`}
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg dark:shadow-indigo-900/30 shadow-indigo-100' 
+                            : 'bg-main text-muted border-line hover:border-indigo-500/50'
+                        } ${isLocked ? 'opacity-30 cursor-not-allowed grayscale border-dashed' : ''}`}
                       >
                         {proto}
-                        {isLocked && <span className="block text-[6px] mt-1 opacity-50">Soon</span>}
+                        {isLocked && <span className="block text-[6px] mt-1 opacity-50 uppercase">Soon</span>}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* СПЕЦИФИЧНЫЕ НАСТРОЙКИ (Flow или Fallback) */}
+              {/* СПЕЦИФИЧНЫЕ НАСТРОЙКИ */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                {/* Настройка Flow для VLESS */}
                 {form.protocol === 'vless' && (
                   <div className="space-y-1 animate-in slide-in-from-top-2 duration-300">
-                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Default Flow</label>
+                    <label className="text-[10px] font-black text-muted uppercase ml-1">Default Flow</label>
                     <select 
-                      className="w-full p-4 bg-white border border-indigo-50 rounded-2xl font-bold text-sm text-indigo-600 outline-none"
+                      className="w-full p-4 bg-card border border-indigo-500/30 rounded-2xl font-bold text-sm text-indigo-500 outline-none focus:border-indigo-500 transition-all"
                       value={form.flow}
                       onChange={e => setForm({...form, flow: e.target.value})}
                     >
                       <option value="xtls-rprx-vision">XTLS Vision (Best)</option>
-                      {/*<option value="xtls-rprx-vision-udp443">XTLS Vision UDP443</option>*/}
                       <option value="">None (Legacy)</option>
                     </select>
                   </div>
                 )}
 
-                {/* Настройка Fallback */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex justify-between">
+                  <label className="text-[10px] font-black text-muted uppercase ml-1 flex justify-between">
                     Fallback Dest (HTTP)
                     {form.network === 'grpc' && <span className="text-amber-500 font-bold">Incompatible with gRPC</span>}
                   </label>
@@ -559,8 +558,8 @@ useEffect(() => {
                     disabled={form.network === 'grpc'}
                     className={`w-full p-4 border rounded-2xl font-bold text-sm transition-all outline-none ${
                       form.network === 'grpc' 
-                        ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' 
-                        : 'bg-white border-slate-100 text-slate-700 focus:border-indigo-500'
+                        ? 'bg-main text-muted/30 border-line cursor-not-allowed' 
+                        : 'bg-card border-line text-base focus:border-indigo-500'
                     }`}
                     value={form.network === 'grpc' ? "" : form.fallbackDest} 
                     onChange={e => setForm({...form, fallbackDest: e.target.value})}
@@ -578,10 +577,9 @@ useEffect(() => {
               
               {/* ВЫБОР ТИПА СЕТИ (Network Type) */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Тип сети (Network Type)</label>
+                <label className="text-[10px] font-black text-muted uppercase ml-1">Тип сети (Network Type)</label>
                 <div className="grid grid-cols-4 gap-3">
                   {['raw', 'ws', 'grpc', 'xhttp'].map((net) => {
-                    // Reality НЕ поддерживает WebSocket
                     const isDisabled = form.security === 'reality' && net === 'ws';
                     
                     return (
@@ -592,33 +590,33 @@ useEffect(() => {
                         onClick={() => setForm({ ...form, network: net })}
                         className={`py-4 rounded-2xl font-black text-[11px] uppercase transition-all border ${
                           form.network === net 
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' 
-                            : 'bg-white text-slate-400 border-slate-100'
-                        } ${isDisabled ? 'opacity-30 cursor-not-allowed bg-slate-50' : 'hover:border-indigo-200'}`}
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg dark:shadow-indigo-900/30' 
+                            : 'bg-main text-muted border-line hover:border-indigo-500/50'
+                        } ${isDisabled ? 'opacity-20 cursor-not-allowed bg-main border-dashed' : ''}`}
                       >
                         {net === 'raw' ? 'TCP / RAW' : net.toUpperCase()}
-                        {isDisabled && <span className="block text-[8px] text-amber-500 mt-1">Несовместимо с Reality</span>}
+                        {isDisabled && <span className="block text-[8px] text-amber-500 mt-1 uppercase">No Reality</span>}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              <hr className="border-slate-100" />
+              <hr className="border-line opacity-50" />
 
               {/* Настройки для RAW */}
               {form.network === 'raw' && (
                 <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
                   {/* Proxy Protocol Switch */}
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="flex items-center justify-between p-4 bg-main/50 rounded-2xl border border-line">
                     <div>
-                      <h4 className="text-sm font-bold text-slate-700">Accept Proxy Protocol</h4>
-                      <p className="text-[10px] text-slate-400">Для работы через Nginx/HAProxy</p>
+                      <h4 className="text-sm font-bold text-base">Accept Proxy Protocol</h4>
+                      <p className="text-[10px] text-muted">Для работы через Nginx/HAProxy</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setForm({...form, acceptProxyProtocol: !form.acceptProxyProtocol})}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${form.acceptProxyProtocol ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${form.acceptProxyProtocol ? 'bg-indigo-600' : 'bg-slate-700'}`}
                     >
                       <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${form.acceptProxyProtocol ? 'translate-x-6' : ''}`} />
                     </button>
@@ -626,7 +624,7 @@ useEffect(() => {
 
                   {/* Header Type */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex justify-between">
+                    <label className="text-[10px] font-black text-muted uppercase ml-1 flex justify-between">
                       Тип маскировки (Header Type)
                       {form.security === 'reality' && (
                         <span className="text-amber-500 normal-case font-medium">Reality требует 'none'</span>
@@ -634,10 +632,10 @@ useEffect(() => {
                     </label>
                     <select 
                       disabled={form.security === 'reality'}
-                      className={`w-full p-4 rounded-2xl font-bold border transition-all ${
+                      className={`w-full p-4 rounded-2xl font-bold border transition-all outline-none ${
                         form.security === 'reality' 
-                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' 
-                        : 'bg-white text-indigo-600 border-indigo-50'
+                        ? 'bg-main text-muted border-line cursor-not-allowed' 
+                        : 'bg-card text-indigo-500 border-indigo-500/30 focus:border-indigo-500'
                       }`}
                       value={form.security === 'reality' ? 'none' : form.tcpHeaderType}
                       onChange={e => setForm({...form, tcpHeaderType: e.target.value})}
@@ -651,46 +649,43 @@ useEffect(() => {
 
               {/* Настройки для WebSocket (WS) */}
               {form.network === 'ws' && (
-                <div className="space-y-4 animate-in slide-in-from-top-2 duration-300 md:col-span-3">
+                <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    
-                    {/* WS PATH */}
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black text-indigo-400 uppercase ml-1 flex justify-between">
+                      <label className="text-[9px] font-black text-indigo-500 uppercase ml-1 flex justify-between">
                         WS Path
                         <button 
                           type="button"
                           onClick={() => setForm({...form, wsPath: generateComplexPath()})}
-                          className="text-indigo-600 hover:text-indigo-800 transition-colors lowercase font-bold"
+                          className="text-indigo-600 hover:text-indigo-400 transition-colors lowercase font-bold"
                         >
-                          + сгенерировать сложный путь
+                          + сгенерировать путь
                         </button>
                       </label>
                       <div className="relative">
                         <input 
-                          className="w-full p-4 bg-white border border-indigo-50 rounded-xl font-mono text-sm pr-10 focus:border-indigo-500 outline-none transition-all" 
+                          className="w-full p-4 bg-card border border-line rounded-xl font-mono text-sm text-base pr-10 focus:border-indigo-500 outline-none transition-all" 
                           value={form.wsPath} 
                           onChange={e => setForm({...form, wsPath: e.target.value})} 
                           placeholder="/secret-path" 
                         />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300">
-                          <Hash size={16} /> {/* Теперь иконка найдется */}
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted/50">
+                          <Hash size={16} />
                         </div>
                       </div>
                     </div>
 
-                    {/* WS HOST */}
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black text-indigo-400 uppercase ml-1">WS Host (SNI)</label>
+                      <label className="text-[9px] font-black text-indigo-500 uppercase ml-1">WS Host (SNI)</label>
                       <div className="relative">
                         <input 
-                          className="w-full p-4 bg-white border border-indigo-50 rounded-xl font-mono text-sm pr-10 focus:border-indigo-500 outline-none transition-all" 
+                          className="w-full p-4 bg-card border border-line rounded-xl font-mono text-sm text-base pr-10 focus:border-indigo-500 outline-none transition-all" 
                           value={form.wsHost} 
                           onChange={e => setForm({...form, wsHost: e.target.value})} 
                           placeholder="example.com" 
                         />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300">
-                          <Globe size={16} /> {/* Можно добавить иконку глобуса для хоста */}
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted/50">
+                          <Globe size={16} />
                         </div>
                       </div>
                     </div>
@@ -700,80 +695,76 @@ useEffect(() => {
 
               {/* gRPC Settings */}
               {form.network === 'grpc' && (
-                <div className="space-y-4 animate-in slide-in-from-top-2 duration-300 md:col-span-3">
+                <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    
-                    {/* Service Name */}
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black text-emerald-500 uppercase ml-1">Service Name (Path)</label>
+                      <label className="text-[9px] font-black text-emerald-500 uppercase ml-1">Service Name</label>
                       <div className="relative">
                         <input 
-                          className="w-full p-4 bg-white border border-indigo-50 rounded-xl font-mono text-sm pr-12" 
+                          className="w-full p-4 bg-card border border-line rounded-xl font-mono text-sm text-base pr-12 focus:border-emerald-500 outline-none" 
                           value={form.grpcServiceName} 
                           onChange={e => setForm({...form, grpcServiceName: e.target.value})} 
-                          placeholder="Напр: SpeechService" 
                         />
                         <button 
                           type="button"
                           onClick={() => setForm({...form, grpcServiceName: getRandomGrpcService()})}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-indigo-400 hover:text-indigo-600 transition-colors"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-emerald-500 hover:text-emerald-400 transition-colors"
                         >
                           <Zap size={18} />
                         </button>
                       </div>
                     </div>
 
-                    {/* Authority */}
                     <div className="space-y-1">
                       <label className="text-[9px] font-black text-emerald-500 uppercase ml-1">Authority (Domain)</label>
                       <input 
-                        className="w-full p-4 bg-white border border-emerald-50 rounded-xl font-mono text-sm outline-none focus:border-emerald-500 transition-all" 
+                        className="w-full p-4 bg-card border border-line rounded-xl font-mono text-sm text-base outline-none focus:border-emerald-500" 
                         value={form.grpcAuthority} 
                         onChange={e => setForm({...form, grpcAuthority: e.target.value})} 
-                        placeholder="example.com" 
                       />
                     </div>
 
-                    {/* Multi Mode */}
-                    <div className="flex items-center justify-between p-4 bg-white border border-emerald-50 rounded-xl">
+                    <div className="flex items-center justify-between p-4 bg-card border border-line rounded-xl">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-black uppercase text-slate-600">Multi Mode</span>
-                        <span className="text-[8px] text-slate-400">Поддержка нескольких сервисов</span>
+                        <span className="text-[10px] font-black uppercase text-base">Multi Mode</span>
+                        <span className="text-[8px] text-muted">Поддержка сессий</span>
                       </div>
                       <input 
                         type="checkbox" 
-                        className="w-5 h-5 accent-emerald-500"
+                        className="w-5 h-5 accent-emerald-500 rounded-lg cursor-pointer"
                         checked={form.grpcMultiMode}
                         onChange={e => setForm({...form, grpcMultiMode: e.target.checked})}
                       />
                     </div>
-
                   </div>
                 </div>
               )}
-              
 
               {/* xHttp */}
               {form.network === 'xhttp' && (
-                <div className="space-y-4 animate-in slide-in-from-top-2 duration-300 md:col-span-3">
+                <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    
-                    {/* PATH */}
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black text-indigo-400 uppercase ml-1">Path</label>
+                      <label className="text-[9px] font-black text-indigo-500 uppercase ml-1">Path
+                        <button 
+                          type="button"
+                          onClick={() => setForm({...form, xhttpPath: generateComplexPath()})}
+                          className="text-indigo-600 hover:text-indigo-400 transition-colors lowercase font-bold"
+                        >
+                          + сгенерировать путь
+                        </button>
+                      </label>
                       <input 
-                        className="w-full p-4 bg-white border border-indigo-50 rounded-xl font-mono text-sm outline-none focus:border-indigo-500 transition-all" 
+                        className="w-full p-4 bg-card border border-line rounded-xl font-mono text-sm text-base focus:border-indigo-500 outline-none transition-all" 
                         value={form.xhttpPath} 
                         onChange={e => setForm({...form, xhttpPath: e.target.value})} 
-                        placeholder="/WqGYA8..." 
                       />
                     </div>
 
-                    {/* MODE (Оставили один, красивый) */}
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black text-indigo-400 uppercase ml-1">Mode</label>
+                      <label className="text-[9px] font-black text-indigo-500 uppercase ml-1">Mode</label>
                       <select 
-                        className="w-full p-4 bg-white border border-indigo-50 rounded-xl font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                        className="w-full p-4 bg-card border border-line rounded-xl font-bold text-sm text-base focus:border-indigo-500 outline-none"
                         value={form.xhttpMode}
                         onChange={e => setForm({...form, xhttpMode: e.target.value})}
                       >
@@ -782,33 +773,28 @@ useEffect(() => {
                       </select>
                     </div>
 
-                    {/* PADDING */}
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black text-indigo-400 uppercase ml-1">Padding Bytes</label>
+                      <label className="text-[9px] font-black text-indigo-500 uppercase ml-1">Padding</label>
                       <input 
-                        className="w-full p-4 bg-white border border-indigo-50 rounded-xl font-mono text-sm outline-none focus:border-indigo-500 transition-all" 
+                        className="w-full p-4 bg-card border border-line rounded-xl font-mono text-sm text-base focus:border-indigo-500 outline-none" 
                         value={form.xhttpPadding} 
                         onChange={e => setForm({...form, xhttpPadding: e.target.value})} 
-                        placeholder="100-1000" 
                       />
                     </div>
-
                   </div>
-                  <p className="text-[8px] text-slate-400 px-1 italic">
-                    * xHTTP — это новый высокопроизводительный транспорт. Настройки сокетов (BBR/TFO) доступны во вкладке "Sockopt".
-                  </p>
                 </div>
               )}
+
+              {/* Уведомление про Unix Socket */}
               {(form.network === 'xhttp') && (
-                <div className="mt-2 p-3 bg-indigo-50 rounded-xl border border-indigo-100 flex items-start gap-3 animate-in zoom-in-95 duration-200">
-                  <div className="mt-0.5 text-indigo-600"><Settings size={14} /></div>
-                  <p className="text-[10px] text-indigo-700 leading-tight">
+                <div className="mt-2 p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20 flex items-start gap-3 animate-in zoom-in-95 duration-200">
+                  <div className="mt-0.5 text-indigo-500"><Settings size={14} /></div>
+                  <p className="text-[10px] text-indigo-500/80 leading-tight">
                     Для сети <strong>{form.network.toUpperCase()}</strong> автоматически включен режим <strong>Unix Domain Socket</strong>. 
-                    Взаимодействие с Nginx будет происходить через файл в оперативной памяти, что быстрее и безопаснее.
+                    Это повышает производительность связки с Nginx.
                   </p>
                 </div>
               )}
-                            
             </div>
           )}
 
@@ -1078,79 +1064,86 @@ useEffect(() => {
           {/* TAB: SNIFFING */}
           {activeTab === 'sniffing' && (
             <div className="space-y-8 animate-in fade-in duration-300">
-               <div className="flex items-center justify-between p-6 bg-slate-50 border rounded-3xl">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${form.sniffingEnabled ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-400'}`}><Search size={20}/></div>
-                    <span className="font-black text-slate-700 uppercase text-xs">Включить Sniffing</span>
+              <div className="flex items-center justify-between p-6 bg-main/50 border border-line rounded-3xl transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${form.sniffingEnabled ? 'bg-emerald-500/10 text-emerald-500' : 'bg-main text-muted'}`}>
+                    <Search size={20}/>
                   </div>
-                  <input type="checkbox" className="w-6 h-6 rounded-lg border-slate-300" checked={form.sniffingEnabled} onChange={e => setForm({...form, sniffingEnabled: e.target.checked})} />
-               </div>
-               
-               {form.sniffingEnabled && (
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3 p-6 bg-slate-50 border border-slate-100 rounded-4xl">
-                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
-                        Dest Override (Sniffing Types)
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {['http', 'tls', 'quic', 'fakedns'].map((type) => {
-                          // Проверяем, выбрано ли значение (учитываем пробелы после запятой)
-                          const selectedTypes = form.destOverride.split(',').map(t => t.trim());
-                          const isChecked = selectedTypes.includes(type);
+                  <span className="font-black text-base uppercase text-xs">Включить Sniffing</span>
+                </div>
+                <input 
+                  type="checkbox" 
+                  className="w-6 h-6 rounded-lg accent-indigo-600 cursor-pointer" 
+                  checked={form.sniffingEnabled} 
+                  onChange={e => setForm({...form, sniffingEnabled: e.target.checked})} 
+                />
+              </div>
+              
+              {form.sniffingEnabled && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-4 duration-300">
+                  <div className="space-y-3 p-6 bg-main/30 border border-line rounded-4xl">
+                    <label className="text-[10px] font-black text-muted uppercase ml-1">
+                      Dest Override (Sniffing Types)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['http', 'tls', 'quic', 'fakedns'].map((type) => {
+                        const selectedTypes = form.destOverride.split(',').map(t => t.trim());
+                        const isChecked = selectedTypes.includes(type);
 
-                          return (
-                            <label 
-                              key={type} 
-                              className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
-                                isChecked 
-                                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' 
-                                  : 'bg-white border-slate-100 text-slate-500 hover:border-indigo-200'
-                              }`}
-                            >
-                              <span className="text-[11px] font-black uppercase tracking-wider">{type}</span>
-                              <input 
-                                type="checkbox" 
-                                className="hidden" 
-                                checked={isChecked}
-                                onChange={() => {
-                                  let newTypes;
-                                  if (isChecked) {
-                                    // Удаляем значение
-                                    newTypes = selectedTypes.filter(t => t !== type);
-                                  } else {
-                                    // Добавляем значение
-                                    newTypes = [...selectedTypes, type];
-                                  }
-                                  // Сохраняем обратно как строку через запятую
-                                  setForm({ ...form, destOverride: newTypes.filter(Boolean).join(', ') });
-                                }}
-                              />
-                              {isChecked && (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </label>
-                          );
-                        })}
-                      </div>
+                        return (
+                          <label 
+                            key={type} 
+                            className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                              isChecked 
+                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg dark:shadow-indigo-900/20' 
+                                : 'bg-card border-line text-muted hover:border-indigo-500/50'
+                            }`}
+                          >
+                            <span className="text-[11px] font-black uppercase tracking-wider">{type}</span>
+                            <input 
+                              type="checkbox" 
+                              className="hidden" 
+                              checked={isChecked}
+                              onChange={() => {
+                                let newTypes = isChecked ? selectedTypes.filter(t => t !== type) : [...selectedTypes, type];
+                                setForm({ ...form, destOverride: newTypes.filter(Boolean).join(', ') });
+                              }}
+                            />
+                            {isChecked && <Check size={12} className="text-white" />}
+                          </label>
+                        );
+                      })}
                     </div>
-                    <div className="space-y-2 p-6 bg-slate-50 border rounded-3xl">
-                       <label className="text-[10px] font-black text-slate-400 uppercase">Domains Excluded  (через запятую)</label>
-                       <input className="w-full p-4 bg-white border rounded-xl font-mono" value={form.domainsExcluded} onChange={e => setForm({...form, domainsExcluded: e.target.value})} />
-                    </div>
-                    <div className="space-y-4">
-                       <label className="flex items-center gap-3 p-4 bg-slate-50 border rounded-2xl cursor-pointer">
-                          <input type="checkbox" checked={form.metadataOnly} onChange={e => setForm({...form, metadataOnly: e.target.checked})} />
-                          <span className="text-xs font-bold text-slate-500 uppercase">Metadata Only</span>
-                       </label>
-                       <label className="flex items-center gap-3 p-4 bg-slate-50 border rounded-2xl cursor-pointer">
-                          <input type="checkbox" checked={form.routeOnly} onChange={e => setForm({...form, routeOnly: e.target.checked})} />
-                          <span className="text-xs font-bold text-slate-500 uppercase">Route Only</span>
-                       </label>
-                    </div>
-                 </div>
-               )}
+                  </div>
+
+                  <div className="space-y-2 p-6 bg-main/30 border border-line rounded-3xl">
+                    <label className="text-[10px] font-black text-muted uppercase">Domains Excluded</label>
+                    <input 
+                      className="w-full p-4 bg-card border border-line rounded-xl font-mono text-xs text-base outline-none focus:border-indigo-500 transition-all" 
+                      value={form.domainsExcluded} 
+                      onChange={e => setForm({...form, domainsExcluded: e.target.value})} 
+                      placeholder="example.com, google.com"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                    {[
+                      { key: 'metadataOnly', label: 'Metadata Only' },
+                      { key: 'routeOnly', label: 'Route Only' }
+                    ].map(opt => (
+                      <label key={opt.key} className="flex items-center gap-3 p-4 bg-main/50 border border-line rounded-2xl cursor-pointer hover:bg-main transition-all">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 accent-indigo-600"
+                          checked={(form as any)[opt.key]} 
+                          onChange={e => setForm({...form, [opt.key]: e.target.checked})} 
+                        />
+                        <span className="text-xs font-bold text-muted uppercase tracking-tight">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1158,14 +1151,18 @@ useEffect(() => {
           {activeTab === 'sockopt' && (
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Master Switch */}
-              <label className={`flex items-center justify-between p-6 rounded-4xl border-2 transition-all cursor-pointer ${form.enableSockopt ? 'bg-indigo-50/50 border-indigo-200' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+              <label className={`flex items-center justify-between p-6 rounded-4xl border-2 transition-all cursor-pointer ${
+                form.enableSockopt 
+                  ? 'bg-indigo-500/10 border-indigo-500/30' 
+                  : 'bg-main border-line opacity-60'
+              }`}>
                 <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-2xl ${form.enableSockopt ? 'bg-indigo-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                  <div className={`p-3 rounded-2xl ${form.enableSockopt ? 'bg-indigo-600 text-white shadow-lg' : 'bg-card text-muted'}`}>
                     <Zap size={20} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-slate-700 uppercase">Глобальные оптимизации</h3>
-                    <p className="text-[10px] text-slate-500 font-medium">BBR, Fast Open и тонкая настройка стека TCP</p>
+                    <h3 className="text-sm font-black text-base uppercase">Глобальные оптимизации</h3>
+                    <p className="text-[10px] text-muted font-medium italic">BBR, Fast Open и тонкая настройка стека TCP</p>
                   </div>
                 </div>
                 <input 
@@ -1173,147 +1170,135 @@ useEffect(() => {
                   className="w-6 h-6 accent-indigo-600"
                   checked={form.enableSockopt}
                   onChange={e => setForm({...form, enableSockopt: e.target.checked})}
-                  disabled={form.network === 'xhttp'} // Блокируем выключение, если xhttp
+                  disabled={form.network === 'xhttp'}
                 />
               </label>
 
-              {/* Контент таба показываем только если включено */}
               {form.enableSockopt && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in zoom-in-95 duration-200">
-              <div className="space-y-2">
-                  <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">TCP Congestion (BBR)</label>
-                  <select className="w-full p-4 bg-white border border-indigo-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all" value={form.tcpCongestion} onChange={e => setForm({...form, tcpCongestion: e.target.value})}>
-                    <option value="bbr">BBR (Best Performance)</option>
-                    <option value="cubic">CUBIC (Standard)</option>
-                    <option value="reno">RENO</option>
-                  </select>
-              </div>
-              
-              <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">TProxy Mode</label>
-                  <select className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm outline-none" value={form.tproxy} onChange={e => setForm({...form, tproxy: e.target.value})}>
-                    <option value="off">Off (Standard)</option>
-                    <option value="tproxy">TProxy (Transparent)</option>
-                    <option value="redirect">Redirect</option>
-                  </select>
-              </div>
-
-              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {[
-                    { key: 'tcpFastOpen', label: 'Fast Open', desc: 'Ускоряет старт' },
-                    { key: 'tcpMptcp', label: 'MPTCP', desc: 'Multi-path TCP' },
-                    { key: 'tcpNoDelay', label: 'No Delay', desc: 'Снижает пинг' },
-                  ].map(opt => (
-                    <label key={opt.key} className="flex flex-col gap-2 p-5 bg-white border border-slate-50 rounded-4xl cursor-pointer hover:border-indigo-200 transition-all group shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black text-slate-700 uppercase">{opt.label}</span>
-                        <input 
-                          type="checkbox" 
-                          className="w-5 h-5 accent-indigo-600"
-                          checked={(form as any)[opt.key]} 
-                          onChange={e => setForm({...form, [opt.key]: e.target.checked})} 
-                        />
-                      </div>
-                      <span className="text-[8px] text-slate-400 font-medium leading-none">{opt.desc}</span>
-                    </label>
-                  ))}
-              </div>
-              {/* ADVANCED TCP TUNING */}
-              <div className="border-t border-slate-100 pt-6">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">
-                  Advanced TCP Tuning (Тонкая настройка)
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  
-                  {/* TCP Max Segment */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-500 ml-1">TCP Max Seg</label>
-                    <input 
-                      type="number"
-                      className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-mono text-xs focus:bg-white transition-all"
-                      value={form.tcpMaxSeg}
-                      onChange={e => setForm({...form, tcpMaxSeg: Number(e.target.value)})}
-                    />
-                  </div>
-
-                  {/* User Timeout */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-500 ml-1">User Timeout (ms)</label>
-                    <input 
-                      type="number"
-                      className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-mono text-xs focus:bg-white transition-all"
-                      value={form.tcpUserTimeout}
-                      onChange={e => setForm({...form, tcpUserTimeout: Number(e.target.value)})}
-                    />
-                  </div>
-
-                  {/* Keep Alive Idle */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-500 ml-1">KeepAlive Idle (s)</label>
-                    <input 
-                      type="number"
-                      className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-mono text-xs focus:bg-white transition-all"
-                      value={form.tcpKeepAliveIdle}
-                      onChange={e => setForm({...form, tcpKeepAliveIdle: Number(e.target.value)})}
-                    />
-                  </div>
-
-                  {/* Domain Strategy */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-500 ml-1">Domain Strategy</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in zoom-in-95 duration-300">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-indigo-500 uppercase tracking-widest ml-1">TCP Congestion (BBR)</label>
                     <select 
-                      className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-xs"
-                      value={form.domainStrategy}
-                      onChange={e => setForm({...form, domainStrategy: e.target.value})}
+                      className="w-full p-4 bg-card border border-line rounded-2xl font-bold text-sm text-base outline-none focus:border-indigo-500 transition-all" 
+                      value={form.tcpCongestion} 
+                      onChange={e => setForm({...form, tcpCongestion: e.target.value})}
                     >
-                      <option value="AsIs">AsIs</option>
-                      <option value="UseIP">UseIP</option>
-                      <option value="UseIPv4">UseIPv4</option>
-                      <option value="UseIPv6">UseIPv6</option>
+                      <option value="bbr">BBR (Best Performance)</option>
+                      <option value="cubic">CUBIC (Standard)</option>
+                      <option value="reno">RENO</option>
+                    </select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">TProxy Mode</label>
+                    <select 
+                      className="w-full p-4 bg-card border border-line rounded-2xl font-bold text-sm text-base outline-none focus:border-indigo-500 transition-all" 
+                      value={form.tproxy} 
+                      onChange={e => setForm({...form, tproxy: e.target.value})}
+                    >
+                      <option value="off">Off (Standard)</option>
+                      <option value="tproxy">TProxy (Transparent)</option>
+                      <option value="redirect">Redirect</option>
                     </select>
                   </div>
 
+                  <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {[
+                      { key: 'tcpFastOpen', label: 'Fast Open', desc: 'Ускоряет старт' },
+                      { key: 'tcpMptcp', label: 'MPTCP', desc: 'Multi-path TCP' },
+                      { key: 'tcpNoDelay', label: 'No Delay', desc: 'Снижает пинг' },
+                    ].map(opt => (
+                      <label key={opt.key} className="flex flex-col gap-2 p-5 bg-card border border-line rounded-3xl cursor-pointer hover:border-indigo-500/50 transition-all group">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black text-base uppercase tracking-tight">{opt.label}</span>
+                          <input 
+                            type="checkbox" 
+                            className="w-5 h-5 accent-indigo-600"
+                            checked={(form as any)[opt.key]} 
+                            onChange={e => setForm({...form, [opt.key]: e.target.checked})} 
+                          />
+                        </div>
+                        <span className="text-[8px] text-muted font-medium leading-none">{opt.desc}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="md:col-span-2 border-t border-line pt-6">
+                    <h4 className="text-[10px] font-black text-muted uppercase tracking-widest mb-4 ml-1">
+                      Advanced TCP Tuning
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        { label: 'Max Seg', key: 'tcpMaxSeg' },
+                        { label: 'Timeout (ms)', key: 'tcpUserTimeout' },
+                        { label: 'Idle (s)', key: 'tcpKeepAliveIdle' }
+                      ].map(item => (
+                        <div key={item.key} className="space-y-1">
+                          <label className="text-[9px] font-bold text-muted ml-1">{item.label}</label>
+                          <input 
+                            type="number"
+                            className="w-full p-3 bg-main border border-line rounded-xl font-mono text-xs text-base focus:border-indigo-500 outline-none transition-all"
+                            value={(form as any)[item.key]}
+                            onChange={e => setForm({...form, [item.key]: Number(e.target.value)})}
+                          />
+                        </div>
+                      ))}
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-muted ml-1">Domain Strategy</label>
+                        <select 
+                          className="w-full p-3 bg-main border border-line rounded-xl font-bold text-xs text-base focus:border-indigo-500 outline-none transition-all"
+                          value={form.domainStrategy}
+                          onChange={e => setForm({...form, domainStrategy: e.target.value})}
+                        >
+                          <option value="AsIs">AsIs</option>
+                          <option value="UseIP">UseIP</option>
+                          <option value="UseIPv4">UseIPv4</option>
+                          <option value="UseIPv6">UseIPv6</option>
+                        </select>
+                      </div>
+                    </div>
+                    <p className="text-[8px] text-muted mt-3 italic px-1">
+                      * Эти параметры влияют на обход DPI. 1440/UseIP — рекомендуемые значения.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-[8px] text-slate-400 mt-3 italic px-1">
-                  * Эти параметры влияют на то, как пакеты упаковываются и удерживаются в сети. 1440/UseIP — стандарт для обхода DPI.
-                </p>
-              </div>
-            </div>
               )}
             </div>
           )}
           {/* TAB: CLIENTS */}
           {activeTab === 'clients' && (
-            <div className="space-y-6 animate-in fade-in">
-              <div className="flex justify-between items-center">
-                <h3 className="font-black text-slate-800 uppercase text-sm">Список пользователей</h3>
-                <button 
-                  type="button" 
-                  onClick={() => setForm({
-                    ...form, 
-                    clients: [...form.clients, { 
-                      uuid: crypto.randomUUID() as `${string}-${string}-${string}-${string}-${string}`, 
-                      email: "", 
-                      flow: form.protocol === "vless" ? "xtls-rprx-vision" : "", 
-                      level: 0,
-                      alterId: 0,
-                      security: "auto",
-                      password: ""
-                    }]
-                  })}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-xs hover:bg-indigo-100"
-                >
-                  <Plus size={14} /> Добавить
-                </button>
-              </div>
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center">
+              <h3 className="font-black text-base uppercase text-sm tracking-tight">Список пользователей</h3>
+              <button 
+                type="button" 
+                onClick={() => setForm({
+                  ...form, 
+                  clients: [...form.clients, { 
+                    uuid: crypto.randomUUID(), 
+                    email: "", 
+                    flow: form.protocol === "vless" ? "xtls-rprx-vision" : "", 
+                    level: 0,
+                    alterId: 0,
+                    security: "auto",
+                    password: ""
+                  }]
+                })}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-500 rounded-xl font-bold text-xs hover:bg-indigo-500/20 transition-all border border-indigo-500/20"
+              >
+                <Plus size={14} /> Добавить
+              </button>
+            </div>
 
+            <div className="space-y-4">
               {form.clients.map((client, idx) => (
-                <div key={idx} className="group relative p-6 bg-slate-50 border border-slate-100 rounded-4xl space-y-4 hover:border-indigo-200 transition-all">
+                <div key={idx} className="group relative p-6 bg-main/30 border border-line rounded-4xl space-y-4 hover:border-indigo-500/30 transition-all">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black text-slate-400 uppercase">Email / Имя</label>
+                      <label className="text-[9px] font-black text-muted uppercase ml-1">Email / Имя</label>
                       <input 
-                        className="w-full p-3 bg-white border rounded-xl font-bold text-sm" 
+                        className="w-full p-3 bg-card border border-line rounded-xl font-bold text-sm text-base focus:border-indigo-500 outline-none transition-all" 
                         value={client.email} 
                         onChange={(e) => {
                           const c = [...form.clients];
@@ -1323,14 +1308,14 @@ useEffect(() => {
                         placeholder="user@example.com"
                       />
                     </div>
-                    {/* Внутри цикла form.clients.map */}
+                    
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black text-slate-400 uppercase">
+                      <label className="text-[9px] font-black text-muted uppercase ml-1">
                         {form.protocol === 'vless' ? 'UUID' : 'Пароль (Password)'}
                       </label>
                       <div className="flex gap-2">
                         <input 
-                          className="flex-1 p-3 bg-white border rounded-xl font-mono text-sm" 
+                          className="flex-1 p-3 bg-card border border-line rounded-xl font-mono text-sm text-base focus:border-indigo-500 outline-none transition-all" 
                           value={form.protocol === 'vless' ? client.uuid : client.password} 
                           onChange={(e) => {
                             const c = [...form.clients];
@@ -1339,27 +1324,30 @@ useEffect(() => {
                             setForm({...form, clients: c});
                           }}
                         />
-                        <button type="button" onClick={() => {
-                          const c = [...form.clients];
-                          if (form.protocol === 'vless') c[idx].uuid = generateUUID();
-                          else c[idx].password = Math.random().toString(36).slice(-12);
-                          setForm({...form, clients: c});
-                        }} className="p-3 bg-white border rounded-xl hover:text-indigo-600"><Zap size={14}/></button>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            const c = [...form.clients];
+                            if (form.protocol === 'vless') c[idx].uuid = generateUUID();
+                            else c[idx].password = Math.random().toString(36).slice(-12);
+                            setForm({...form, clients: c});
+                          }} 
+                          className="p-3 bg-main border border-line rounded-xl hover:text-indigo-500 hover:border-indigo-500 transition-all"
+                        >
+                          <Zap size={14}/>
+                        </button>
                       </div>
                     </div>
                   </div>
                   
-                  {/* НОВЫЕ ПОЛЯ: Flow и Level */}
-                  <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-line/30">
                     {form.protocol === 'vless' && 
                     (form.security === 'reality' || form.security === 'tls') && 
-                    form.network === 'raw' && ( // Добавляем проверку на RAW (TCP)
+                    form.network === 'raw' && (
                       <div className="space-y-1 animate-in zoom-in-95 duration-200">
-                        <label className="text-[9px] font-black text-slate-400 uppercase ml-1">
-                          Client Flow
-                        </label>
+                        <label className="text-[9px] font-black text-muted uppercase ml-1">Client Flow</label>
                         <select 
-                          className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-xs text-indigo-600 outline-none"
+                          className="w-full p-3 bg-main border border-line rounded-xl font-bold text-xs text-indigo-500 outline-none focus:border-indigo-500"
                           value={client.flow}
                           onChange={(e) => {
                             const c = [...form.clients];
@@ -1369,16 +1357,15 @@ useEffect(() => {
                         >
                           <option value="">Наследовать (None)</option>
                           <option value="xtls-rprx-vision">XTLS Vision</option>
-                          {/*<option value="xtls-rprx-vision-udp443">XTLS Vision UDP443</option>*/}
                         </select>
                       </div>
                     )}
                     
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black text-slate-400 uppercase">User Level</label>
+                      <label className="text-[9px] font-black text-muted uppercase ml-1">User Level</label>
                       <input 
                         type="number"
-                        className="w-full p-3 bg-white border rounded-xl font-bold text-xs"
+                        className="w-full p-3 bg-card border border-line rounded-xl font-bold text-xs text-base outline-none focus:border-indigo-500"
                         value={client.level}
                         onChange={(e) => {
                           const c = [...form.clients];
@@ -1393,7 +1380,7 @@ useEffect(() => {
                     <button 
                       type="button" 
                       onClick={() => setForm({...form, clients: form.clients.filter((_, i) => i !== idx)})}
-                      className="absolute -top-2 -right-2 p-2 bg-white shadow-md border border-red-50 text-red-400 rounded-full hover:text-red-600 transition-all"
+                      className="absolute -top-2 -right-2 p-2 bg-card shadow-lg border border-line text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -1401,22 +1388,28 @@ useEffect(() => {
                 </div>
               ))}
             </div>
-          )}
+          </div>
+        )}
 
         </form>
 
         {/* Footer */}
-        <div className="p-8 bg-slate-50 border-t flex gap-4">
-          <button onClick={handleClose} className="flex-1 py-4 font-black text-slate-400 uppercase tracking-widest hover:text-slate-600">Отмена</button>
+        <div className="p-8 bg-main/50 border-t border-line flex gap-4 mt-auto">
+          <button 
+            onClick={handleClose} 
+            className="flex-1 py-4 font-black text-muted uppercase tracking-widest hover:text-base transition-colors"
+          >
+            Отмена
+          </button>
           <button 
             onClick={handleSubmit} 
             disabled={loading || !isRealityValid() || !form.tag}
-            className={`py-4 px-8 rounded-3xl font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 
+            className={`py-4 px-10 rounded-3xl font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 
               ${(loading || !isRealityValid() || !form.tag) 
-                ? 'bg-slate-300 cursor-not-allowed text-slate-500' 
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-100'}`}
+                ? 'bg-main border border-line text-muted cursor-not-allowed' 
+                : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl dark:shadow-indigo-900/40 shadow-indigo-100 active:scale-95'}`}
           >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : "Сохранить конфигурацию"}
+            {loading ? <Loader2 className="animate-spin" size={20} /> : "Сохранить конфиг"}
           </button>
         </div>
       </div>

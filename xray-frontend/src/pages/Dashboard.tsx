@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Users, BarChart3, Activity, HardDrive } from "lucide-react";
+import { Users, BarChart3, Activity, HardDrive, Cpu, Database } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
-import { getStats, getStatsSystem } from "../api/stats"; // Импортируем твой новый метод
+import { getStats, getStatsSystem } from "../api/stats";
 import type { DockerListResponse } from "../api/docker";
 
-// Утилита для красивого форматирования байт
 const formatBytes = (bytes: number) => {
   if (!bytes) return "0 B";
   const k = 1024;
@@ -19,7 +18,6 @@ export default function Dashboard() {
     dockerData: DockerListResponse | null 
   }>();
 
-  // Локальное состояние для данных бэкенда
   const [summary, setSummary] = useState<{
     total_clients: number;
     new_today: number;
@@ -29,16 +27,12 @@ export default function Dashboard() {
   const [systemStats, setSystemStats] = useState<any>(null);
 
   useEffect(() => {
-    // 1. Загрузка статистики БД
     const fetchDbStats = () => getStats().then(setSummary).catch(console.error);
-    
-    // 2. Загрузка системных метрик сервера
     const fetchSystemStats = () => getStatsSystem().then(setSystemStats).catch(console.error);
 
     fetchDbStats();
     fetchSystemStats();
 
-    // Обновляем БД раз в минуту, а систему чуть чаще (например, раз в 15 секунд)
     const dbTimer = setInterval(fetchDbStats, 60000);
     const sysTimer = setInterval(fetchSystemStats, 15000);
 
@@ -50,32 +44,48 @@ export default function Dashboard() {
 
   const stats = [
     { 
-      name: "Клиенты Xray", 
+      name: "Пользователи", 
       value: summary?.total_clients ?? "...", 
       sub: `+${summary?.new_today ?? 0} сегодня`, 
-      icon: <Users size={20}/>, 
-      color: "bg-blue-500" 
+      icon: <Users size={18}/>, 
+      color: "bg-blue-500",
+      customContent: (
+        <div className="mt-4 pt-4 border-t border-line/50">
+           <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              <span className="text-[9px] font-black text-muted uppercase tracking-widest">Active Database</span>
+           </div>
+        </div>
+      )
     },
     { 
-      name: "Трафик", 
+      name: "Общий Трафик", 
       value: summary ? formatBytes(summary.total_traffic_bytes) : "...", 
-      sub: "", 
-      icon: <BarChart3 size={20}/>, 
-      color: "bg-emerald-500" 
+      sub: "Всего прогнано", 
+      icon: <Database size={18}/>, 
+      color: "bg-emerald-500",
+      customContent: (
+        <div className="mt-4 pt-4 border-t border-line/50">
+           <div className="flex items-center gap-2">
+              <BarChart3 size={12} className="text-emerald-500" />
+              <span className="text-[9px] font-black text-muted uppercase tracking-widest">Global Statistics</span>
+           </div>
+        </div>
+      )
     },
     { 
-      name: "Uptime Системы", 
+      name: "Ядро Xray", 
       value: xrayStatus.status === 'running' ? "ONLINE" : "OFFLINE", 
-      sub: "Статус ядра", 
-      icon: <Activity size={20}/>, 
+      sub: `v${xrayStatus.version || '0.0'}`, 
+      icon: <Activity size={18}/>, 
       color: xrayStatus.status === 'running' ? "bg-indigo-500" : "bg-red-500",
       customContent: (
-        <div className="mt-2 pt-2 border-t border-slate-100 space-y-1">
+        <div className="mt-4 pt-4 border-t border-line/50 space-y-2">
           {dockerData?.containers.map(container => (
-            <div key={container.name} className="flex justify-between items-center text-[9px] font-mono">
-              <span className="text-slate-500 truncate mr-2">{container.name.replace('anaconduit_', '')}:</span>
-              <span className={container.status === 'running' ? "text-indigo-600 font-bold" : "text-red-400"}>
-                {container.status === 'running' ? container.uptime : 'offline'}
+            <div key={container.name} className="flex justify-between items-center text-[10px] font-mono">
+              <span className="text-muted/60 truncate mr-2">{container.name.replace('anaconduit_', '')}</span>
+              <span className={container.status === 'running' ? "text-indigo-400 font-bold" : "text-red-400"}>
+                {container.status === 'running' ? "●" : "○"}
               </span>
             </div>
           ))}
@@ -83,124 +93,104 @@ export default function Dashboard() {
       )
     },
     { 
-      name: "Нагрузка проекта", 
-      value: `${dockerData?.total.cpu_percent || 0}%`, 
-      sub: "Среднее CPU", 
-      icon: <BarChart3 size={20}/>, 
-      color: (dockerData?.total.cpu_percent || 0) > 80 ? "bg-red-500" : "bg-purple-500",
-      customContent: (
-        <div className="mt-2 pt-2 border-t border-slate-100 space-y-3">
-          <div className="space-y-1">
-             <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase">
-                <span>Процессор</span>
-                <span>{dockerData?.total.cpu_percent}%</span>
-             </div>
-             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-purple-500 transition-all duration-500" 
-                  style={{ width: `${Math.min(dockerData?.total.cpu_percent || 0, 100)}%` }}
-                />
-             </div>
-          </div>
-          <div className="space-y-1">
-             <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase">
-                <span>Память ({dockerData?.total.mem_usage_percent}%)</span>
-                <span>{dockerData?.total.mem_usage_mb} MB</span>
-             </div>
-             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-indigo-500 transition-all duration-500" 
-                  style={{ width: `${Math.min(dockerData?.total.mem_usage_percent || 0, 100)}%` }}
-                />
-             </div>
-          </div>
-        </div>
-      )
-    },
-    { 
-      name: "Ресурсы Сервера", 
+      name: "Host Resources", 
       value: `${systemStats?.system?.cpu_percent ?? 0}%`, 
-      sub: "Load Avg", 
-      icon: <HardDrive size={20}/>, 
-      color: (systemStats?.system?.cpu_percent > 80) ? "bg-red-600" : "bg-purple-600",
+      sub: "CPU Load", 
+      icon: <Cpu size={18}/>, 
+      color: (systemStats?.system?.cpu_percent > 80) ? "bg-red-600" : "bg-purple-500",
       customContent: (
-        <div className="mt-2 pt-2 border-t border-slate-100 space-y-3">
-          {/* CPU Сервера */}
-          <div className="space-y-1">
-             <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase">
-                <span>Процессор (Host)</span>
-                <span>{systemStats?.system?.cpu_percent}%</span>
-             </div>
-             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-purple-500 transition-all duration-500" 
-                  style={{ width: `${systemStats?.system?.cpu_percent || 0}%` }}
-                />
-             </div>
-          </div>
-          
-          {/* RAM Сервера */}
-          <div className="space-y-1">
-             <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase">
-                <span>Память ({systemStats?.system?.mem_percent}%)</span>
-                <span>Сервер</span>
-             </div>
-             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-indigo-500 transition-all duration-500" 
-                  style={{ width: `${systemStats?.system?.mem_percent || 0}%` }}
-                />
-             </div>
-          </div>
-
-          {/* Disk Сервера */}
-          <div className="space-y-1">
-             <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase">
-                <span>Диск ({systemStats?.system?.disk_percent}%)</span>
-                <span>Root FS</span>
-             </div>
-             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-slate-400 transition-all duration-500" 
-                  style={{ width: `${systemStats?.system?.disk_percent || 0}%` }}
-                />
-             </div>
-          </div>
+        <div className="mt-4 pt-4 border-t border-line/50 space-y-4">
+          <ResourceBar label="CPU" percent={systemStats?.system?.cpu_percent} color="bg-purple-500" />
+          <ResourceBar label={`RAM (${systemStats?.system?.mem_percent}%)`} percent={systemStats?.system?.mem_percent} color="bg-indigo-500" />
+          <ResourceBar label={`DISK (${systemStats?.system?.disk_percent}%)`} percent={systemStats?.system?.disk_percent} color="bg-slate-400" />
         </div>
       )
     },
   ];
 
   return (
-    <div className="p-8 overflow-y-auto">
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 italic">Anaconduit!</h1>
-          <p className="text-slate-500">Система работает на ядре Xray-core {xrayStatus.version}</p>
+    <div className="p-8 h-full overflow-y-auto custom-scrollbar">
+      <div className="max-w-7xl mx-auto space-y-10">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-4xl font-black text-base tracking-tighter italic uppercase italic-important">
+              Dashboard<span className="text-indigo-500">.</span>
+            </h1>
+            <p className="text-muted text-xs font-bold uppercase tracking-[0.2em]">
+              Server node management panel
+            </p>
+          </div>
+          <div className="px-4 py-2 bg-card border border-line rounded-2xl flex items-center gap-3">
+             <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
+             <span className="text-[10px] font-black text-base uppercase tracking-widest">
+                Xray Core: <span className="text-indigo-500">{xrayStatus.version}</span>
+             </span>
+          </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((s, i) => (
-            <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
-              <div>
-                <div className="flex justify-between items-start">
-                  <div className={`p-2 rounded-lg ${s.color} text-white`}>
-                    {s.icon}
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <h3 className="text-slate-500 text-sm font-medium">{s.name}</h3>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-slate-900">{s.value}</span>
-                    <span className="text-xs text-slate-400 uppercase tracking-wider">{s.sub}</span>
-                  </div>
+            <div 
+              key={i} 
+              className="bg-main p-7 rounded-[2.5rem] border border-line shadow-sm flex flex-col hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300 group"
+            >
+              <div className="flex justify-between items-start">
+                <div className={`p-3 rounded-2xl ${s.color} text-white shadow-lg shadow-current/20 group-hover:scale-110 transition-transform`}>
+                  {s.icon}
                 </div>
               </div>
-              {s.customContent && s.customContent}
+              <div className="mt-6">
+                <h3 className="text-muted text-[10px] font-black uppercase tracking-widest">{s.name}</h3>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-3xl font-black text-base tracking-tight">{s.value}</span>
+                  <span className="text-[10px] text-muted font-bold uppercase">{s.sub}</span>
+                </div>
+              </div>
+              {s.customContent}
             </div>
           ))}
         </div>
+
+        {/* Секция Docker контейнеров (можно расширить) */}
+        <section className="bg-card/30 border border-line rounded-[3rem] p-8">
+           <div className="flex items-center gap-3 mb-8">
+              <HardDrive className="text-indigo-500" size={20} />
+              <h2 className="text-xs font-black text-base uppercase tracking-[0.3em]">Containerization Status</h2>
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {dockerData?.containers.map(c => (
+                <div key={c.name} className="bg-main border border-line p-5 rounded-3xl flex items-center justify-between">
+                   <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-base uppercase tracking-wider">{c.name.replace('anaconduit_', '')}</span>
+                      <span className="text-[9px] text-muted font-bold">{c.uptime}</span>
+                   </div>
+                   <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${c.status === 'running' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                      {c.status}
+                   </div>
+                </div>
+              ))}
+           </div>
+        </section>
       </div>
+    </div>
+  );
+}
+
+// Вспомогательный компонент для полосок ресурсов
+function ResourceBar({ label, percent, color }: { label: string, percent: number, color: string }) {
+  const p = Math.min(percent || 0, 100);
+  return (
+    <div className="space-y-1.5">
+       <div className="flex justify-between text-[9px] font-black text-muted uppercase tracking-tighter">
+          <span>{label}</span>
+          <span className="text-base">{p}%</span>
+       </div>
+       <div className="w-full h-1 bg-card border border-line rounded-full overflow-hidden">
+          <div 
+            className={`h-full ${color} transition-all duration-1000 ease-out`} 
+            style={{ width: `${p}%` }}
+          />
+       </div>
     </div>
   );
 }

@@ -51,49 +51,56 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-main/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-main w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-line animate-in zoom-in-95 duration-200">
         <div className="p-8">
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex justify-between items-start mb-8">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                 <h2 className="text-2xl font-black text-slate-900 leading-tight">Лимиты</h2>
-                 {user.is_active ? 
-                    <span className="bg-emerald-100 text-emerald-600 text-[10px] px-2 py-0.5 rounded-full font-bold">ACTIVE</span> :
-                    <span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold">EXPIRED</span>
-                 }
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="text-xl font-black text-base leading-none uppercase tracking-tight">Лимиты</h2>
+                {user.is_active ? (
+                    <span className="bg-emerald-500/10 text-emerald-500 text-[9px] px-2 py-1 rounded-lg font-black border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+                      ACTIVE
+                    </span>
+                ) : (
+                    <span className="bg-red-500/10 text-red-500 text-[9px] px-2 py-1 rounded-lg font-black border border-red-500/20">
+                      EXPIRED
+                    </span>
+                )}
               </div>
-              <p className="text-slate-500 font-medium text-sm">{user.email}</p>
+              <p className="text-muted font-bold text-xs mt-2 italic">{user.email}</p>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
-              <X size={24} />
+            <button 
+              onClick={onClose} 
+              className="p-2.5 hover:bg-card rounded-2xl transition-all text-muted hover:text-base active:scale-90"
+            >
+              <X size={20} />
             </button>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Трафик */}
             <div className="space-y-3">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.15em] text-muted flex items-center gap-2 ml-1">
                 <Zap size={14} className="text-indigo-500" /> Общий лимит (GB)
-            </label>
-            <div className="relative">
+              </label>
+              <div className="relative group">
                 <input 
-                type="number" 
-                value={traffic}
-                onChange={(e) => setTraffic(e.target.value)}
-                placeholder="0 = Безлимит"
-                /* Увеличиваем pr-14, чтобы текст GB и стрелки не мешали цифрам */
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-4 pr-16 py-4 font-mono font-bold text-lg focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  type="number" 
+                  value={traffic}
+                  onChange={(e) => setTraffic(e.target.value)}
+                  placeholder="0 = Безлимит"
+                  className="w-full bg-card border border-line rounded-2xl pl-5 pr-16 py-4 font-mono font-bold text-lg text-base focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xs select-none pointer-events-none bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
-                GB
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted font-black text-[10px] select-none pointer-events-none bg-main border border-line px-2.5 py-1.5 rounded-xl shadow-sm group-focus-within:border-indigo-500/30 transition-colors">
+                  GB
                 </div>
-            </div>
+              </div>
             </div>
 
             {/* Продление времени */}
             <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.15em] text-muted flex items-center gap-2 ml-1">
                 <Calendar size={14} className="text-indigo-500" /> Продлить на (дней)
               </label>
               <input 
@@ -101,7 +108,7 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
                 value={days}
                 onChange={(e) => setDays(e.target.value)}
                 placeholder="0 = Сбросить срок"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-4 font-mono font-bold text-lg focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
+                className="w-full bg-card border border-line rounded-2xl px-5 py-4 font-mono font-bold text-lg text-base focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all"
               />
               
               {/* Быстрые пресеты */}
@@ -110,7 +117,7 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
                   <button 
                     key={d}
                     onClick={() => addDays(d)}
-                    className="flex-1 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-500 hover:border-indigo-300 hover:text-indigo-600 transition-all flex items-center justify-center gap-1"
+                    className="flex-1 py-2.5 bg-card border border-line rounded-xl text-[10px] font-black text-muted hover:border-indigo-500/50 hover:text-indigo-500 hover:bg-indigo-500/5 transition-all flex items-center justify-center gap-1 active:scale-95"
                   >
                     <Plus size={10} /> {d}Д
                   </button>
@@ -118,26 +125,29 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
               </div>
             </div>
 
-            <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex gap-3">
+            <div className="bg-amber-500/5 border border-amber-500/10 p-5 rounded-[2rem] flex gap-4">
               <ShieldAlert className="text-amber-500 shrink-0" size={20} />
-              <p className="text-[11px] text-amber-700 font-medium leading-relaxed">
-                Если пользователь был заблокирован, сохранение корректных лимитов **автоматически разблокирует** его в Xray.
+              <p className="text-[10px] text-amber-500/80 font-bold leading-relaxed uppercase tracking-tight">
+                Сохранение лимитов <span className="text-amber-500">автоматически разблокирует</span> пользователя в ядре Xray.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+        <div className="p-4 bg-card/30 border-t border-line flex gap-3">
           <button 
             onClick={onClose}
-            className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-200 transition-all uppercase text-xs"
+            className="flex-1 px-6 py-4 rounded-2xl font-black text-muted hover:text-base transition-all uppercase text-[10px] tracking-widest"
           >
             Отмена
           </button>
           <button 
             onClick={handleSave}
             disabled={loading}
-            className="flex-1 bg-slate-900 hover:bg-black text-white px-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-slate-200 disabled:opacity-50 uppercase text-xs"
+            className={`flex-1 px-6 py-4 rounded-3xl font-black flex items-center justify-center gap-3 transition-all uppercase text-[10px] tracking-widest shadow-xl active:scale-[0.98]
+              ${loading 
+                ? 'bg-main text-muted cursor-not-allowed' 
+                : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/20'}`}
           >
             {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
             Применить

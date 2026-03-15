@@ -9,7 +9,6 @@ export interface ConfigLink {
 export interface UserConfigResponse {
   user_email: string;
   links: ConfigLink[];
-  subscription: string; // Base64 строка со всеми ссылками
   link_subscription: string;
 }
 
@@ -23,14 +22,3 @@ export const getUserConfigLinks = async (userId: number) => {
 };
 
 
-export const getSubscriptionInfo = async (token: string) => {
-  try {
-    // Используем axios напрямую или чистый fetch, чтобы не подмешивать заголовки авторизации админа
-    // Путь теперь выглядит так: /secret_path/TOKEN/info
-    const response = await api.get(`/api/v1/${token}/info`); 
-    return response.data;
-  } catch (error) {
-    console.error("Failed to fetch subscription:", error);
-    throw error;
-  }
-};

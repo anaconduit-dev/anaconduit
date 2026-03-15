@@ -66,93 +66,125 @@ export default function InboundsPage() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <header className="mb-10">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-          <Server className="text-indigo-600" size={32} />
-          Инбаунды
-        </h1>
-        <p className="text-slate-500 font-medium">Активные порты Xray Core</p>
-      </header>
-
-      {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-slate-300" size={48} /></div>
-      ) : error ? (
-        <div className="bg-red-50 text-red-600 p-6 rounded-[32px] flex items-center gap-3 border border-red-100">
-          <AlertCircle /> {error}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          
-          {/* КАРТОЧКА ПЛЮС (Добавление нового порта) */}
-          <div 
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center p-6 group cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/50 transition-all min-h-[280px]"
-          >
-            <div className="w-16 h-16 bg-white rounded-[24px] flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm mb-4">
-              <PlusCircle size={32} />
+    <div className="p-8 h-full overflow-y-auto custom-scrollbar">
+      <div className="max-w-7xl mx-auto">
+        <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-900/20">
+                <Server size={22} />
+              </div>
+              <h1 className="text-3xl font-black text-base tracking-tighter uppercase italic">
+                Инбаунды<span className="text-indigo-500">.</span>
+              </h1>
             </div>
-            <span className="text-sm font-black uppercase text-slate-400 group-hover:text-indigo-600 tracking-widest">
-              Добавить порт
-            </span>
+            <p className="text-muted text-[10px] font-black uppercase tracking-[0.2em] ml-1">
+              Активные входящие порты Xray Core
+            </p>
           </div>
+          
+          {/* Статистика по портам (опционально) */}
+          <div className="flex gap-4">
+            <div className="px-4 py-2 bg-card border border-line rounded-2xl flex items-center gap-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+              <span className="text-[10px] font-black text-base uppercase tracking-widest">
+                Всего: <span className="text-indigo-500">{inbounds.length}</span>
+              </span>
+            </div>
+          </div>
+        </header>
 
-          {inbounds.map((inbound) => (
-            <div key={inbound.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all relative group overflow-hidden flex flex-col justify-between min-h-[180px]">
-              <div className="p-4"> {/* Уменьшили паддинг с 6 до 4 */}
-                <div className="flex justify-between items-start mb-3"> {/* Уменьшили отступ с 6 до 3 */}
-                  <div className={`p-2 rounded-xl ${inbound.is_running_in_xray ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-400'}`}>
-                    <Zap size={18} fill={inbound.is_running_in_xray ? "currentColor" : "none"} />
-                  </div>
-                  
-                  <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={() => handleEdit(inbound.id)}
-                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                    >
-                      <Settings2 size={14} />
-                    </button>
-                    <button 
-                      onClick={(e) => handleDelete(e, inbound.id, inbound.tag)}
-                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <Loader2 className="animate-spin text-indigo-500" size={48} />
+            <span className="text-[10px] font-black text-muted uppercase tracking-[0.3em]">Mapping network ports...</span>
+          </div>
+        ) : error ? (
+          <div className="bg-red-500/5 border border-red-500/20 text-red-400 p-8 rounded-[2.5rem] flex items-center gap-4 animate-shake">
+            <AlertCircle size={24} /> 
+            <div className="flex flex-col">
+              <span className="font-black uppercase text-xs tracking-widest">System Error</span>
+              <span className="text-sm opacity-80">{error}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            
+            {/* КАРТОЧКА ПЛЮС */}
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-card/30 border-2 border-dashed border-line rounded-[2.5rem] flex flex-col items-center justify-center p-8 group cursor-pointer hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all min-h-[220px] relative overflow-hidden active:scale-[0.98]"
+            >
+              <div className="w-14 h-14 bg-main border border-line rounded-2xl flex items-center justify-center text-muted group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-500 transition-all shadow-sm mb-4">
+                <PlusCircle size={28} />
+              </div>
+              <span className="text-[10px] font-black uppercase text-muted group-hover:text-indigo-500 tracking-[0.2em]">
+                Добавить порт
+              </span>
+            </button>
 
-                <h3 className="text-sm font-bold text-slate-800 mb-0.5 truncate" title={inbound.tag}>
-                  {inbound.tag}
-                </h3>
-                
-                <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-wider mb-4">
-                  <Globe size={10} />
-                  {inbound.protocol}
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-50">
-                  <div>
-                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Порт</p>
-                    <p className="text-base font-mono font-bold text-slate-700 leading-none">{inbound.port}</p>
+            {inbounds.map((inbound) => (
+              <div key={inbound.id} className="bg-main rounded-[2.5rem] border border-line shadow-sm hover:border-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/5 transition-all relative group overflow-hidden flex flex-col min-h-[220px]">
+                <div className="p-7 flex-1">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className={`p-3 rounded-2xl transition-colors ${inbound.is_running_in_xray ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-900/20' : 'bg-card text-muted'}`}>
+                      <Zap size={18} fill={inbound.is_running_in_xray ? "currentColor" : "none"} />
+                    </div>
+                    
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                      <button 
+                        onClick={() => handleEdit(inbound.id)}
+                        className="p-2.5 bg-card text-muted hover:text-indigo-500 hover:border-indigo-500/50 border border-transparent rounded-xl transition-all"
+                      >
+                        <Settings2 size={14} />
+                      </button>
+                      <button 
+                        onClick={(e) => handleDelete(e, inbound.id, inbound.tag)}
+                        className="p-2.5 bg-card text-muted hover:text-red-500 hover:border-red-500/50 border border-transparent rounded-xl transition-all"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Клиенты</p>
-                    <div className="flex items-center justify-end gap-1 text-base font-mono font-bold text-slate-700 leading-none">
-                      <Users size={14} className="text-slate-300" />
-                      {inbound.clients_count}
+
+                  <div className="space-y-1 mb-6">
+                    <h3 className="text-base font-black text-base truncate uppercase tracking-tight" title={inbound.tag}>
+                      {inbound.tag}
+                    </h3>
+                    <div className="flex items-center gap-2 text-[9px] font-black text-indigo-500 uppercase tracking-widest">
+                      <Globe size={10} />
+                      {inbound.protocol}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-5 border-t border-line/50">
+                    <div>
+                      <p className="text-[8px] font-black text-muted uppercase tracking-widest mb-1">Порт</p>
+                      <p className="text-lg font-mono font-black text-base leading-none">{inbound.port}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[8px] font-black text-muted uppercase tracking-widest mb-1">Клиенты</p>
+                      <div className="flex items-center justify-end gap-1.5 text-lg font-mono font-black text-base leading-none">
+                        <Users size={16} className="text-indigo-500/50" />
+                        {inbound.clients_count}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className={`py-1.5 px-4 text-[8px] font-black uppercase tracking-widest flex items-center gap-2 ${inbound.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                <div className={`w-1 h-1 rounded-full ${inbound.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                {inbound.is_active ? 'Active' : 'Disabled'}
+                {/* Статус-бар внизу карточки */}
+                <div className={`py-3 px-7 text-[9px] font-black uppercase tracking-[0.2em] flex items-center justify-between ${inbound.is_active ? 'bg-emerald-500/5 text-emerald-500 border-t border-emerald-500/10' : 'bg-red-500/5 text-red-500 border-t border-red-500/10'}`}>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-1.5 h-1.5 rounded-full ${inbound.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                    {inbound.is_active ? 'Active' : 'Disabled'}
+                  </div>
+                  <span className="opacity-40 text-[8px]">Inbound Core</span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Модалки остаются без изменений */}
       <AddInboundModal 

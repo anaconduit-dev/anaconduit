@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { ShieldCheck, AlertCircle, Loader2, Shield } from 'lucide-react';
 // Импортируем нашу чистую функцию
 import { updateAdminCredentials } from '../api/admin';
 
@@ -44,62 +44,76 @@ const AdminCredentialsForm = ({ onSuccess }: { onSuccess: () => void }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 space-y-4">
+    <form onSubmit={handleSubmit} className="p-8 space-y-6 animate-in fade-in duration-500">
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl flex items-center gap-2 text-sm">
-          <AlertCircle size={16} /> {error}
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl flex items-center gap-3 text-xs font-bold animate-shake">
+          <AlertCircle size={18} /> {error}
         </div>
       )}
 
-      {/* Поле: Текущий пароль */}
-      <div className="space-y-1">
-        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-wider">Текущий пароль</label>
+      {/* Секция текущего доступа */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 ml-1">
+          <Shield size={12} className="text-indigo-500" />
+          <label className="text-[10px] font-black text-muted uppercase tracking-[0.1em]">Верификация</label>
+        </div>
         <input
           type="password"
           required
-          placeholder="••••••••"
-          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all"
+          placeholder="Текущий пароль администратора"
+          className="w-full bg-main border border-line rounded-2xl px-5 py-4 text-base text-sm focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all placeholder:text-muted/30"
           value={formData.current_password}
           onChange={e => setFormData({...formData, current_password: e.target.value})}
         />
       </div>
 
-      <div className="h-px bg-slate-800/50 my-2" />
+      <div className="relative py-2">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-line/50"></div>
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-card px-3 text-[9px] font-black text-muted uppercase tracking-widest">Новые данные</span>
+        </div>
+      </div>
 
-      {/* Поле: Новый логин */}
-      <div className="space-y-1">
-        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-wider">Новый логин</label>
+      {/* Новый логин */}
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-black text-muted uppercase ml-1 tracking-wider">Новый логин (Username)</label>
         <input
           type="text"
           required
-          placeholder="admin"
-          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all"
+          placeholder="Напр: admin_proxy"
+          className="w-full bg-card border border-line rounded-2xl px-5 py-4 text-base text-sm focus:border-indigo-500/50 outline-none transition-all"
           value={formData.new_username}
           onChange={e => setFormData({...formData, new_username: e.target.value})}
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Поле: Новый пароль */}
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-wider">Новый пароль</label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Новый пароль */}
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-muted uppercase ml-1 tracking-wider">Новый пароль</label>
           <input
             type="password"
             required
             placeholder="••••••••"
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all"
+            className="w-full bg-card border border-line rounded-2xl px-5 py-4 text-base text-sm focus:border-indigo-500/50 outline-none transition-all"
             value={formData.new_password}
             onChange={e => setFormData({...formData, new_password: e.target.value})}
           />
         </div>
-        {/* Поле: Подтверждение */}
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-wider">Повтор пароля</label>
+        {/* Подтверждение */}
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-muted uppercase ml-1 tracking-wider">Повтор пароля</label>
           <input
             type="password"
             required
             placeholder="••••••••"
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all"
+            className={`w-full bg-card border rounded-2xl px-5 py-4 text-base text-sm outline-none transition-all ${
+              formData.confirm_password && formData.new_password !== formData.confirm_password 
+              ? 'border-red-500/50 focus:border-red-500' 
+              : 'border-line focus:border-indigo-500/50'
+            }`}
             value={formData.confirm_password}
             onChange={e => setFormData({...formData, confirm_password: e.target.value})}
           />
@@ -108,11 +122,18 @@ const AdminCredentialsForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
       <button
         type="submit"
-        disabled={loading}
-        className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 mt-4 shadow-lg shadow-blue-900/20 active:scale-[0.98]"
+        disabled={loading || (formData.new_password !== formData.confirm_password && formData.confirm_password !== "")}
+        className={`w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-xs transition-all flex items-center justify-center gap-3 mt-4 shadow-xl active:scale-[0.98] 
+          ${loading 
+            ? 'bg-main text-muted cursor-not-allowed' 
+            : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/20'}`}
       >
-        {loading ? <Loader2 className="animate-spin" size={20} /> : <ShieldCheck size={20} />}
-        {loading ? 'Обновление...' : 'Подтвердить изменения'}
+        {loading ? (
+          <Loader2 className="animate-spin" size={18} />
+        ) : (
+          <ShieldCheck size={18} className={formData.new_password && formData.new_password === formData.confirm_password ? 'text-emerald-400' : ''} />
+        )}
+        {loading ? 'Обновление данных...' : 'Применить изменения'}
       </button>
     </form>
   );

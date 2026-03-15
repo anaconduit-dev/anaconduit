@@ -74,105 +74,131 @@ export default function UserDetailModal({ user, onClose, onRefresh }: UserDetail
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-main/60 backdrop-blur-md animate-in fade-in duration-300"
       onClick={onClose}
     >
+      {/* Zoomed QR Overlay */}
       {zoomedQr && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 animate-in zoom-in-95" onClick={() => setZoomedQr(null)}>
-          <div className="bg-white p-8 rounded-[40px] relative">
+        <div 
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-main/90 backdrop-blur-xl animate-in zoom-in-95 cursor-zoom-out" 
+          onClick={() => setZoomedQr(null)}
+        >
+          <div className="bg-white p-10 rounded-[3rem] relative shadow-[0_0_50px_rgba(0,0,0,0.3)]" onClick={e => e.stopPropagation()}>
             <QRCode value={zoomedQr} size={320} viewBox={`0 0 256 256`} />
-            <button className="absolute -top-12 right-0 text-white flex items-center gap-2">Закрыть <X size={24} /></button>
+            <button 
+              className="absolute -top-14 right-0 text-white flex items-center gap-2 font-black uppercase text-[10px] tracking-widest hover:text-indigo-400 transition-colors"
+              onClick={() => setZoomedQr(null)}
+            >
+              Закрыть <X size={20} />
+            </button>
           </div>
         </div>
       )}
 
+      {/* Main Modal */}
       <div 
-        className="bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden max-h-[95vh] flex flex-col animate-in zoom-in-95 duration-200"
+        className="bg-main w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[95vh] flex flex-col border border-line animate-in zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-indigo-600 text-white rounded-2xl shadow-lg">
+        {/* Header */}
+        <div className="p-8 border-b border-line flex justify-between items-center bg-card/30">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-900/20">
               <ShieldCheck size={22}/>
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-800 leading-none">{user.email}</h2>
-              <p className="text-[10px] text-slate-400 font-bold mt-1.5 uppercase tracking-wider">Управление доступом</p>
+              <h2 className="text-lg font-black text-base leading-none tracking-tight">{user.email}</h2>
+              <p className="text-[9px] text-muted font-black mt-2 uppercase tracking-[0.15em]">Управление доступом</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><X size={20} /></button>
+          <button 
+            onClick={onClose} 
+            className="p-2.5 hover:bg-card rounded-2xl text-muted transition-all active:scale-90"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-8 custom-scrollbar">
-          <div className="bg-slate-900 rounded-3xl p-6 text-white relative overflow-hidden shadow-xl">
-             <Globe className="absolute -right-8 -bottom-8 text-white/5" size={160} />
-             <div className="relative z-10 space-y-6">
+        <div className="p-8 overflow-y-auto space-y-10 custom-scrollbar">
+          {/* Subscription Card (Dark Style) */}
+          <div className="bg-[#0c0c0e] border border-white/5 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl">
+            <Globe className="absolute -right-12 -bottom-12 text-white/[0.03] rotate-12" size={200} />
+            <div className="relative z-10 space-y-6">
                 <div>
-                  <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-3">Subscription Token</p>
-                  <div className="flex gap-2">
-                    <div className="flex-1 bg-white/10 backdrop-blur-md border border-white/10 text-[11px] p-3 rounded-xl font-mono truncate select-all">
-                      {loading ? "..." : linksData?.subscription}
+                  <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">Subscription Link</p>
+                  <div className="flex gap-3">
+                    <div className="flex-1 bg-white/5 backdrop-blur-md border border-white/10 text-[11px] p-4 rounded-2xl font-mono truncate select-all text-indigo-100/70">
+                      {loading ? "Generating..." : linksData?.link_subscription}
                     </div>
-                    <button onClick={() => handleCopy(linksData?.subscription, 'sub')} className={`p-3 rounded-xl transition-all ${copiedTag === 'sub' ? 'bg-emerald-500' : 'bg-white text-slate-900'}`}>
-                      {copiedTag === 'sub' ? <CheckCircle2 size={18} /> : <Copy size={18} />}
+                    <button 
+                      onClick={() => handleCopy(linksData?.link_subscription, 'sub_link')} 
+                      className={`p-4 rounded-2xl transition-all active:scale-90 ${
+                        copiedTag === 'sub_link' 
+                          ? 'bg-emerald-500 text-white' 
+                          : 'bg-white text-slate-900 hover:bg-indigo-50'
+                      }`}
+                    >
+                      {copiedTag === 'sub_link' ? <CheckCircle2 size={20} /> : <Copy size={20} />}
                     </button>
                   </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-3">Public Link</p>
-                  <div className="flex gap-2">
-                    <div className="flex-1 bg-white/10 backdrop-blur-md border border-white/10 text-[11px] p-3 rounded-xl font-mono truncate select-all">
-                      {loading ? "..." : linksData?.link_subscription}
-                    </div>
-                    <button onClick={() => handleCopy(linksData?.link_subscription, 'sub_link')} className={`p-3 rounded-xl transition-all ${copiedTag === 'sub_link' ? 'bg-emerald-500' : 'bg-white text-slate-900'}`}>
-                      {copiedTag === 'sub_link' ? <CheckCircle2 size={18} /> : <Copy size={18} />}
-                    </button>
-                  </div>
-                </div>
-             </div>
+            </div>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <Zap size={14} className="text-amber-500" /> Подключения и доступ
+          {/* Connections List */}
+          <div className="space-y-5">
+            <h3 className="text-[10px] font-black text-muted uppercase tracking-[0.2em] flex items-center gap-3 ml-1">
+              <Zap size={14} className="text-amber-500" /> Подключения и протоколы
             </h3>
 
             {loading ? (
-              <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-indigo-600" size={32} /></div>
+              <div className="py-20 flex flex-col items-center gap-4">
+                <Loader2 className="animate-spin text-indigo-500" size={32} />
+                <span className="text-[10px] font-black text-muted uppercase tracking-widest">Получаем ссылки...</span>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 gap-4">
                 {linksData?.links.map((item: any, idx: number) => {
                   const clientData = user.clients?.find((c: any) => c.inbound?.tag === item.tag);
 
                   return (
-                    <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-3xl hover:border-indigo-200 transition-all shadow-sm group">
+                    <div 
+                      key={idx} 
+                      className="flex items-center gap-5 p-5 bg-card/30 border border-line rounded-[2rem] hover:border-indigo-500/30 transition-all group"
+                    >
+                      {/* QR Thumbnail */}
                       <div 
-                        className="relative bg-white p-1.5 rounded-xl border border-slate-100 cursor-zoom-in shrink-0 group/qr"
+                        className="relative bg-white p-2 rounded-2xl border border-line cursor-zoom-in shrink-0 group/qr shadow-sm transition-transform active:scale-95"
                         onClick={() => setZoomedQr(item.link)}
                       >
-                        <QRCode value={item.link} size={48} viewBox={`0 0 256 256`} />
-                        {/* Возвращаем Maximize2 как оверлей для красоты и использования импорта */}
-                        <div className="absolute inset-0 bg-indigo-600/20 opacity-0 group-hover/qr:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                          <Maximize2 size={16} className="text-indigo-700" />
+                        <QRCode value={item.link} size={52} viewBox={`0 0 256 256`} />
+                        <div className="absolute inset-0 bg-indigo-600/10 opacity-0 group-hover/qr:opacity-100 transition-opacity flex items-center justify-center rounded-2xl backdrop-blur-[1px]">
+                          <Maximize2 size={16} className="text-indigo-600" />
                         </div>
                       </div>
 
+                      {/* Link Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[8px] font-black bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded uppercase border border-indigo-100">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[8px] font-black bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded-lg uppercase border border-indigo-500/20 tracking-tighter">
                             {item.protocol}
                           </span>
-                          <span className="text-sm font-bold text-slate-800 truncate">{item.tag}</span>
+                          <span className="text-sm font-bold text-base truncate tracking-tight">{item.tag}</span>
                         </div>
-                        <p className="text-[10px] text-slate-400 font-mono truncate select-all">
-                          {item.link.substring(0, 50)}...
+                        <p className="text-[10px] text-muted font-mono truncate opacity-60">
+                          {item.link}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-1">
+                      {/* Actions */}
+                      <div className="flex items-center gap-2">
                         <button 
                           onClick={() => handleCopy(item.link, item.tag)}
-                          className={`p-2.5 rounded-xl transition-all ${copiedTag === item.tag ? 'bg-emerald-500 text-white' : 'hover:bg-slate-100 text-slate-400'}`}
+                          className={`p-3 rounded-2xl transition-all active:scale-90 ${
+                            copiedTag === item.tag 
+                              ? 'bg-emerald-500 text-white' 
+                              : 'bg-main border border-line text-muted hover:text-indigo-500 hover:border-indigo-500/50'
+                          }`}
                         >
                           {copiedTag === item.tag ? <CheckCircle2 size={18} /> : <Copy size={18} />}
                         </button>
@@ -181,7 +207,7 @@ export default function UserDetailModal({ user, onClose, onRefresh }: UserDetail
                           <button 
                             disabled={isDeleting === clientData.inbound_id}
                             onClick={() => handleRemoveInbound(clientData.inbound_id, item.tag)}
-                            className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all disabled:opacity-50"
+                            className="p-3 text-muted/40 hover:text-red-500 hover:bg-red-500/10 rounded-2xl transition-all disabled:opacity-30 active:scale-90"
                           >
                             {isDeleting === clientData.inbound_id ? (
                               <Loader2 size={18} className="animate-spin" />
@@ -197,6 +223,11 @@ export default function UserDetailModal({ user, onClose, onRefresh }: UserDetail
               </div>
             )}
           </div>
+        </div>
+        
+        {/* Optional Modal Footer */}
+        <div className="p-4 bg-card/20 border-t border-line text-center">
+          <span className="text-[8px] font-black text-muted/30 uppercase tracking-[0.3em]">Anaconduit Secure Link Manager</span>
         </div>
       </div>
     </div>

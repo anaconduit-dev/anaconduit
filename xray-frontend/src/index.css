@@ -1,15 +1,61 @@
 @import "tailwindcss";
 
-/* Это обнуление стилей Vite, чтобы всё не липло */
 :root {
   max-width: none !important;
   margin: 0 !important;
   padding: 0 !important;
   text-align: left !important;
+  
+  /* Переменные для СВЕТЛОЙ темы */
+  --color-bg-main: #f8fafc;
+  --color-bg-card: #ffffff;
+  --color-text-base: #1e293b; /* slate-800 */
+  --color-text-muted: #64748b; /* slate-500 */
+  --color-border-base: #e2e8f0; /* slate-200 */
+}
+
+.dark {
+  /* Переменные для ТЕМНОЙ темы */
+  --color-bg-main: #020617;   /* slate-950 */
+  --color-bg-card: #0f172a;   /* slate-900 */
+  --color-text-base: #f1f5f9; /* slate-100 */
+  --color-text-muted: #94a3b8; /* slate-400 */
+  --color-border-base: #1e293b; /* slate-800 */
+}
+
+@theme {
+  --variant-dark: .dark &;
+  
+  /* Регистрируем переменные в Tailwind v4 */
+  --color-main: var(--color-bg-main);
+  --color-card: var(--color-bg-card);
+  --color-base: var(--color-text-base);
+  --color-muted: var(--color-text-muted);
+  --color-line: var(--color-border-base);
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #f8fafc;
+  /* Используем переменную фона */
+  background-color: var(--color-bg-main);
+  color: var(--color-text-base);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+@layer base {
+  body {
+    @apply transition-colors duration-300;
+  }
+}
+
+html, body {
+  /* Задаем фоновый цвет, который будет виден при оверскролле */
+  background-color: #050505; 
+  
+  /* Опционально: отключаем эффект растягивания совсем (если нужно) */
+  /* overscroll-behavior: none; */
+  
+  /* Позволяет скроллу быть плавным на iOS */
+  -webkit-overflow-scrolling: touch;
 }

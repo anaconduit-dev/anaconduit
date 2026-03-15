@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Sun, Moon } from "lucide-react";
 import { logout } from "../store/auth";
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { getDockerContainers, type DockerListResponse } from "../api/docker";
@@ -11,7 +12,19 @@ import {
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
-  
+  const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
   // Состояние мобильного меню
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -109,9 +122,10 @@ useEffect(() => {
   const closeMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <div className="min-h-screen flex bg-[#f8fafc] relative">
+    // Используем bg-main (адаптивный фон)
+    <div className="min-h-screen flex bg-main relative transition-colors duration-300">
       
-      {/* OVERLAY для мобильного меню */}
+      {/* OVERLAY */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[45] lg:hidden animate-in fade-in duration-300"
@@ -161,7 +175,7 @@ useEffect(() => {
             </Link>
           ))}
         </nav>
-      
+          
         {/* Мини-статистика в сайдбаре */}
         {dockerData && (
           <div className="px-6 py-4 space-y-3 border-t border-slate-800/50">
@@ -216,46 +230,43 @@ useEffect(() => {
 
       {/* ОСНОВНОЙ КОНТЕНТ */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40 shrink-0">
+        {/* HEADER - используем bg-card и border-line */}
+        <header className="h-16 bg-card border-b border-line flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40 shrink-0 transition-colors">
           <div className="flex items-center gap-3">
-            {/* Бургер-кнопка для мобилок */}
-            <button 
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl"
-            >
-              <Menu size={24} />
-            </button>
-            <h2 className="font-bold text-slate-700 truncate max-w-[150px] lg:max-w-none">
-              Панель управления
-            </h2>
+             <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 text-muted hover:bg-main rounded-xl">
+                <Menu size={24} />
+             </button>
+             {/* text-base - адаптивный цвет текста */}
+             <h2 className="font-bold text-base">Панель управления</h2>
           </div>
 
           <div className="flex items-center gap-2 lg:gap-4">
+            {/* КНОПКА ПЕРЕКЛЮЧЕНИЯ ТЕМЫ */}
+            <button 
+              onClick={toggleTheme}
+              className="p-2 rounded-xl bg-main border border-line dark:text-amber-400 text-indigo-600 hover:scale-110 transition-all"
+              title={theme === 'dark' ? "Светлая тема" : "Темная тема"}
+            >
+              {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+
             {/* Статус Xray */}
             <div className={`flex items-center gap-2 lg:gap-3 px-2 lg:px-3 py-1.5 rounded-full border transition-all ${
               xrayStatus.status === 'running' 
-              ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
-              : "bg-red-50 text-red-700 border-red-100"
+              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+              : "bg-red-500/10 text-red-500 border-red-500/20"
             }`}>
               <div className={`w-2 h-2 rounded-full shrink-0 ${
                 xrayStatus.status === 'running' ? "bg-emerald-500 animate-pulse" : "bg-red-500"
               }`} />
-              
               <span className="text-[9px] lg:text-[10px] font-black uppercase whitespace-nowrap">
                 {xrayStatus.status === 'running' ? 'Online' : 'Offline'}
               </span>
-              
-              {/* Нагрузка (скрываем на совсем маленьких экранах) */}
-              {xrayStatus.status === 'running' && (
-                <div className="hidden sm:flex gap-2 pl-2 border-l border-emerald-200 text-[9px] font-bold opacity-70 whitespace-nowrap">
-                  <span>CPU: {xrayStatus.cpu}%</span>
-                </div>
-              )}
             </div>
             
             <button 
               onClick={refreshStatus} 
-              className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"
+              className="p-2 text-muted hover:text-indigo-600 transition-colors"
             >
               <RefreshCw size={16} />
             </button>
@@ -264,7 +275,8 @@ useEffect(() => {
 
         <main className="flex-1 overflow-y-auto">
           <div className="p-4 lg:p-8">
-            <Outlet context={{ xrayStatus, nginxStatus, dockerData, refreshStatus }} /> 
+            {/* Пробрасываем тему через context если понадобится внутри */}
+            <Outlet context={{ xrayStatus, nginxStatus, dockerData, refreshStatus, theme }} /> 
           </div>
         </main>
       </div>

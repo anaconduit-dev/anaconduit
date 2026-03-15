@@ -59,44 +59,70 @@ export default function LogTerminal({
   };
 
   return (
-    <div className={`bg-slate-950 rounded-[32px] border border-slate-800 shadow-2xl overflow-hidden flex flex-col ${height}`}>
-      <div className="px-6 py-4 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
-        <div className="flex items-center gap-3 text-slate-400">
-          <Terminal size={18} className="text-indigo-500" />
-          <span className="text-xs font-black uppercase tracking-widest">{title}</span>
+    <div className={`bg-main rounded-[2.5rem] border border-line shadow-2xl overflow-hidden flex flex-col transition-all ${height}`}>
+      {/* Заголовок терминала */}
+      <div className="px-6 py-4 border-b border-line bg-card/30 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+            <Terminal size={16} className="text-indigo-500" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black text-base uppercase tracking-[0.2em] leading-none">{title}</span>
+            <span className="text-[8px] text-muted font-bold uppercase mt-1 tracking-tighter">System Output</span>
+          </div>
         </div>
+        
         <div className="flex items-center gap-2">
-           <button 
+          <button 
             onClick={fetchLogs}
-            className="p-2 hover:bg-white/10 rounded-xl text-slate-500 transition-colors"
+            className="p-2.5 hover:bg-indigo-500/10 rounded-xl text-muted hover:text-indigo-500 transition-all active:scale-90"
+            title="Обновить логи"
           >
             <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
       </div>
 
+      {/* Тело терминала */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-6 font-mono text-[11px] leading-relaxed selection:bg-indigo-500/30"
+        className="flex-1 overflow-y-auto p-6 font-mono text-[11px] leading-relaxed selection:bg-indigo-500/30 bg-[#0c0c0e] custom-scrollbar"
       >
         {logs.length === 0 ? (
-          <div className="text-slate-600 italic">Ожидание данных...</div>
+          <div className="flex items-center gap-3 text-muted/40 italic">
+            <div className="w-1 h-1 rounded-full bg-muted/40 animate-bounce" />
+            <span>Ожидание системных данных...</span>
+          </div>
         ) : (
           logs.map((line, i) => (
-            <div key={i} className="flex gap-4 group hover:bg-white/5 py-0.5 px-2 -mx-2 rounded">
-              <span className="text-slate-800 select-none w-8 text-right italic shrink-0">{i + 1}</span>
-              <span className={`${formatLogLine(line)} break-all`}>{line}</span>
+            <div key={i} className="flex gap-4 group hover:bg-white/[0.03] py-0.5 px-3 -mx-3 rounded-md transition-colors">
+              <span className="text-muted/20 select-none w-8 text-right font-bold shrink-0 group-hover:text-muted/40 transition-colors">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <span className={`${formatLogLine(line)} break-all tracking-tight`}>
+                {line}
+              </span>
             </div>
-          ))
+          )) // <-- Проверь, что эта скобка и следующая на месте
         )}
       </div>
       
-      <div className="px-6 py-2 bg-slate-900/30 border-t border-slate-800 flex justify-between items-center text-[9px] font-bold uppercase tracking-tighter">
-        <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-slate-500 text-[10px]">Live Stream</span>
+      {/* Футер терминала */}
+      <div className="px-6 py-3 bg-card/50 border-t border-line flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="relative flex items-center justify-center">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="absolute w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-40" />
+          </div>
+          <span className="text-muted text-[9px] font-black uppercase tracking-widest">Live Stream Active</span>
         </div>
-        <span className="text-slate-600">Buffer: 100 lines</span>
+        
+        <div className="flex items-center gap-4">
+          <div className="h-3 w-px bg-line" />
+          <span className="text-muted/60 text-[9px] font-bold uppercase">
+            Buffer: <span className="text-base">100 lines</span>
+          </span>
+        </div>
       </div>
     </div>
   );
