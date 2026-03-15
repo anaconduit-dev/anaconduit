@@ -22,7 +22,6 @@ const generateShortId = (length = 8) => {
 };
 
 
-
 const grpcServices = [
   "SpeechService", "Analytics", "Tunnel", "Internal", "Cloud", 
   "Health", "Data", "Mesh", "Bridge", "Secure", "Node", "Proxy", "Core"
@@ -136,6 +135,19 @@ export default function EditInboundModal({ isOpen, onClose, onSuccess, inboundId
   
 
   if (!isOpen) return null;
+
+  const handleGenerateKeys = async () => {
+    try {
+        const keys = await generateXrayKeys();
+        setForm((prev: any) => ({ 
+        ...prev, 
+        privateKey: keys.private_key, 
+        publicKey: keys.public_key 
+        }));
+    } catch (e) { 
+        console.error(e); 
+    }
+    };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -831,7 +843,7 @@ export default function EditInboundModal({ isOpen, onClose, onSuccess, inboundId
                         <div className="space-y-6 pt-8 border-t border-indigo-500/10">
                         <div className="flex justify-between items-center px-2">
                             <h5 className="text-[10px] font-black text-red-500 uppercase tracking-[0.3em]">Cryptography Keys</h5>
-                            <button type="button" onClick={generateXrayKeys} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-xl shadow-indigo-900/40 active:scale-95">Generate New Pair</button>
+                            <button type="button" onClick={handleGenerateKeys} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-xl shadow-indigo-900/40 active:scale-95">Generate New Pair</button>
                         </div>
 
                         <div className="space-y-4">

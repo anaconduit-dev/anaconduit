@@ -16,3 +16,20 @@ app/static/*
 
 # Системные файлы
 .DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.env
+venv/
+
+# Node/React
+node_modules/
+dist/
+build/
+
+# Anaconduit Specific
+/opt/anaconduit/data/run/*.sock
+/opt/anaconduit/data/xray/*.json
+!/opt/anaconduit/data/xray/config.json.template
+*.log

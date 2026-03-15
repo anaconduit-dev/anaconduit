@@ -818,8 +818,8 @@ useEffect(() => {
                       onClick={() => setForm({ ...form, security: sec })}
                       className={`p-4 rounded-2xl font-bold text-xs uppercase border transition-all ${
                         form.security === sec 
-                          ? 'bg-indigo-600 text-white border-indigo-600' 
-                          : 'bg-white text-slate-400 border-slate-100'
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg dark:shadow-indigo-900/30' 
+                          : 'bg-main text-muted border-line hover:border-indigo-500/50'
                       } ${isForbidden ? 'opacity-40 cursor-not-allowed bg-slate-50' : ''}`}
                     >
                       {sec}
@@ -835,230 +835,174 @@ useEffect(() => {
             </div>
               {/* БЛОК: NONE (Ничего не показываем или инфо-плашка) */}
               {form.security === 'none' && (
-                <div className="p-6 border-2 border-dashed border-slate-100 rounded-3xl text-center">
-                  <p className="text-xs text-slate-400 font-medium">Трафик будет передаваться в открытом виде (рекомендуется только для внутренних сетей или за Nginx)</p>
+                <div className="p-10 border-2 border-dashed border-line rounded-[3rem] text-center bg-card/10 group hover:border-indigo-500/20 transition-colors">
+                    <div className="p-4 bg-line rounded-full w-fit mx-auto mb-4 text-muted group-hover:text-indigo-500 transition-colors">
+                    <Shield size={32} />
+                    </div>
+                    <p className="text-[10px] text-muted font-black uppercase tracking-widest max-w-xs mx-auto leading-relaxed">
+                    Трафик передается <span className="text-amber-500">без шифрования</span>. Используйте только для локальных сетей или за Nginx.
+                    </p>
                 </div>
               )}
               
-              {/* БЛОК: TLS (Стандартное шифрование) */}
+              {/* БЛОК: TLS */}
               {form.security === 'tls' && (
-                <div className="space-y-4 animate-in slide-in-from-top-2">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Server Name (SNI)</label>
-                      <input className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:border-indigo-500" 
-                        value={form.tlsServerName} 
-                        onChange={e => setForm({...form, tlsServerName: e.target.value})} 
-                        placeholder="example.com" 
+              <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-black text-muted uppercase tracking-[0.2em] ml-2">Server Name (SNI)</label>
+                      <input className="w-full p-5 bg-card border border-line rounded-[1.5rem] font-black text-sm text-base focus:border-indigo-500/50 outline-none transition-all shadow-xl" 
+                      value={form.tlsServerName} 
+                      onChange={e => setForm({...form, tlsServerName: e.target.value})} 
+                      placeholder="example.com" 
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">ALPN</label>
-                      <input className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:border-indigo-500" 
-                        value={form.alpn} 
-                        onChange={e => setForm({...form, alpn: e.target.value})} 
-                        placeholder="h2,http/1.1" 
+                  </div>
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-black text-muted uppercase tracking-[0.2em] ml-2">ALPN</label>
+                      <input className="w-full p-5 bg-card border border-line rounded-[1.5rem] font-mono text-sm text-indigo-400 focus:border-indigo-500/50 outline-none transition-all shadow-xl" 
+                      value={form.alpn} 
+                      onChange={e => setForm({...form, alpn: e.target.value})} 
+                      placeholder="h2,http/1.1" 
                       />
-                    </div>
+                  </div>
                   </div>
 
-                  {/* Пути к сертификатам */}
                   <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Путь к сертификату (.crt / .pem)</label>
-                      <input className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-mono text-xs outline-none focus:border-indigo-500" 
-                        value={form.tlsCertPath} 
-                        onChange={e => setForm({...form, tlsCertPath: e.target.value})} 
-                        placeholder="/etc/xray/fullchain.pem" 
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-black text-muted uppercase tracking-[0.2em] ml-2">Cert Path (.crt / .pem)</label>
+                      <input className="w-full p-5 bg-main border border-line rounded-[1.5rem] font-mono text-xs text-muted focus:text-base focus:border-indigo-500 transition-all outline-none" 
+                      value={form.tlsCertPath} 
+                      onChange={e => setForm({...form, tlsCertPath: e.target.value})} 
+                      placeholder="/etc/xray/fullchain.pem" 
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Путь к ключу (.key)</label>
-                      <input className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-mono text-xs outline-none focus:border-indigo-500" 
-                        value={form.tlsKeyPath} 
-                        onChange={e => setForm({...form, tlsKeyPath: e.target.value})} 
-                        placeholder="/etc/xray/privkey.pem" 
+                  </div>
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-black text-muted uppercase tracking-[0.2em] ml-2">Key Path (.key)</label>
+                      <input className="w-full p-5 bg-main border border-line rounded-[1.5rem] font-mono text-xs text-muted focus:text-base focus:border-indigo-500 transition-all outline-none" 
+                      value={form.tlsKeyPath} 
+                      onChange={e => setForm({...form, tlsKeyPath: e.target.value})} 
+                      placeholder="/etc/xray/privkey.pem" 
                       />
-                    </div>
+                  </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-tight">Allow Insecure</h4>
-                      <p className="text-[9px] text-slate-400">Игнорировать ошибки проверки сертификатов</p>
-                    </div>
-                    <button
+                  <div className="flex items-center justify-between p-6 bg-card border border-line rounded-[2rem] shadow-xl">
+                  <div className="space-y-1">
+                      <h4 className="text-sm font-black text-base uppercase tracking-tight">Allow Insecure</h4>
+                      <p className="text-[9px] text-muted font-bold uppercase tracking-widest">Ignore certificate validation errors</p>
+                  </div>
+                  <button
                       type="button"
                       onClick={() => setForm({...form, allowInsecure: !form.allowInsecure})}
-                      className={`w-10 h-5 rounded-full transition-colors relative ${form.allowInsecure ? 'bg-indigo-500' : 'bg-slate-300'}`}
-                    >
-                      <div className={`absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full transition-transform ${form.allowInsecure ? 'translate-x-5' : ''}`} />
-                    </button>
+                      className={`w-14 h-7 rounded-full transition-all relative border ${form.allowInsecure ? 'bg-indigo-600 border-indigo-400' : 'bg-main border-line'}`}
+                  >
+                      <div className={`absolute top-1 left-1 bg-white w-4.5 h-4.5 rounded-full shadow-lg transition-transform duration-300 ${form.allowInsecure ? 'translate-x-7' : ''}`} />
+                  </button>
                   </div>
-                </div>
+              </div>
               )}
 
+              {/* БЛОК: REALITY */}
               {form.security === 'reality' && (
-                <div className="space-y-6 bg-indigo-50 p-8 rounded-[2.5rem] border border-indigo-100">
-                  <div className="flex justify-between items-center border-b border-indigo-100 pb-4">
-                    <span className="font-black text-indigo-900 text-xs uppercase tracking-tighter">Reality Settings</span>
-                    
+              <div className="space-y-8 bg-indigo-500/5 p-8 rounded-[3rem] border border-indigo-500/10 animate-in slide-in-from-top-4 duration-500">
+                  <div className="flex justify-between items-center border-b border-indigo-500/10 pb-6">
+                  <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                      <span className="font-black text-base text-[12px] uppercase tracking-[0.3em]">Reality Core Engine</span>
+                  </div>
                   </div>
 
-                  {/* Основные цели */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-indigo-400 uppercase ml-1">Target (Dest)</label>
-                      <input className="w-full p-4 bg-white rounded-xl border border-indigo-100 text-sm font-bold" 
-                        placeholder="example.com:443" 
-                        value={form.dest} 
-                        onChange={e => {
+                  {/* Targets */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-2">Target Dest</label>
+                      <input className="w-full p-5 bg-card border border-indigo-500/20 rounded-[1.5rem] text-sm font-black text-base focus:border-indigo-500 transition-all shadow-2xl" 
+                      placeholder="example.com:443" 
+                      value={form.dest} 
+                      onChange={e => {
                           const val = e.target.value;
-                          // 1. Извлекаем чистый домен (убираем http://, https:// и :port)
                           const cleanDomain = val.replace(/^https?:\/\//, '').split(':')[0];
-                          
-                          // 2. Логика автозаполнения Server Names
                           let newServerNames = form.serverNames;
-                          
-                          // Если в домене есть точка (похоже на адрес) и поле еще не трогали вручную
                           if (cleanDomain.includes('.')) {
-                            const baseDomain = cleanDomain.startsWith('www.') ? cleanDomain.substring(4) : cleanDomain;
-                            const wwwDomain = `www.${baseDomain}`;
-                            
-                            // Формируем строку через запятую: "www.test.com, test.com"
-                            newServerNames = `${wwwDomain}, ${baseDomain}`;
+                              const baseDomain = cleanDomain.startsWith('www.') ? cleanDomain.substring(4) : cleanDomain;
+                              newServerNames = `www.${baseDomain}, ${baseDomain}`;
                           }
-
-                          setForm({
-                            ...form, 
-                            dest: val,
-                            serverNames: newServerNames
-                          });
-                        }} 
+                          setForm({...form, dest: val, serverNames: newServerNames});
+                      }} 
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-indigo-400 uppercase ml-1">Spider X Path</label>
-                      <input className="w-full p-4 bg-white rounded-xl border border-indigo-100 font-mono text-sm" placeholder="/" value={form.spiderX} onChange={e => setForm({...form, spiderX: e.target.value})} />
-                    </div>
+                  </div>
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-2">Spider X Path</label>
+                      <input className="w-full p-5 bg-card border border-indigo-500/20 rounded-[1.5rem] font-mono text-sm text-base focus:border-indigo-500 transition-all shadow-2xl" placeholder="/" value={form.spiderX} onChange={e => setForm({...form, spiderX: e.target.value})} />
+                  </div>
                   </div>
 
-                  {/* Тонкие настройки маскировки */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-1 md:col-span-2">
-                      <label className="text-[9px] font-black text-indigo-400 uppercase ml-1">Server Names</label>
-                      <input className="w-full p-4 bg-white rounded-xl border border-indigo-100 text-sm" placeholder="example.com, www.example.com" value={form.serverNames} onChange={e => setForm({...form, serverNames: e.target.value})} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-indigo-400 uppercase ml-1">Fingerprint</label>
-                      <select className="w-full p-4 bg-white border border-indigo-100 rounded-xl font-bold text-sm" value={form.fingerprint} onChange={e => setForm({...form, fingerprint: e.target.value})}>
-                        <option value="chrome">Chrome</option>
-                        <option value="firefox">Firefox</option>
-                        <option value="safari">Safari</option>
-                        <option value="edge">Edge</option>
-                        <option value="randomized">Randomized</option>
+                  {/* Masking Settings */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-2">Server Names (SNI)</label>
+                      <input className="w-full p-5 bg-card border border-indigo-500/20 rounded-[1.5rem] text-sm text-base focus:border-indigo-500 transition-all shadow-2xl" placeholder="example.com, www.example.com" value={form.serverNames} onChange={e => setForm({...form, serverNames: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-2">Fingerprint</label>
+                      <select className="w-full p-5 bg-card border border-indigo-500/20 rounded-[1.5rem] font-black text-sm text-indigo-400 focus:border-indigo-500 outline-none transition-all shadow-2xl appearance-none cursor-pointer" value={form.fingerprint} onChange={e => setForm({...form, fingerprint: e.target.value})}>
+                      <option value="chrome">Chrome</option>
+                      <option value="firefox">Firefox</option>
+                      <option value="safari">Safari</option>
+                      <option value="randomized">Randomized</option>
                       </select>
-                    </div>
-                    <div className="space-y-3 md:col-span-2">
-                      <div className="flex justify-between items-end ml-1">
-                        <label className="text-[9px] font-black text-indigo-400 uppercase">
-                          Short IDs (через запятую или пробел)
-                        </label>
-                        <div className="flex gap-2">
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              const newId = generateShortId(8);
-                              const current = form.shortIds ? form.shortIds + ', ' : '';
-                              setForm({...form, shortIds: current + newId});
-                            }}
-                            className="text-[8px] font-black bg-indigo-100 text-indigo-600 px-2 py-1 rounded-md hover:bg-indigo-200 transition-all"
-                          >
-                            +8 HEX
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              const newId = generateShortId(16);
-                              const current = form.shortIds ? form.shortIds + ', ' : '';
-                              setForm({...form, shortIds: current + newId});
-                            }}
-                            className="text-[8px] font-black bg-indigo-600 text-white px-2 py-1 rounded-md hover:shadow-md transition-all"
-                          >
-                            +16 HEX
-                          </button>
-                        </div>
-                      </div>
+                  </div>
 
-                      <div className="relative group">
-                        <textarea 
-                          className="w-full p-4 bg-white rounded-2xl border border-indigo-100 font-mono text-xs min-h-[80px] focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all resize-none"
-                          placeholder="Введите вручную или сгенерируйте..."
-                          value={form.shortIds}
-                          onChange={e => setForm({...form, shortIds: e.target.value})}
-                        />
-                        
-                        {/* Индикатор количества */}
-                        <div className="absolute bottom-3 right-3 flex gap-1">
-                          {form.shortIds?.split(/[, ]+/).filter(id => id.length > 0).map((id, i) => (
-                            <div key={i} className={`w-1.5 h-1.5 rounded-full ${id.length === 16 ? 'bg-indigo-600' : 'bg-indigo-300'}`} title={`ID: ${id}`} />
-                          ))}
-                        </div>
+                  <div className="space-y-4 md:col-span-2">
+                      <div className="flex justify-between items-end ml-2">
+                      <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Short IDs (HEX)</label>
+                      <div className="flex gap-2">
+                          <button type="button" onClick={() => {
+                          const newId = generateShortId(8);
+                          setForm({...form, shortIds: form.shortIds ? `${form.shortIds}, ${newId}` : newId});
+                          }} className="text-[8px] font-black bg-indigo-500/10 text-indigo-500 px-3 py-1.5 rounded-xl border border-indigo-500/20 hover:bg-indigo-500/20 transition-all">+8 HEX</button>
+                          <button type="button" onClick={() => {
+                          const newId = generateShortId(16);
+                          setForm({...form, shortIds: form.shortIds ? `${form.shortIds}, ${newId}` : newId});
+                          }} className="text-[8px] font-black bg-indigo-600 text-white px-3 py-1.5 rounded-xl shadow-lg shadow-indigo-900/40 active:scale-95 transition-all">+16 HEX</button>
                       </div>
-                      
-                      <p className="text-[8px] text-slate-400 px-1 italic">
-                        * Можно вводить свои ID. Каждый ID должен быть в HEX (0-9, a-f) и иметь четную длину.
+                      </div>
+                      <textarea className="w-full p-5 bg-main border border-indigo-500/20 rounded-[1.5rem] font-mono text-xs text-base min-h-[100px] focus:border-indigo-500 outline-none transition-all shadow-inner resize-none" placeholder="HEX IDs..." value={form.shortIds} onChange={e => setForm({...form, shortIds: e.target.value})} />
+                  </div>
+
+                  <div className="space-y-4">
+                      <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-2">Max Time Diff</label>
+                      <div className="flex items-center gap-4">
+                      <input type="number" className="w-full p-5 bg-card border border-indigo-500/20 rounded-[1.5rem] font-black text-sm text-base focus:border-indigo-500 transition-all shadow-2xl" value={form.maxTimediff / 1000} onChange={e => setForm({...form, maxTimediff: (parseInt(e.target.value) || 0) * 1000})} placeholder="60" />
+                      <span className="text-[10px] font-black text-indigo-500">SEC</span>
+                      </div>
+                      <p className="text-[8px] text-muted font-bold uppercase tracking-tight leading-relaxed px-2">
+                      Time sync tolerance. 0 = 60s default.
                       </p>
-                    </div>
-                    <div className="space-y-3">
-                    <label className="text-[9px] font-black text-indigo-400 uppercase ml-1 flex justify-between">
-                      Max Time Diff
-                      <span className="text-[8px] normal-case font-medium text-slate-400">Допуск разницы времени (сек)</span>
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <input 
-                        type="number"
-                        className="w-full p-4 bg-white rounded-xl border border-indigo-100 font-bold text-sm outline-none focus:border-indigo-500 transition-all"
-                        value={form.maxTimediff / 1000} // Показываем в секундах
-                        onChange={e => {
-                          const seconds = parseInt(e.target.value) || 0;
-                          setForm({...form, maxTimediff: seconds * 1000}); // Сохраняем в мс
-                        }}
-                        placeholder="60"
-                      />
-                      <div className="text-[10px] font-bold text-indigo-300">SEC</div>
-                    </div>
-                    <p className="text-[8px] text-slate-400 px-1 leading-tight">
-                      0 = по умолчанию (60с). Слишком маленькое значение требует идеальной синхронизации времени на клиенте.
-                    </p>
                   </div>
                   </div>
                   
-                  <div className="space-y-4 pt-4 border-t border-indigo-100">
-                    <div className="space-y-1">
-                      <button type="button" onClick={handleGenerateKeys} className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold text-[10px]">NEW KEYS</button>
-                      <label className="text-[9px] font-black text-red-500 uppercase ml-1">Private Key (Обязательно)</label>
-                      <input 
-                        className={`w-full p-4 bg-white/50 rounded-xl font-mono text-[10px] border ${!form.privateKey ? 'border-red-300' : 'border-indigo-100'}`}
-                        value={form.privateKey} 
-                        readOnly 
-                        placeholder="Нажмите NEW KEYS для генерации" 
-                      />
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-red-500 uppercase ml-1">Public Key (Обязательно)</label>
-                      <input 
-                        className={`w-full p-4 bg-white rounded-xl font-mono text-[10px] border ${!form.publicKey ? 'border-red-300' : 'border-indigo-100'}`}
-                        value={form.publicKey} 
-                        onChange={e => setForm({...form, publicKey: e.target.value})} 
-                        placeholder="Введите или сгенерируйте Public Key" 
-                      />
-                    </div>
+                  {/* Keys Section */}
+                  <div className="space-y-6 pt-8 border-t border-indigo-500/10">
+                  <div className="flex justify-between items-center px-2">
+                      <h5 className="text-[10px] font-black text-red-500 uppercase tracking-[0.3em]">Cryptography Keys</h5>
+                      <button type="button" onClick={handleGenerateKeys} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-xl shadow-indigo-900/40 active:scale-95">Generate New Pair</button>
                   </div>
-                </div>
+
+                  <div className="space-y-4">
+                      <div className="space-y-2">
+                      <label className="text-[9px] font-black text-red-500/50 uppercase tracking-widest ml-2">Private Key (Hidden)</label>
+                      <input className={`w-full p-5 bg-main/50 rounded-[1.5rem] font-mono text-[10px] border tracking-widest ${!form.privateKey ? 'border-red-500/40 text-red-500 animate-pulse' : 'border-line text-muted'}`} value={form.privateKey} readOnly placeholder="GENERATE KEYS TO VIEW" />
+                      </div>
+                      <div className="space-y-2">
+                      <label className="text-[9px] font-black text-indigo-400 uppercase tracking-widest ml-2">Public Key (Visible)</label>
+                      <input className={`w-full p-5 bg-card rounded-[1.5rem] font-mono text-[10px] text-base border ${!form.publicKey ? 'border-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.1)]' : 'border-indigo-500/30'} focus:border-indigo-500 transition-all shadow-2xl`} value={form.publicKey} onChange={e => setForm({...form, publicKey: e.target.value})} placeholder="X25519 Public Key..." />
+                      </div>
+                  </div>
+                  </div>
+              </div>
               )}
-            </div>
+          </div>
           )}
 
           {/* TAB: SNIFFING */}

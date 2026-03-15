@@ -164,7 +164,7 @@ export default function UsersPage() {
               className="text-[10px] font-black uppercase bg-transparent border-none focus:ring-0 cursor-pointer text-base outline-none tracking-widest"
             >
               <option value={0} className="bg-main">Refresh: OFF</option>
-              <option value={5} className="bg-main">5 Seconds</option>
+              <option value={10} className="bg-main">10 Seconds</option>
               <option value={15} className="bg-main">15 Seconds</option>
               <option value={60} className="bg-main">1 Minute</option>
             </select>
