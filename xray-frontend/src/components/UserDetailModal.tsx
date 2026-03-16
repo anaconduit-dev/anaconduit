@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { 
   X, Copy, CheckCircle2, Loader2, 
   ShieldCheck, Zap, Globe, Maximize2, Trash2 
@@ -14,6 +15,7 @@ interface UserDetailModalProps {
 }
 
 export default function UserDetailModal({ user, onClose, onRefresh }: UserDetailModalProps) {
+  const { t } = useTranslation();
   const [linksData, setLinksData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export default function UserDetailModal({ user, onClose, onRefresh }: UserDetail
   };
 
   const handleRemoveInbound = async (inboundId: number, tag: string) => {
-    if (!window.confirm(`Отключить пользователя от сервера "${tag}"?`)) return;
+    if (!window.confirm(t("modals.userDetail.removeConfirm", { tag }))) return;
     
     setIsDeleting(inboundId);
     try {
@@ -66,7 +68,7 @@ export default function UserDetailModal({ user, onClose, onRefresh }: UserDetail
       onRefresh(); 
       onClose();   
     } catch (err) {
-      alert("Не удалось удалить подключение");
+      alert(t("modals.userDetail.removeError"));
     } finally {
       setIsDeleting(null);
     }
@@ -89,7 +91,7 @@ export default function UserDetailModal({ user, onClose, onRefresh }: UserDetail
               className="absolute -top-14 right-0 text-white flex items-center gap-2 font-black uppercase text-[10px] tracking-widest hover:text-indigo-400 transition-colors"
               onClick={() => setZoomedQr(null)}
             >
-              Закрыть <X size={20} />
+              {t("modals.userDetail.close")} <X size={20} />
             </button>
           </div>
         </div>
@@ -108,7 +110,9 @@ export default function UserDetailModal({ user, onClose, onRefresh }: UserDetail
             </div>
             <div>
               <h2 className="text-lg font-black text-base leading-none tracking-tight">{user.email}</h2>
-              <p className="text-[9px] text-muted font-black mt-2 uppercase tracking-[0.15em]">Управление доступом</p>
+              <p className="text-[9px] text-muted font-black mt-2 uppercase tracking-[0.15em]">
+                {t("modals.userDetail.title")}
+              </p>
             </div>
           </div>
           <button 
@@ -125,10 +129,12 @@ export default function UserDetailModal({ user, onClose, onRefresh }: UserDetail
             <Globe className="absolute -right-12 -bottom-12 text-white/[0.03] rotate-12" size={200} />
             <div className="relative z-10 space-y-6">
                 <div>
-                  <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">Subscription Link</p>
+                  <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">
+                    {t("modals.userDetail.subLinkTitle")}
+                  </p>
                   <div className="flex gap-3">
-                    <div className="flex-1 bg-white/5 backdrop-blur-md border border-white/10 text-[11px] p-4 rounded-2xl font-mono truncate select-all text-indigo-100/70">
-                      {loading ? "Generating..." : linksData?.link_subscription}
+                    <div className="flex-1 ...">
+                      {loading ? t("modals.userDetail.generating") : linksData?.link_subscription}
                     </div>
                     <button 
                       onClick={() => handleCopy(linksData?.link_subscription, 'sub_link')} 
@@ -148,13 +154,15 @@ export default function UserDetailModal({ user, onClose, onRefresh }: UserDetail
           {/* Connections List */}
           <div className="space-y-5">
             <h3 className="text-[10px] font-black text-muted uppercase tracking-[0.2em] flex items-center gap-3 ml-1">
-              <Zap size={14} className="text-amber-500" /> Подключения и протоколы
+              <Zap size={14} className="text-amber-500" /> {t("modals.userDetail.connectionsTitle")}
             </h3>
 
             {loading ? (
               <div className="py-20 flex flex-col items-center gap-4">
                 <Loader2 className="animate-spin text-indigo-500" size={32} />
-                <span className="text-[10px] font-black text-muted uppercase tracking-widest">Получаем ссылки...</span>
+                <span className="text-[10px] font-black text-muted uppercase tracking-widest">
+                  {t("modals.userDetail.loadingLinks")}
+                </span>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4">
@@ -227,7 +235,9 @@ export default function UserDetailModal({ user, onClose, onRefresh }: UserDetail
         
         {/* Optional Modal Footer */}
         <div className="p-4 bg-card/20 border-t border-line text-center">
-          <span className="text-[8px] font-black text-muted/30 uppercase tracking-[0.3em]">Anaconduit Secure Link Manager</span>
+        <span className="text-[8px] font-black text-muted/30 uppercase tracking-[0.3em]">
+            {t("modals.userDetail.footerInfo")}
+          </span>
         </div>
       </div>
     </div>

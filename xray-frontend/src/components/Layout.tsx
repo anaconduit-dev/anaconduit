@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, Languages } from "lucide-react";
 import { logout } from "../store/auth";
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getDockerContainers, type DockerListResponse } from "../api/docker";
 import { getNginxStatus, type NginxStatus} from "../api/nginx";
 import { getSystemStatus, getLatestVersion } from "../api/app";
@@ -10,9 +11,15 @@ import {
 } from "lucide-react";
 
 export default function Layout() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language.startsWith('ru') ? 'en' : 'ru';
+    i18n.changeLanguage(newLang);
+  };
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -146,7 +153,6 @@ useEffect(() => {
             </div>
             <span className="font-bold tracking-wider text-lg">Anaconduit</span>
           </div>
-          {/* Кнопка закрытия внутри сайдбара для мобилок */}
           <button onClick={closeMenu} className="lg:hidden p-1 text-slate-400">
             <X size={24} />
           </button>
@@ -154,23 +160,19 @@ useEffect(() => {
         
         <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto">
           {[
-            { name: "Главная", path: "/dashboard", icon: <Activity size={18} /> },
-            { name: "Конфиг Xray", path: "/settxray", icon: <ShieldCheck size={18} /> },
-            { name: "Подключения", path: "/inbounds", icon: <Users size={18} /> },
-            { name: "Пользователи", path: "/users", icon: <Users size={18} /> },
-            { name: "Nginx", path: "/nginx", icon: <Settings size={18} /> },
-            { name: "Настройки", path: "/settings", icon: <Settings size={18} /> },
+            { name: t("layout.menu.home"), path: "/dashboard", icon: <Activity size={18} /> },
+            { name: t("layout.menu.xrayConfig"), path: "/settxray", icon: <ShieldCheck size={18} /> },
+            { name: t("layout.menu.inbounds"), path: "/inbounds", icon: <Users size={18} /> },
+            { name: t("layout.menu.users"), path: "/users", icon: <Users size={18} /> },
+            { name: t("layout.menu.nginx"), path: "/nginx", icon: <Settings size={18} /> },
+            { name: t("layout.menu.settings"), path: "/settings", icon: <Settings size={18} /> },
           ].map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={closeMenu}
-              className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+            <Link key={item.path} to={item.path} onClick={closeMenu} 
+            className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
                 location.pathname === item.path 
                 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" 
                 : "text-slate-400 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
+              }`}>
               {item.icon} {item.name}
             </Link>
           ))}
@@ -180,7 +182,7 @@ useEffect(() => {
         {dockerData && (
           <div className="px-6 py-4 space-y-3 border-t border-slate-800/50">
              <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500">
-                <span>Проект нагрузки</span>
+                <span>{t("layout.nodeStatus")}</span>
                 <span className="text-indigo-400">{dockerData.total.count} CTR</span>
              </div>
              <div className="space-y-2">
@@ -209,12 +211,12 @@ useEffect(() => {
             {systemVersion.hasUpdate && (
               <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full animate-pulse border border-amber-500/20">
                 <RefreshCw size={8} />
-                <span className="font-bold">UPDATE</span>
+                <span className="font-bold">{t("layout.updateAvailable")}</span>
               </div>
             )}
           </div>
 
-          <p className="mt-3 uppercase tracking-widest font-bold">Ядро Xray</p>
+          <p className="mt-3 uppercase tracking-widest font-bold">{t("layout.xrayCore")}</p>
           <p className="mt-1 text-slate-400 font-mono tracking-tighter">{xrayStatus.version || "---"}</p>
           
           <p className="mt-2 uppercase tracking-widest font-bold">Nginx</p>
@@ -223,29 +225,36 @@ useEffect(() => {
 
         <div className="p-4 border-t border-slate-800 shrink-0">
           <button onClick={handleLogout} className="w-full flex items-center gap-3 p-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-all">
-            <LogOut size={18} /> Выйти
+            <LogOut size={18} /> {t("layout.logout")}
           </button>
         </div>
       </aside>
 
       {/* ОСНОВНОЙ КОНТЕНТ */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        {/* HEADER - используем bg-card и border-line */}
         <header className="h-16 bg-card border-b border-line flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40 shrink-0 transition-colors">
           <div className="flex items-center gap-3">
              <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 text-muted hover:bg-main rounded-xl">
                 <Menu size={24} />
              </button>
-             {/* text-base - адаптивный цвет текста */}
-             <h2 className="font-bold text-base">Панель управления</h2>
+             <h2 className="font-bold text-base">{t("layout.title")}</h2>
           </div>
 
           <div className="flex items-center gap-2 lg:gap-4">
-            {/* КНОПКА ПЕРЕКЛЮЧЕНИЯ ТЕМЫ */}
+            {/* ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА */}
+            <button 
+              onClick={toggleLanguage}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-main border border-line text-slate-500 hover:text-indigo-500 transition-all font-bold text-xs"
+              title="Switch Language"
+            >
+              <Languages size={18} />
+              <span className="uppercase">{i18n.language.slice(0, 2)}</span>
+            </button>
+
+            {/* ТЕМА */}
             <button 
               onClick={toggleTheme}
               className="p-2 rounded-xl bg-main border border-line dark:text-amber-400 text-indigo-600 hover:scale-110 transition-all"
-              title={theme === 'dark' ? "Светлая тема" : "Темная тема"}
             >
               {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
             </button>
@@ -275,7 +284,6 @@ useEffect(() => {
 
         <main className="flex-1 overflow-y-auto">
           <div className="p-4 lg:p-8">
-            {/* Пробрасываем тему через context если понадобится внутри */}
             <Outlet context={{ xrayStatus, nginxStatus, dockerData, refreshStatus, theme }} /> 
           </div>
         </main>

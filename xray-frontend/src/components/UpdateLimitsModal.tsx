@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next"; // Импорт
 import { X, ShieldAlert, Zap, Calendar, Save, Loader2, Plus } from "lucide-react";
 import { updateLimits } from "../api/user";
 
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: Props) {
+  const { t } = useTranslation();
   const [traffic, setTraffic] = useState<string>("");
   const [days, setDays] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -38,7 +40,7 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
       onSuccess();
       onClose();
     } catch (e) {
-      alert("Ошибка при обновлении лимитов");
+      alert(t("modals.limits.errorUpdate"));
     } finally {
       setLoading(false);
     }
@@ -57,16 +59,16 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
           <div className="flex justify-between items-start mb-8">
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h2 className="text-xl font-black text-base leading-none uppercase tracking-tight">Лимиты</h2>
-                {user.is_active ? (
-                    <span className="bg-emerald-500/10 text-emerald-500 text-[9px] px-2 py-1 rounded-lg font-black border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
-                      ACTIVE
-                    </span>
-                ) : (
-                    <span className="bg-red-500/10 text-red-500 text-[9px] px-2 py-1 rounded-lg font-black border border-red-500/20">
-                      EXPIRED
-                    </span>
-                )}
+                <h2 className="text-xl font-black text-base leading-none uppercase tracking-tight">
+                  {t("modals.limits.title")}
+                </h2>
+                <span className={`text-[9px] px-2 py-1 rounded-lg font-black border ${
+                  user.is_active 
+                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]" 
+                  : "bg-red-500/10 text-red-500 border-red-500/20"
+                }`}>
+                  {user.is_active ? t("status.active") : t("status.expired")}
+                </span>
               </div>
               <p className="text-muted font-bold text-xs mt-2 italic">{user.email}</p>
             </div>
@@ -82,7 +84,7 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
             {/* Трафик */}
             <div className="space-y-3">
               <label className="text-[10px] font-black uppercase tracking-[0.15em] text-muted flex items-center gap-2 ml-1">
-                <Zap size={14} className="text-indigo-500" /> Общий лимит (GB)
+                <Zap size={14} className="text-indigo-500" /> {t("modals.limits.trafficLabel")}
               </label>
               <div className="relative group">
                 <input 
@@ -101,13 +103,13 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
             {/* Продление времени */}
             <div className="space-y-3">
               <label className="text-[10px] font-black uppercase tracking-[0.15em] text-muted flex items-center gap-2 ml-1">
-                <Calendar size={14} className="text-indigo-500" /> Продлить на (дней)
+                <Calendar size={14} className="text-indigo-500" /> {t("modals.limits.daysLabel")}
               </label>
               <input 
                 type="number" 
                 value={days}
                 onChange={(e) => setDays(e.target.value)}
-                placeholder="0 = Сбросить срок"
+                placeholder={t("modals.limits.daysPlaceholder")}
                 className="w-full bg-card border border-line rounded-2xl px-5 py-4 font-mono font-bold text-lg text-base focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all"
               />
               
@@ -119,7 +121,7 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
                     onClick={() => addDays(d)}
                     className="flex-1 py-2.5 bg-card border border-line rounded-xl text-[10px] font-black text-muted hover:border-indigo-500/50 hover:text-indigo-500 hover:bg-indigo-500/5 transition-all flex items-center justify-center gap-1 active:scale-95"
                   >
-                    <Plus size={10} /> {d}Д
+                    <Plus size={10} /> {t("modals.limits.daysPreset", { count: d })}
                   </button>
                 ))}
               </div>
@@ -128,7 +130,7 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
             <div className="bg-amber-500/5 border border-amber-500/10 p-5 rounded-[2rem] flex gap-4">
               <ShieldAlert className="text-amber-500 shrink-0" size={20} />
               <p className="text-[10px] text-amber-500/80 font-bold leading-relaxed uppercase tracking-tight">
-                Сохранение лимитов <span className="text-amber-500">автоматически разблокирует</span> пользователя в ядре Xray.
+                {t("modals.limits.warningInfo")}
               </p>
             </div>
           </div>
@@ -139,7 +141,7 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
             onClick={onClose}
             className="flex-1 px-6 py-4 rounded-2xl font-black text-muted hover:text-base transition-all uppercase text-[10px] tracking-widest"
           >
-            Отмена
+            {t("modals.limits.cancel")}
           </button>
           <button 
             onClick={handleSave}
@@ -150,7 +152,7 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
                 : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/20'}`}
           >
             {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            Применить
+            {t("modals.limits.apply")}
           </button>
         </div>
       </div>

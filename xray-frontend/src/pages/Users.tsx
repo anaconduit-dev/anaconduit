@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import UserDetailModal from "../components/UserDetailModal";
 import AddClientModal from "../components/AddClientModal";
 import UpdateLimitsModal from "../components/UpdateLimitsModal"
@@ -10,6 +11,7 @@ import {
 import { getUsers, deleteFullUser, resetSubscriptionToken } from "../api/user";
 
 export default function UsersPage() {
+  const { t } = useTranslation();
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
@@ -73,11 +75,11 @@ export default function UsersPage() {
       setUsers(usersArray);
       setError(null);
     } catch (e) {
-      setError("Ошибка обновления данных");
+      setError(t("users.updateError"));
     } finally {
       setLoading(false);
     }
-  }, [previousData, lastFetchTime]);
+  }, [previousData, lastFetchTime, t]);
 
   useEffect(() => {
     loadData();
@@ -121,19 +123,25 @@ export default function UsersPage() {
 
   const handleDelete = (e: React.MouseEvent, id: number, name: string) => {
     e.stopPropagation();
-    if (window.confirm(`Полностью удалить пользователя ${name}?`)) {
-      deleteFullUser(id).then(() => loadData()).catch(() => alert("Ошибка при удалении"));
+    if (window.confirm(t("users.deleteConfirm", { name }))) { // Параметр в confirm
+      deleteFullUser(id)
+        .then(() => loadData())
+        .catch(() => alert(t("users.deleteError")));
     }
   };
 
   const handleResetToken = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
+
+    // Добавляем проверку перед выполнением
+    if (!window.confirm(t("users.resetTokenConfirm"))) return;
+
     resetSubscriptionToken(id)
       .then(() => {
-        alert("Токен успешно сброшен");
+        alert(t("users.resetTokenSuccess"));
         loadData();
       })
-      .catch(() => alert("Ошибка при сбросе токена"));
+      .catch(() => alert(t("users.resetTokenError")));
   };
 
   const filteredUsers = users.filter(u => 
@@ -149,10 +157,10 @@ export default function UsersPage() {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <h1 className="text-3xl font-black text-base tracking-tighter uppercase italic">
-              Clients Monitor<span className="text-indigo-500">.</span>
+              {t("users.title")}<span className="text-indigo-500">.</span>
             </h1>
             <p className="text-muted text-[10px] font-black uppercase tracking-[0.2em] ml-1">
-              Управление доступом и мониторинг трафика
+              {t("users.subtitle")}
             </p>
           </div>
           
@@ -163,10 +171,10 @@ export default function UsersPage() {
               onChange={(e) => setRefreshInterval(Number(e.target.value))}
               className="text-[10px] font-black uppercase bg-transparent border-none focus:ring-0 cursor-pointer text-base outline-none tracking-widest"
             >
-              <option value={0} className="bg-main">Refresh: OFF</option>
-              <option value={10} className="bg-main">10 Seconds</option>
-              <option value={15} className="bg-main">15 Seconds</option>
-              <option value={60} className="bg-main">1 Minute</option>
+              <option value={0} className="bg-main">{t("users.refresh.off")}</option>
+              <option value={10} className="bg-main">{t("users.refresh.seconds", { count: 10 })}</option>
+              <option value={15} className="bg-main">{t("users.refresh.seconds", { count: 15 })}</option>
+              <option value={60} className="bg-main">{t("users.refresh.minute")}</option>
             </select>
             {refreshInterval > 0 && (
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse mr-2 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
@@ -179,7 +187,7 @@ export default function UsersPage() {
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-indigo-500 transition-colors" size={20} />
           <input 
             type="text"
-            placeholder="Поиск по email или токену..."
+            placeholder={t("users.searchPlaceholder")}
             className="w-full pl-14 pr-6 py-5 bg-card border border-line rounded-[2rem] focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-lg text-sm font-bold tracking-tight text-base placeholder:text-muted/50 placeholder:font-normal"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -189,7 +197,7 @@ export default function UsersPage() {
         {loading && users.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-muted gap-4">
             <Loader2 className="animate-spin text-indigo-500" size={40} />
-            <p className="text-[10px] font-black uppercase tracking-[0.3em]">Синхронизация базы данных...</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em]">{t("users.syncing")}</p>
           </div>
         ) : error ? (
           <div className="bg-red-500/5 border border-red-500/20 p-6 rounded-[2rem] text-red-500 flex items-center gap-4 animate-in zoom-in-95">
@@ -206,7 +214,9 @@ export default function UsersPage() {
               <div className="w-16 h-16 bg-card border border-line rounded-[1.5rem] flex items-center justify-center text-muted group-hover:text-white group-hover:bg-indigo-600 group-hover:border-indigo-500 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-2xl mb-4">
                   <UserPlus size={28} />
               </div>
-              <span className="text-[10px] font-black uppercase text-muted tracking-[0.2em] group-hover:text-indigo-500 transition-colors">Новый клиент</span>
+              <span className="text-[10px] font-black uppercase text-muted tracking-[0.2em] group-hover:text-indigo-500 transition-colors">
+                {t("users.newUser")}
+              </span>
             </div>
 
             {filteredUsers.map((user) => {
@@ -246,7 +256,7 @@ export default function UsersPage() {
                         )}
                       </div>
                       
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-y-1 group-hover:translate-y-0">
+                      <div className="flex gap-1 lg:opacity-0 lg:group-hover:opacity-100 lg:translate-y-1 lg:group-hover:translate-y-0 transition-all duration-300">
                         <button onClick={(e) => {e.stopPropagation(); handleAddInboundToExisting(e, user)}} className="p-2 hover:bg-indigo-500/10 rounded-xl text-muted hover:text-indigo-500 transition-colors"><PlusCircle size={14} /></button>
                         <button onClick={(e) => {e.stopPropagation(); handleOpenLimits(e, user)}} className="p-2 hover:bg-amber-500/10 rounded-xl text-muted hover:text-amber-500 transition-colors"><Activity size={14} /></button>
                         <button onClick={(e) => {e.stopPropagation(); handleResetToken(e, user.id)}} className="p-2 hover:bg-indigo-500/10 rounded-xl text-muted hover:text-indigo-400 transition-colors"><Key size={14} /></button>
@@ -317,7 +327,7 @@ export default function UsersPage() {
                         ))
                       ) : (
                         <div className="text-[9px] text-muted/40 font-black uppercase tracking-widest text-center py-2 italic">
-                          No active nodes
+                          {t("users.noNodes")}
                         </div>
                       )}
                     </div>

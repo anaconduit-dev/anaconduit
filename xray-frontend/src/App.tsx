@@ -10,7 +10,7 @@ import SettNginx from "./pages/SettNginx";
 import Settings from "./pages/Settings";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import { getToken } from "./store/auth";
-
+import './i18n/config'; // Просто импорт для инициализации
 function ProtectedRoute({ children }: any) {
   const token = getToken();
   if (!token) return <Navigate to="/login" />;

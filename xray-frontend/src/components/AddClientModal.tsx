@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Server, Zap, Loader2 } from "lucide-react";
 import { addClient } from "../api/user"; 
 import { getInbounds } from "../api/inbound"; 
+import { useTranslation } from "react-i18next";
 
 interface AddClientModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface AddClientModalProps {
 }
 
 export default function AddClientModal({ isOpen, onClose, onSuccess, existingUser = null }: AddClientModalProps) {
+  const { t } = useTranslation();
   const [inbounds, setInbounds] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -58,15 +60,13 @@ export default function AddClientModal({ isOpen, onClose, onSuccess, existingUse
     });
   };
 
-  if (!isOpen) return null;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const targetId = Number(form.inboundId);
     if (!targetId) return;
 
     if (isAlreadyAdded(targetId)) {
-      alert(`Пользователь ${form.email} уже добавлен к этому инбаунду!`);
+      alert(t("modals.addClient.errorAlreadyAdded", { email: form.email }));
       return;
     }
 
@@ -76,14 +76,15 @@ export default function AddClientModal({ isOpen, onClose, onSuccess, existingUse
       onSuccess();
       onClose();
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Ошибка сервера");
+      alert(err.response?.data?.detail || t("modals.addClient.errorServer"));
     } finally {
       setLoading(false);
     }
   };
 
   const selectedProtocol = inbounds.find(i => i.id === Number(form.inboundId))?.protocol;
-
+  if (!isOpen) return null;
+  
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 transition-all">
       <div className="bg-card w-full max-w-lg rounded-[3rem] shadow-2xl border border-line overflow-hidden animate-in zoom-in-95 duration-200">
@@ -96,10 +97,12 @@ export default function AddClientModal({ isOpen, onClose, onSuccess, existingUse
             </div>
             <div>
               <h2 className="text-xl font-black uppercase tracking-tight text-base">
-                {existingUser ? "Привязать инбаунд" : "Новый пользователь"}
+                {existingUser ? t("modals.addClient.titleBind") : t("modals.addClient.titleNew")}
               </h2>
               <p className="text-[10px] font-bold text-indigo-500 uppercase">
-                {existingUser ? `Для ${existingUser.email}` : "Создание аккаунта"}
+                {existingUser 
+                  ? t("modals.addClient.subtitleBind", { email: existingUser.email }) 
+                  : t("modals.addClient.subtitleNew")}
               </p>
             </div>
           </div>
@@ -112,19 +115,23 @@ export default function AddClientModal({ isOpen, onClose, onSuccess, existingUse
           
           {/* Select Inbound */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-muted uppercase ml-1">Целевой сервер</label>
+            <label className="text-[10px] font-black text-muted uppercase ml-1">
+              {t("modals.addClient.targetServer")}
+            </label>
             <select 
               required
               className="w-full p-4 bg-main border border-line rounded-2xl font-bold text-sm text-base outline-none focus:ring-2 focus:ring-indigo-500/20"
               value={form.inboundId}
               onChange={e => handleInboundChange(e.target.value)}
             >
-              <option value="">Выберите инбаунд...</option>
+              <option value="">{t("modals.addClient.selectInbound")}</option>
               {inbounds.map((ib: any) => {
                 const disabled = isAlreadyAdded(ib.id);
                 return (
                   <option key={ib.id} value={ib.id} disabled={disabled} className="bg-card text-base">
-                    {disabled ? `🔒 [УЖЕ ЕСТЬ] ${ib.tag}` : `[${ib.protocol.toUpperCase()}] ${ib.tag}`}
+                    {disabled 
+                      ? t("modals.addClient.alreadyAdded", { tag: ib.tag }) 
+                      : `[${ib.protocol.toUpperCase()}] ${ib.tag}`}
                   </option>
                 );
               })}
@@ -133,7 +140,9 @@ export default function AddClientModal({ isOpen, onClose, onSuccess, existingUse
 
           {/* Email */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-muted uppercase ml-1">Email</label>
+            <label className="text-[10px] font-black text-muted uppercase ml-1">
+              {t("fields.email")}
+            </label>
             <input 
               required
               disabled={!!existingUser}
@@ -151,7 +160,7 @@ export default function AddClientModal({ isOpen, onClose, onSuccess, existingUse
           {/* Secret (UUID/Password) */}
           <div className="space-y-2">
             <label className="text-[10px] font-black text-muted uppercase ml-1">
-              {selectedProtocol === 'trojan' ? 'Пароль' : 'UUID / ID'}
+              {selectedProtocol === 'trojan' ? t("modals.addClient.secretPassword") : t("modals.addClient.secretUuid")}
             </label>
             <input 
               required
@@ -165,7 +174,9 @@ export default function AddClientModal({ isOpen, onClose, onSuccess, existingUse
           <div className="grid grid-cols-2 gap-4">
             {selectedProtocol === 'vless' ? (
               <div className="space-y-2 animate-in slide-in-from-left-2">
-                <label className="text-[10px] font-black text-muted uppercase ml-1">Flow</label>
+                <label className="text-[10px] font-black text-muted uppercase ml-1">
+                  {t("fields.flow")}
+                </label>
                 <select 
                   className="w-full p-4 bg-card border border-line rounded-2xl font-bold text-sm text-base outline-none focus:border-indigo-500 transition-all"
                   value={form.flow}
@@ -177,15 +188,19 @@ export default function AddClientModal({ isOpen, onClose, onSuccess, existingUse
               </div>
             ) : (
               <div className="space-y-2 opacity-50">
-                <label className="text-[10px] font-black text-muted uppercase ml-1">Flow</label>
+                <label className="text-[10px] font-black text-muted uppercase ml-1">
+                  {t("fields.flow")}
+                </label>
                 <div className="w-full p-4 bg-main border border-line rounded-2xl font-bold text-xs text-muted">
-                  Недоступно
+                  {t("modals.addClient.flowNotAvailable")}
                 </div>
               </div>
             )}
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-muted uppercase ml-1">Level</label>
+              <label className="text-[10px] font-black text-muted uppercase ml-1">
+                {t("fields.level")}
+              </label>
               <input 
                 type="number"
                 className="w-full p-4 bg-card border border-line rounded-2xl font-bold text-sm text-base outline-none focus:border-indigo-500 transition-all"
@@ -202,7 +217,7 @@ export default function AddClientModal({ isOpen, onClose, onSuccess, existingUse
             className="w-full p-5 bg-indigo-600 text-white rounded-[2rem] font-black uppercase text-xs shadow-xl dark:shadow-indigo-950/20 shadow-indigo-100 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3 active:scale-95"
           >
             {loading ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} />}
-            {existingUser ? "Привязать к серверу" : "Создать и подключить"}
+            {existingUser ? t("modals.addClient.submitBind") : t("modals.addClient.submitNew")}
           </button>
         </form>
       </div>

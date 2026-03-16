@@ -131,7 +131,7 @@ export default function InboundsPage() {
                       <Zap size={18} fill={inbound.is_running_in_xray ? "currentColor" : "none"} />
                     </div>
                     
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                    <div className="flex gap-2 lg:opacity-0 lg:group-hover:opacity-100 lg:translate-x-2 lg:group-hover:translate-x-0 transition-all duration-300">
                       <button 
                         onClick={() => handleEdit(inbound.id)}
                         className="p-2.5 bg-card text-muted hover:text-indigo-500 hover:border-indigo-500/50 border border-transparent rounded-xl transition-all"

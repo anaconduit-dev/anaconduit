@@ -5,20 +5,18 @@ export type I18nText = {
 };
 
 export interface AppButton {
-  text: I18nText;
-  link: string; // Сюда можно вставлять {{SUBSCRIPTION_LINK}}
-  // external - просто ссылка на сайт/github
-  // subscriptionLink - deep link для импорта в приложение
+  labelKey: string; // Ключ для перевода, например "apps.happ.buttons.playStore"
+  link: string;
   type: "external" | "subscriptionLink"; 
   icon?: string; 
 }
 
 export interface AppBlock {
-  title: I18nText;
-  description: I18nText;
+  titleKey: string; // Ключ для перевода
+  descriptionKey: string; // Ключ для перевода
   buttons?: AppButton[];
-  icon?: string; // Эмодзи или ключ для SVG
-  iconColor?: string; // Например, 'blue', 'emerald', 'red'
+  icon: string; 
+  iconColor?: string; 
 }
 
 export interface ClientApp {
@@ -98,64 +96,25 @@ export const CLIENT_APPS: OSGroup[] = [
     icon: ICONS.Android,
     apps: [
       {
-        name: "v2rayNG",
-        icon: ICONS.VRayNG, 
+        name: "Happ",
+        icon: ICONS.Happ, 
         blocks: [
           {
-            // ШАГ 1: Установка
-            title: {
-              ru: "Установка приложения",
-              en: "App Installation"
-            },
-            description: {
-              ru: "Скачайте и установите актуальную версию клиента из Google Play.",
-              en: "Download and install the latest client version from Google Play."
-            },
+            titleKey: "apps.common.installTitle",
+            descriptionKey: "apps.happ.installDesc",
             icon: "📥",
-            iconColor: "blue",
             buttons: [
-              {
-                text: { ru: "Google Play", en: "Google Play" },
-                link: "https://play.google.com/store/apps/details?id=com.v2ray.ang",
-                type: "external"
-              }
+              { labelKey: "apps.buttons.googlePlay", link: "https://play.google.com/store/apps/details?id=com.happproxy", type: "external" },
+              { labelKey: "apps.buttons.downloadApk", link: "https://github.com/Happ-proxy/happ-android/releases/latest/download/Happ.apk", type: "external" }
             ]
           },
           {
-            // ШАГ 2: Автоматический импорт
-            title: {
-              ru: "Добавление подписки",
-              en: "Add Subscription"
-            },
-            description: {
-              ru: "Нажмите на кнопку ниже, чтобы подписка добавилась в приложение автоматически.",
-              en: "Click the button below to add the subscription to the app automatically."
-            },
+            titleKey: "apps.common.addSubTitle",
+            descriptionKey: "apps.common.addSubDesc",
             icon: "⚡",
-            iconColor: "emerald",
-            buttons: [
-              {
-                text: { ru: "Быстрый импорт", en: "Quick Import" },
-                // Используем плейсхолдер, который потом заменим в компоненте
-                link: "v2rayng://install-sub/?url={{SUBSCRIPTION_LINK}}",
-                type: "subscriptionLink"
-              }
-            ]
+            buttons: [{ labelKey: "apps.common.quickImport", link: "happ://add/{{SUBSCRIPTION_LINK}}", type: "subscriptionLink" }]
           },
-          {
-            // ШАГ 3: Ручной ввод (если автомат не сработал)
-            title: {
-              ru: "Если импорт не сработал",
-              en: "If import failed"
-            },
-            description: {
-              ru: "Скопируйте ссылку подписки вручную, в приложении нажмите '+' и выберите 'Импорт из буфера'.",
-              en: "Copy the subscription link manually, then click '+' in the app and select 'Import from clipboard'."
-            },
-            icon: "🛠️",
-            iconColor: "slate"
-            // Кнопок нет, просто текстовая инструкция
-          }
+          { titleKey: "apps.common.failedTitle", descriptionKey: "apps.common.failedDesc", icon: "🛠️" }
         ]
       },
       {
@@ -163,65 +122,21 @@ export const CLIENT_APPS: OSGroup[] = [
         icon: ICONS.PrizrakBox, 
         blocks: [
           {
-            // ШАГ 1: Установка
-            title: {
-              ru: "Установка приложения",
-              en: "App Installation"
-            },
-            description: {
-              ru: "Выберите пакет под вашу архитектуру и установите Prizrak-Box.",
-              en: "Choose the package matching your architecture and install Prizrak-Box."
-            },
+            titleKey: "apps.common.installTitle",
+            descriptionKey: "apps.prizrak.installDesc",
             icon: "📥",
-            iconColor: "blue",
             buttons: [
-              {
-                text: { ru: "arm64 (.apk)alpha", en: "arm64 (.apk)alpha" },
-                link: "https://github.com/legiz-ru/ClashMetaForAndroid/releases/download/Prerelease-alpha/prizrak-box-1.1-alpha-arm64-v8a-release.apk",
-                type: "external"
-              },
-              {
-                text: { ru: "github releases", en: "github releases" },
-                link: "https://github.com/legiz-ru/ClashMetaForAndroid/releases",
-                type: "external"
-              }
+              { labelKey: "apps.buttons.arm64apk", link: "https://github.com/legiz-ru/ClashMetaForAndroid/releases/download/Prerelease-alpha/prizrak-box-1.1-alpha-arm64-v8a-release.apk", type: "external" },
+              { labelKey: "apps.buttons.githubReleases", link: "https://github.com/legiz-ru/ClashMetaForAndroid/releases", type: "external" }
             ]
           },
           {
-            // ШАГ 2: Автоматический импорт
-            title: {
-              ru: "Добавление подписки",
-              en: "Add Subscription"
-            },
-            description: {
-              ru: "Нажмите на кнопку ниже, чтобы подписка добавилась в приложение автоматически.",
-              en: "Click the button below to add the subscription to the app automatically."
-            },
+            titleKey: "apps.common.addSubTitle",
+            descriptionKey: "apps.common.addSubDesc",
             icon: "⚡",
-            iconColor: "emerald",
-            buttons: [
-              {
-                text: { ru: "Быстрый импорт", en: "Quick Import" },
-                // Используем плейсхолдер, который потом заменим в компоненте
-                link: "prizrak-box://install-config?url={{SUBSCRIPTION_LINK}}",
-                type: "subscriptionLink"
-              }
-            ]
+            buttons: [{ labelKey: "apps.common.quickImport", link: "prizrak-box://install-config?url={{SUBSCRIPTION_LINK}}", type: "subscriptionLink" }]
           },
-          {
-            // ШАГ 3: Ручной ввод (если автомат не сработал)
-            title: {
-              ru: "Если импорт не сработал",
-              en: "If import failed"
-            },
-            description: {
-              ru: "Скопируйте ссылку подписки вручную, в приложении нажмите '+' и выберите 'Импорт из буфера'.",
-              en: "Copy the subscription link manually, then click '+' in the app and select 'Import from clipboard'."
-            },
-            icon: "🛠️",
-            iconColor: "slate"
-            // Кнопок нет, просто текстовая инструкция
-          }
+          { titleKey: "apps.common.failedTitle", descriptionKey: "apps.common.failedDesc", icon: "🛠️" }
         ]
       }
     ]
@@ -235,65 +150,21 @@ export const CLIENT_APPS: OSGroup[] = [
         icon: ICONS.Happ, 
         blocks: [
           {
-            // ШАГ 1: Установка
-            title: {
-              ru: "Установка приложения",
-              en: "App Installation"
-            },
-            description: {
-              ru: "Откройте страницу в App Store и установите приложение. Запустите его, в окне разрешения VPN-конфигурации нажмите Allow и введите свой пароль.",
-              en: "Open the page in App Store and install the app. Launch it, in the VPN configuration permission window click Allow and enter your passcode."
-            },
+            titleKey: "apps.common.installTitle",
+            descriptionKey: "apps.happ.iosInstallDesc",
             icon: "📥",
-            iconColor: "blue",
             buttons: [
-              {
-                text: { ru: "App Store (RU)", en: "App Store (RU)" },
-                link: "https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973",
-                type: "external"
-              },
-              {
-                text: { ru: "App Store (Global)", en: "App Store (Global)" },
-                link: "https://apps.apple.com/us/app/happ-proxy-utility/id6504287215",
-                type: "external"
-              },
+              { labelKey: "apps.buttons.appStoreRu", link: "https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973", type: "external" },
+              { labelKey: "apps.buttons.appStoreGlobal", link: "https://apps.apple.com/us/app/happ-proxy-utility/id6504287215", type: "external" }
             ]
           },
           {
-            // ШАГ 2: Автоматический импорт
-            title: {
-              ru: "Добавление подписки",
-              en: "Add Subscription"
-            },
-            description: {
-              ru: "Нажмите на кнопку ниже, чтобы подписка добавилась в приложение автоматически.",
-              en: "Click the button below to add the subscription to the app automatically."
-            },
+            titleKey: "apps.common.addSubTitle",
+            descriptionKey: "apps.common.addSubDesc",
             icon: "⚡",
-            iconColor: "emerald",
-            buttons: [
-              {
-                text: { ru: "Быстрый импорт", en: "Quick Import" },
-                // Используем плейсхолдер, который потом заменим в компоненте
-                link: "happ://add/{{SUBSCRIPTION_LINK}}",
-                type: "subscriptionLink"
-              }
-            ]
+            buttons: [{ labelKey: "apps.common.quickImport", link: "happ://add/{{SUBSCRIPTION_LINK}}", type: "subscriptionLink" }]
           },
-          {
-            // ШАГ 3: Ручной ввод (если автомат не сработал)
-            title: {
-              ru: "Если импорт не сработал",
-              en: "If import failed"
-            },
-            description: {
-              ru: "Скопируйте ссылку подписки вручную, в приложении нажмите '+' и выберите 'Импорт из буфера'.",
-              en: "Copy the subscription link manually, then click '+' in the app and select 'Import from clipboard'."
-            },
-            icon: "🛠️",
-            iconColor: "slate"
-            // Кнопок нет, просто текстовая инструкция
-          }
+          { titleKey: "apps.common.failedTitle", descriptionKey: "apps.common.failedDesc", icon: "🛠️" }
         ]
       }
     ]
@@ -307,85 +178,26 @@ export const CLIENT_APPS: OSGroup[] = [
         icon: ICONS.PrizrakBox, 
         blocks: [
           {
-            // ШАГ 1: Установка
-            title: {
-              ru: "Установка приложения",
-              en: "App Installation"
-            },
-            description: {
-              ru: "Выберите пакет под вашу архитектуру и установите Prizrak-Box.",
-              en: "Choose the package matching your architecture and install Prizrak-Box."
-            },
+            titleKey: "apps.common.installTitle",
+            descriptionKey: "apps.prizrak.installDesc",
             icon: "📥",
-            iconColor: "blue",
             buttons: [
-              {
-                text: { ru: "amd64 (.deb)", en: "amd64 (.deb)" },
-                link: "https://github.com/legiz-ru/Prizrak-Box/releases/latest/download/linux-amd64.deb",
-                type: "external"
-              },
-              {
-                text: { ru: "amd64 (.rpm)", en: "amd64 (.rpm)" },
-                link: "https://github.com/legiz-ru/Prizrak-Box/releases/latest/download/linux-amd64.rpm",
-                type: "external"
-              },
-              {
-                text: { ru: "arm64 (.deb)", en: "arm64 (.deb)" },
-                link: "https://github.com/legiz-ru/Prizrak-Box/releases/latest/download/linux-arm64.deb",
-                type: "external"
-              },
-              {
-                text: { ru: "arm64 (.rpm)", en: "arm64 (.rpm)" },
-                link: "https://github.com/legiz-ru/Prizrak-Box/releases/latest/download/linux-arm64.rpm",
-                type: "external"
-              },
-              {
-                text: { ru: "github releases", en: "github releases" },
-                link: "https://github.com/legiz-ru/Prizrak-Box/releases/",
-                type: "external"
-              }
+              { labelKey: "apps.buttons.amd64deb", link: "https://github.com/legiz-ru/Prizrak-Box/releases/latest/download/linux-amd64.deb", type: "external" },
+              { labelKey: "apps.buttons.arm64deb", link: "https://github.com/legiz-ru/Prizrak-Box/releases/latest/download/linux-arm64.deb", type: "external" },
+              { labelKey: "apps.buttons.githubReleases", link: "https://github.com/legiz-ru/Prizrak-Box/releases/", type: "external" }
             ]
           },
           {
-            // ШАГ 2: Автоматический импорт
-            title: {
-              ru: "Добавление подписки",
-              en: "Add Subscription"
-            },
-            description: {
-              ru: "Нажмите на кнопку ниже, чтобы подписка добавилась в приложение автоматически.",
-              en: "Click the button below to add the subscription to the app automatically."
-            },
+            titleKey: "apps.common.addSubTitle",
+            descriptionKey: "apps.common.addSubDesc",
             icon: "⚡",
-            iconColor: "emerald",
-            buttons: [
-              {
-                text: { ru: "Быстрый импорт", en: "Quick Import" },
-                // Используем плейсхолдер, который потом заменим в компоненте
-                link: "prizrak-box://install-config?url={{SUBSCRIPTION_LINK}}",
-                type: "subscriptionLink"
-              }
-            ]
+            buttons: [{ labelKey: "apps.common.quickImport", link: "prizrak-box://install-config?url={{SUBSCRIPTION_LINK}}", type: "subscriptionLink" }]
           },
-          {
-            // ШАГ 3: Ручной ввод (если автомат не сработал)
-            title: {
-              ru: "Если импорт не сработал",
-              en: "If import failed"
-            },
-            description: {
-              ru: "Скопируйте ссылку подписки вручную, в приложении нажмите '+' и выберите 'Импорт из буфера'.",
-              en: "Copy the subscription link manually, then click '+' in the app and select 'Import from clipboard'."
-            },
-            icon: "🛠️",
-            iconColor: "slate"
-            // Кнопок нет, просто текстовая инструкция
-          }
+          { titleKey: "apps.common.failedTitle", descriptionKey: "apps.common.failedDesc", icon: "🛠️" }
         ]
       }
     ]
   },
-
   {
     os: "Windows",
     icon: ICONS.Windows,
@@ -395,70 +207,21 @@ export const CLIENT_APPS: OSGroup[] = [
         icon: ICONS.PrizrakBox, 
         blocks: [
           {
-            // ШАГ 1: Установка
-            title: {
-              ru: "Установка приложения",
-              en: "App Installation"
-            },
-            description: {
-              ru: "Выберите пакет под вашу архитектуру и установите Prizrak-Box.",
-              en: "Choose the package matching your architecture and install Prizrak-Box."
-            },
+            titleKey: "apps.common.installTitle",
+            descriptionKey: "apps.prizrak.installDesc",
             icon: "📥",
-            iconColor: "blue",
             buttons: [
-              {
-                text: { ru: "Windows (Установщик)", en: "Windows (Setup)" },
-                link: "https://github.com/legiz-ru/Prizrak-Box/releases/latest/download/windows-amd64.msi",
-                type: "external"
-              },
-              {
-                text: { ru: "Windows на ARM (Установщик)", en: "Windows on ARM (Setup)" },
-                link: "https://github.com/legiz-ru/Prizrak-Box/releases/latest/download/windows-arm64.msi",
-                type: "external"
-              },
-              {
-                text: { ru: "github releases", en: "github releases" },
-                link: "https://github.com/legiz-ru/Prizrak-Box/releases/",
-                type: "external"
-              }
+              { labelKey: "apps.buttons.winSetup", link: "https://github.com/legiz-ru/Prizrak-Box/releases/latest/download/windows-amd64.msi", type: "external" },
+              { labelKey: "apps.buttons.githubReleases", link: "https://github.com/legiz-ru/Prizrak-Box/releases/", type: "external" }
             ]
           },
           {
-            // ШАГ 2: Автоматический импорт
-            title: {
-              ru: "Добавление подписки",
-              en: "Add Subscription"
-            },
-            description: {
-              ru: "Нажмите на кнопку ниже, чтобы подписка добавилась в приложение автоматически.",
-              en: "Click the button below to add the subscription to the app automatically."
-            },
+            titleKey: "apps.common.addSubTitle",
+            descriptionKey: "apps.common.addSubDesc",
             icon: "⚡",
-            iconColor: "emerald",
-            buttons: [
-              {
-                text: { ru: "Быстрый импорт", en: "Quick Import" },
-                // Используем плейсхолдер, который потом заменим в компоненте
-                link: "prizrak-box://install-config?url={{SUBSCRIPTION_LINK}}",
-                type: "subscriptionLink"
-              }
-            ]
+            buttons: [{ labelKey: "apps.common.quickImport", link: "prizrak-box://install-config?url={{SUBSCRIPTION_LINK}}", type: "subscriptionLink" }]
           },
-          {
-            // ШАГ 3: Ручной ввод (если автомат не сработал)
-            title: {
-              ru: "Если импорт не сработал",
-              en: "If import failed"
-            },
-            description: {
-              ru: "Скопируйте ссылку подписки вручную, В Prizrak-Box перейдите в раздел Профили, нажмите кнопку +, вставьте вашу скопированную ссылку и нажмите Потдвердить.",
-              en: "Copy the subscription link manually, In Prizrak-Box, go to the Profiles section, click the + button, paste your copied link, and click Confirm."
-            },
-            icon: "🛠️",
-            iconColor: "slate"
-            // Кнопок нет, просто текстовая инструкция
-          }
+          { titleKey: "apps.common.failedTitle", descriptionKey: "apps.prizrak.winFailedDesc", icon: "🛠️" }
         ]
       }
     ]

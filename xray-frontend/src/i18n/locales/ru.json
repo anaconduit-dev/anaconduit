@@ -1,0 +1,137 @@
+{
+  "status": {
+    "active": "ACTIVE",
+    "expired": "EXPIRED"
+  },
+  "modals": {
+    "limits": {
+      "title": "Лимиты",
+      "trafficLabel": "Общий лимит (GB)",
+      "trafficPlaceholder": "0 = Безлимит",
+      "daysLabel": "Продлить на (дней)",
+      "daysPlaceholder": "0 = Сбросить срок",
+      "daysPreset": "{{count}}Д",
+      "warningInfo": "Сохранение лимитов автоматически разблокирует пользователя в ядре Xray.",
+      "errorUpdate": "Ошибка при обновлении лимитов",
+      "cancel": "Отмена",
+      "apply": "Применить"
+    },
+    "addClient": {
+      "titleNew": "Новый пользователь",
+      "titleBind": "Привязать инбаунд",
+      "subtitleNew": "Создание аккаунта",
+      "subtitleBind": "Для {{email}}",
+      "targetServer": "Целевой сервер",
+      "selectInbound": "Выберите инбаунд...",
+      "alreadyAdded": "🔒 [УЖЕ ЕСТЬ] {{tag}}",
+      "secretPassword": "Пароль",
+      "secretUuid": "UUID / ID",
+      "flowNotAvailable": "Недоступно",
+      "submitNew": "Создать и подключить",
+      "submitBind": "Привязать к серверу",
+      "errorAlreadyAdded": "Пользователь {{email}} уже добавлен к этому инбаунду!",
+      "errorServer": "Ошибка сервера"
+    },
+    "userDetail": {
+      "title": "Управление доступом",
+      "close": "Закрыть",
+      "subLinkTitle": "Ссылка подписки",
+      "generating": "Генерация...",
+      "loadingLinks": "Получаем ссылки...",
+      "connectionsTitle": "Подключения и протоколы",
+      "removeConfirm": "Отключить пользователя от сервера \"{{tag}}\"?",
+      "removeError": "Не удалось удалить подключение",
+      "footerInfo": "Anaconduit Secure Link Manager"
+    }
+  },
+  "fields": {
+    "email": "Email",
+    "flow": "Flow",
+    "level": "Level"
+  },
+  "layout": {
+    "title": "Панель управления",
+    "logout": "Выйти",
+    "nodeStatus": "Проект нагрузки",
+    "xrayCore": "Ядро Xray",
+    "updateAvailable": "ОБНОВЛЕНИЕ",
+    "menu": {
+      "home": "Главная",
+      "xrayConfig": "Конфиг Xray",
+      "inbounds": "Подключения",
+      "users": "Пользователи",
+      "nginx": "Nginx",
+      "settings": "Настройки"
+    }
+  },
+  "apps": {
+    "common": {
+      "installTitle": "Установка приложения",
+      "addSubTitle": "Добавление подписки",
+      "addSubDesc": "Нажмите на кнопку ниже, чтобы подписка добавилась в приложение автоматически.",
+      "quickImport": "Быстрый импорт",
+      "failedTitle": "Если импорт не сработал",
+      "failedDesc": "Скопируйте ссылку подписки вручную, в приложении нажмите '+' и выберите 'Импорт из буфера'."
+    },
+    "buttons": {
+      "googlePlay": "Google Play",
+      "downloadApk": "Скачать APK",
+      "githubReleases": "GitHub Releases",
+      "appStoreRu": "App Store (RU)",
+      "appStoreGlobal": "App Store (Global)",
+      "arm64apk": "arm64 (.apk) alpha",
+      "amd64deb": "amd64 (.deb)",
+      "arm64deb": "arm64 (.deb)",
+      "winSetup": "Windows (Установщик)"
+    },
+    "happ": {
+      "installDesc": "Скачайте и установите актуальную версию клиента из Google Play.",
+      "iosInstallDesc": "Установите приложение из App Store. Запустите его и разрешите добавление VPN-конфигурации (нажмите Allow)."
+    },
+    "prizrak": {
+      "installDesc": "Выберите пакет под вашу архитектуру и установите Prizrak-Box.",
+      "winFailedDesc": "Скопируйте ссылку вручную. В Prizrak-Box перейдите в Профили, нажмите +, вставьте ссылку и подтвердите."
+    }
+  },
+  "premium": "Премиум подписка",
+  "usage": "Потребление трафика",
+  "copy": "Копировать ссылку подписки",
+  "individualConnections": "Индивидуальные подключения",
+  "nodeStatus": "Узел системы: Работает",
+  "online": "● В сети",
+  "offline": "● Оффлайн",
+  "encrypted": "Шифрование",
+  "used": "Использовано",
+  "limit": "Лимит",
+  "expiration": "Срок действия",
+  "guide": "Инструкция по настройке",
+  "copied": "Успешно скопировано",
+  "forever": "Бессрочно",
+  "manualImport": "Для ручного импорта каждой ноды отдельно",
+  "scanToImport": "Сканируйте для импорта ноды",
+  "close": "Закрыть",
+  "invalidToken": "Недействительный токен",
+  "accessError": "Ошибка доступа",
+  "tryAgain": "Попробовать снова",
+  "users": {
+    "title": "Управление Пользователями",
+    "subtitle": "Управление доступом и мониторинг трафика",
+    "searchPlaceholder": "Поиск по email или токену...",
+    "syncing": "Синхронизация базы данных...",
+    "updateError": "Ошибка обновления данных",
+    "newUser": "Новый клиент",
+    "live": "Live",
+    "noNodes": "Нет активных узлов",
+    "deleteConfirm": "Полностью удалить пользователя {{name}}?",
+    "resetTokenSuccess": "Токен успешно сброшен",
+    "resetTokenError": "Ошибка при сбросе токена",
+    "resetTokenConfirm": "Вы уверены, что хотите сбросить токен подписки? Старая ссылка перестанет работать у пользователя.",
+    "deleteError": "Ошибка при удалении",
+    "refresh": {
+      "off": "Обновление: ВЫКЛ",
+      "seconds": "{{count}} секунд",
+      "minute": "1 минута"
+    }
+    
+  }
+}

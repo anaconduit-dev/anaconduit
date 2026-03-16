@@ -70,5 +70,4 @@ sudo bash -c "$(curl -sL [https://github.com/anaconduit-dev/anaconduit-script/ra
 
 * [ ] Multi-node: управление несколькими серверами из одной панели.
 
-
 * [ ] Модуль автоматической очистки логов и оптимизации БД.

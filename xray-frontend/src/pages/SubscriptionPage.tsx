@@ -3,38 +3,15 @@ import { getSubscriptionInfo } from "../api/pub_sub";
 import { useParams, useSearchParams } from "react-router-dom";
 import { CLIENT_APPS } from "../constants/app";
 import QRCode from "react-qr-code";
+import { useTranslation } from 'react-i18next';
 
-// Типизация для языка
-type Lang = "ru" | "en";
-
-// Словарь системных текстов
-const UI_TEXT = {
-  nodeStatus: { ru: 'Узел системы: Работает', en: 'System Node: Operational' },
-  online: { ru: '● В сети', en: '● System Online' },
-  offline: { ru: '● Оффлайн', en: '● System Offline' },
-  usage: { ru: 'Потребление трафика', en: 'Data Consumption' },
-  encrypted: { ru: 'Шифрование', en: 'Encrypted' },
-  used: { ru: 'Использовано', en: 'Used Volume' },
-  limit: { ru: 'Лимит', en: 'Total Limit' },
-  expiration: { ru: 'Срок действия', en: 'Access Expiration' },
-  premium: { ru: 'Премиум подписка', en: 'Premium Subscription' },
-  guide: { ru: 'Инструкция по настройке', en: 'Configuration Guide' },
-  copy: { ru: 'Копировать ссылку подписки', en: 'Copy System Subscription' },
-  copied: { ru: 'Успешно скопировано', en: 'Successfully Copied' },
-  forever: { ru: 'Бессрочно', en: 'Unlimited' },
-  individualConnections: { ru: 'Индивидуальные подключения', en: 'Individual Connections' },
-  manualImport: { ru: 'Для ручного импорта каждой ноды отдельно', en: 'For manual node import' },
-  scanToImport: { ru: 'Сканируйте для импорта ноды', en: 'Scan to import node' },
-  close: { ru: 'Закрыть', en: 'Close' }
-};
 
 export default function SubscriptionPage() {
   // 1. Инициализация языка
-  const [lang, setLang] = useState<Lang>(() => {
-    const saved = localStorage.getItem("app_lang");
-    if (saved === "ru" || saved === "en") return saved as Lang;
-    return window.navigator.language.startsWith("ru") ? "ru" : "en";
-  });
+  const { t, i18n } = useTranslation();
+  // Текущий язык из i18next
+  const currentLang = i18n.language;
+
   const [activeApp, setActiveApp] = useState<string>("");
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,15 +24,11 @@ export default function SubscriptionPage() {
   const queryToken = searchParams.get("token");
   const activeToken = urlToken || queryToken || null;
 
-  const toggleLang = (newLang: Lang) => {
-    setLang(newLang);
-    localStorage.setItem("app_lang", newLang);
-  };
-
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return UI_TEXT.forever[lang];
+    if (!dateString) return t("forever");
     const date = new Date(dateString);
-    return date.toLocaleDateString(lang === "ru" ? "ru-RU" : "en-US", { 
+    // Используем i18n.language для локализации даты
+    return date.toLocaleDateString(currentLang, { 
       day: "numeric", month: "long", year: "numeric" 
     });
   };
@@ -88,11 +61,11 @@ export default function SubscriptionPage() {
           setError(null);
         })
         .catch(() => {
-          setError(lang === 'ru' ? "Недействительный токен" : "Invalid token");
+          setError(t('invalidToken'));
         })
         .finally(() => setLoading(false));
     }
-  }, [activeToken, lang]);
+  }, [activeToken, t]);
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -122,13 +95,13 @@ export default function SubscriptionPage() {
     <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 text-center">
       <div className="max-w-md w-full bg-red-500/5 border border-red-500/20 p-8 rounded-[2.5rem] space-y-4">
         <div className="text-4xl">⚠️</div>
-        <h2 className="text-xl font-bold text-white uppercase">{lang === 'ru' ? 'Ошибка доступа' : 'Access Error'}</h2>
+        <h2 className="text-xl font-bold text-white uppercase">{t("accessError")}</h2>
         <p className="text-sm text-red-400/80 leading-relaxed">{error}</p>
         <button 
           onClick={() => window.location.reload()}
           className="mt-4 px-6 py-2 bg-white/5 hover:bg-white/10 text-white text-xs font-bold rounded-xl transition-all"
         >
-          {lang === 'ru' ? 'Попробовать снова' : 'Try Again'}
+          {t("tryAgain")}
         </button>
       </div>
     </div>
@@ -143,7 +116,7 @@ export default function SubscriptionPage() {
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
               <p className="text-indigo-400/60 text-[10px] font-black uppercase tracking-[0.2em]">
-                {UI_TEXT.nodeStatus[lang]}
+                {t("nodeStatus")}
               </p>
             </div>
             <h1 className="text-xl md:text-3xl font-black text-white tracking-tighter italic uppercase transition-all">
@@ -154,12 +127,12 @@ export default function SubscriptionPage() {
           <div className="flex flex-row items-center gap-3">
             {/* Language Switcher */}
             <div className="flex p-1 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md transition-all">
-              {(["ru", "en"] as Lang[]).map((l) => (
+              {(["ru", "en"]).map((l) => (
                 <button
                   key={l}
-                  onClick={() => toggleLang(l)}
+                  onClick={() => i18n.changeLanguage(l)}
                   className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${
-                    lang === l ? "bg-white text-black shadow-lg" : "text-slate-500 hover:text-white"
+                    currentLang.startsWith(l) ? "bg-white text-black shadow-lg" : "text-slate-500 hover:text-white"
                   }`}
                 >
                   {l.toUpperCase()}
@@ -173,7 +146,7 @@ export default function SubscriptionPage() {
                 ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.1)]' 
                 : 'bg-red-500/5 border-red-500/20 text-red-400'
             }`}>
-              {data?.status === 'active' ? UI_TEXT.online[lang] : UI_TEXT.offline[lang]}
+              {data?.status === 'active' ? t("online") : t("offline")}
             </div>
           </div>
         </div>
@@ -188,13 +161,13 @@ export default function SubscriptionPage() {
             <div className="relative z-10 space-y-4"> {/* Уменьшили шаг между рядами с space-y-8 до 4 */}
               <div className="flex justify-between items-end gap-2">
                 <div className="space-y-0"> {/* Убрали лишний шаг в заголовке */}
-                  <span className="text-muted text-[8px] font-black uppercase tracking-[0.3em] block">{UI_TEXT.usage[lang]}</span>
+                  <span className="text-muted text-[8px] font-black uppercase tracking-[0.3em] block">{t("usage")}</span>
                   <p className="text-3xl md:text-4xl font-black text-white tracking-tighter italic leading-tight">
                     {data?.usage_percent}<span className="text-indigo-500 text-2xl">%</span>
                   </p>
                 </div>
                 <div className="text-right hidden sm:block">
-                  <span className="text-muted text-[8px] font-black uppercase tracking-[0.3em] block">{UI_TEXT.encrypted[lang]}</span>
+                  <span className="text-muted text-[8px] font-black uppercase tracking-[0.3em] block">{t("encrypted")}</span>
                   <p className="text-base font-black text-indigo-400 tracking-widest uppercase">TLS / XRAY</p>
                 </div>
               </div>
@@ -210,11 +183,11 @@ export default function SubscriptionPage() {
               <div className="grid grid-cols-2 gap-3"> {/* Уменьшили gap между карточками трафика до 3 */}
                 <div className="bg-white/[0.02] border border-white/5 p-4 rounded-[1.5rem]"> 
                   {/* Уменьшили padding внутри ячеек до p-4 и скругление до 1.5rem */}
-                  <p className="text-[8px] text-muted font-black uppercase tracking-widest mb-1">{UI_TEXT.used[lang]}</p>
+                  <p className="text-[8px] text-muted font-black uppercase tracking-widest mb-1">{t("used")}</p>
                   <p className="text-lg md:text-xl font-black text-white leading-none">{data?.used_traffic_gb} <span className="text-[10px] text-muted font-normal uppercase">GB</span></p>
                 </div>
                 <div className="bg-white/[0.02] border border-white/5 p-4 rounded-[1.5rem]">
-                  <p className="text-[8px] text-muted font-black uppercase tracking-widest mb-1">{UI_TEXT.limit[lang]}</p>
+                  <p className="text-[8px] text-muted font-black uppercase tracking-widest mb-1">{t("limit")}</p>
                   <p className="text-lg md:text-xl font-black text-white leading-none">{data?.total_traffic_gb || "∞"} <span className="text-[10px] text-muted font-normal uppercase">GB</span></p>
                 </div>
               </div>
@@ -225,7 +198,7 @@ export default function SubscriptionPage() {
           <div className="lg:col-span-1 h-full bg-indigo-950/40 border border-indigo-500/20 rounded-[2rem] p-6 md:p-8 shadow-2xl relative overflow-hidden flex flex-col justify-center">
             {/* Сделали фон темнее (indigo-950/40), чтобы не спорил с основной карточкой, и уменьшили padding до p-6 */}
             <div className="relative z-10">
-              <span className="text-indigo-200/60 text-[8px] font-black uppercase tracking-[0.3em] block mb-2">{UI_TEXT.expiration[lang]}</span>
+              <span className="text-indigo-200/60 text-[8px] font-black uppercase tracking-[0.3em] block mb-2">{t("expiration")}</span>
               <p className="text-2xl md:text-3xl font-black text-white leading-tight tracking-tighter uppercase">{formatDate(data?.expire_date)}</p>
             </div>
           </div>
@@ -234,7 +207,7 @@ export default function SubscriptionPage() {
        {/* Setup Section */}
         <div className="max-w-7xl mx-auto w-full bg-[#0A0A0A] border border-white/5 rounded-[3rem] p-3 shadow-lg transition-all">
           <div className="p-8 pb-4">
-            <h3 className="text-xl font-black text-white uppercase tracking-tight">{UI_TEXT.guide[lang]}</h3>
+            <h3 className="text-xl font-black text-white uppercase tracking-tight">{t("guide")}</h3>
           </div>
           
           {/* РЯД 1: Выбор ОС */}
@@ -246,7 +219,7 @@ export default function SubscriptionPage() {
                   onClick={() => setActiveOS(group.os)}
                   className={`flex-1 flex items-center justify-center gap-3 px-8 py-4 rounded-[1.5rem] text-[11px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap ${
                     activeOS === group.os 
-                      ? 'bg-white text-black shadow-xl scale-[1.02]' 
+                      ? 'bg-indigo-600 text-white shadow-xl scale-[1.02]' 
                       : 'text-muted hover:text-white hover:bg-white/5'
                   }`}
                 >
@@ -296,10 +269,10 @@ export default function SubscriptionPage() {
                           <div className="space-y-4 w-full">
                             <div>
                               <h4 className="font-black text-white text-xs uppercase tracking-[0.2em] mb-2">
-                                {block.title[lang]}
+                                {t(block.titleKey)}
                               </h4>
                               <p className="text-sm text-slate-400 leading-relaxed italic">
-                                {block.description[lang]}
+                                {t(block.descriptionKey)}
                               </p>
                             </div>
                             
@@ -312,9 +285,9 @@ export default function SubscriptionPage() {
                                       if (btn.type === "subscriptionLink") window.location.href = getFinalLink(btn.link);
                                       else window.open(btn.link, "_blank");
                                     }}
-                                    className="px-5 py-3 bg-white text-black hover:bg-indigo-500 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
+                                    className="px-5 py-3 bg-indigo-600 text-white hover:bg-indigo-500 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
                                   >
-                                    {btn.text[lang]}
+                                    {t(btn.labelKey)}
                                   </button>
                                 ))}
                               </div>
@@ -334,11 +307,11 @@ export default function SubscriptionPage() {
           <button 
             onClick={() => copyToClipboard(data?.subscription_url)}
             className={`w-full max-w-md font-black py-6 rounded-full transition-all duration-500 shadow-2xl flex items-center justify-center gap-4 group active:scale-[0.96] overflow-hidden ${
-                copied ? 'bg-emerald-600 text-white' : 'bg-white text-black hover:bg-indigo-600 hover:text-white'
+                copied ? 'bg-emerald-600 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-900 hover:text-white'
             }`}
           >
             <span className="uppercase tracking-[0.3em] text-[12px]">
-              {copied ? UI_TEXT.copied[lang] : UI_TEXT.copy[lang]}
+              {copied ? t("copied") : t("copy")}
             </span>
           </button>
         </div>
@@ -347,10 +320,10 @@ export default function SubscriptionPage() {
           <div className="max-w-7xl mx-auto w-full space-y-6 mt-10">
             <div className="px-8">
               <h3 className="text-xl font-black text-white uppercase tracking-tight">
-                {UI_TEXT.individualConnections[lang]}
+                {t("individualConnections")}
               </h3>
               <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mt-2">
-                {UI_TEXT.manualImport[lang]}
+                {t("manualImport")}
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-2">
@@ -398,7 +371,7 @@ export default function SubscriptionPage() {
                     <button 
                       onClick={() => copyToClipboard(linkItem.link)}
                       className="p-4 bg-white/5 hover:bg-white text-slate-400 hover:text-black rounded-2xl transition-all active:scale-90"
-                      title={lang === 'ru' ? 'Копировать' : 'Copy'}
+                      title={t("copy")}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -432,13 +405,13 @@ export default function SubscriptionPage() {
               {/* Внутри модалки */}
                 <div className="text-center space-y-2">
                   <p className="text-black text-[10px] font-black uppercase tracking-[0.2em] opacity-40">
-                    {UI_TEXT.scanToImport[lang]}
+                    {t("scanToImport")}
                   </p>
                   <button 
                     onClick={() => setQrModalLink(null)}
                     className="w-full px-8 py-4 bg-black text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl active:scale-95 transition-all"
                   >
-                    {UI_TEXT.close[lang]}
+                    {t("close")}
                   </button>
                 </div>
             </div>

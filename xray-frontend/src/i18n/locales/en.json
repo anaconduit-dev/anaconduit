@@ -1,0 +1,136 @@
+{
+  "status": {
+    "active": "ACTIVE",
+    "expired": "EXPIRED"
+  },
+  "modals": {
+    "limits": {
+      "title": "Limits",
+      "trafficLabel": "Total Limit (GB)",
+      "trafficPlaceholder": "0 = Unlimited",
+      "daysLabel": "Extend by (days)",
+      "daysPlaceholder": "0 = Reset expiry",
+      "daysPreset": "{{count}}D",
+      "warningInfo": "Saving limits will automatically unlock the user in the Xray core.",
+      "errorUpdate": "Error updating limits",
+      "cancel": "Cancel",
+      "apply": "Apply"
+    },
+    "addClient": {
+      "titleNew": "New User",
+      "titleBind": "Bind Inbound",
+      "subtitleNew": "Account Creation",
+      "subtitleBind": "For {{email}}",
+      "targetServer": "Target Server",
+      "selectInbound": "Select inbound...",
+      "alreadyAdded": "🔒 [EXISTS] {{tag}}",
+      "secretPassword": "Password",
+      "secretUuid": "UUID / ID",
+      "flowNotAvailable": "Not available",
+      "submitNew": "Create and connect",
+      "submitBind": "Bind to server",
+      "errorAlreadyAdded": "User {{email}} is already added to this inbound!",
+      "errorServer": "Server error"
+    },
+    "userDetail": {
+      "title": "Access Management",
+      "close": "Close",
+      "subLinkTitle": "Subscription Link",
+      "generating": "Generating...",
+      "loadingLinks": "Fetching links...",
+      "connectionsTitle": "Connections & Protocols",
+      "removeConfirm": "Disconnect user from server \"{{tag}}\"?",
+      "removeError": "Failed to remove connection",
+      "footerInfo": "Anaconduit Secure Link Manager"
+    }
+  },
+  "fields": {
+    "email": "Email",
+    "flow": "Flow",
+    "level": "Level"
+  },
+  "layout": {
+    "title": "Control Panel",
+    "logout": "Logout",
+    "nodeStatus": "Project Load",
+    "xrayCore": "Xray Core",
+    "updateAvailable": "UPDATE",
+    "menu": {
+      "home": "Dashboard",
+      "xrayConfig": "Xray Config",
+      "inbounds": "Inbounds",
+      "users": "Users",
+      "nginx": "Nginx",
+      "settings": "Settings"
+    }
+  },
+  "apps": {
+    "common": {
+      "installTitle": "App Installation",
+      "addSubTitle": "Add Subscription",
+      "addSubDesc": "Click the button below to add the subscription to the app automatically.",
+      "quickImport": "Quick Import",
+      "failedTitle": "If import failed",
+      "failedDesc": "Copy the subscription link manually, click '+' in the app and select 'Import from clipboard'."
+    },
+    "buttons": {
+      "googlePlay": "Google Play",
+      "downloadApk": "Download APK",
+      "githubReleases": "GitHub Releases",
+      "appStoreRu": "App Store (RU)",
+      "appStoreGlobal": "App Store (Global)",
+      "arm64apk": "arm64 (.apk) alpha",
+      "amd64deb": "amd64 (.deb)",
+      "arm64deb": "arm64 (.deb)",
+      "winSetup": "Windows (Setup)"
+    },
+    "happ": {
+      "installDesc": "Download and install the latest client version from Google Play.",
+      "iosInstallDesc": "Install the app from App Store. Launch it and allow VPN configuration (click Allow)."
+    },
+    "prizrak": {
+      "installDesc": "Choose the package matching your architecture and install Prizrak-Box.",
+      "winFailedDesc": "Copy the link manually. In Prizrak-Box, go to Profiles, click +, paste the link and confirm."
+    }
+  },
+  "premium": "Premium Subscription",
+  "usage": "Data Consumption",
+  "copy": "Copy Subscription Link",
+  "individualConnections": "Individual Connections",
+  "nodeStatus": "System Node: Operational",
+  "online": "● System Online",
+  "offline": "● System Offline",
+  "encrypted": "Encrypted",
+  "used": "Used Volume",
+  "limit": "Total Limit",
+  "expiration": "Access Expiration",
+  "guide": "Configuration Guide",
+  "copied": "Successfully Copied",
+  "forever": "Unlimited",
+  "manualImport": "For manual node import",
+  "scanToImport": "Scan to import node",
+  "close": "Close",
+  "invalidToken": "Invalid token",
+  "accessError": "Access Error",
+  "tryAgain": "Try Again",
+  "users": {
+    "title": "Clients Monitor",
+    "subtitle": "Access Management & Traffic Monitoring",
+    "searchPlaceholder": "Search by email or token...",
+    "syncing": "Database synchronization...",
+    "updateError": "Data update error",
+    "newUser": "New Client",
+    "live": "Live",
+    "noNodes": "No active nodes",
+    "deleteConfirm": "Fully delete user {{name}}?",
+    "resetTokenSuccess": "Token reset successfully",
+    "resetTokenError": "Error resetting token",
+    "resetTokenConfirm": "Are you sure you want to reset the subscription token? The user's old link will stop working.",
+    "deleteError": "Error during deletion",
+    "refresh": {
+      "off": "Refresh: OFF",
+      "seconds": "{{count}} seconds",
+      "minute": "1 minute"
+    }
+  }
+}
