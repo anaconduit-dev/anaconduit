@@ -8,7 +8,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_xray_service, get_current_admin
 from app.models.models import Client, Inbound, User  # Добавили User
 from app.services.xray_service import XrayService
-from app.schemas.user import UserResponse
+from app.schemas.user import UserResponse, UpdateLimitsSchema
 from typing import List, Optional
 from datetime import datetime, timedelta
 import uuid
@@ -189,13 +189,11 @@ async def remove_user_from_inbound(
 @router.patch("/update-limits/{user_id}")
 async def update_user_limits(
     user_id: int,
-    traffic_gb: Optional[int] = None,
-    expiry_days: Optional[int] = None,
+    data: UpdateLimitsSchema, # Используем схему из Body
     db: AsyncSession = Depends(get_db),
     admin: dict = Depends(get_current_admin),
-    xray_service: XrayService = Depends(get_xray_service) # Внедряем сервис
+    xray_service: XrayService = Depends(get_xray_service)
 ):
-    # 1. Получаем пользователя с его клиентами (ключами)
     result = await db.execute(
         select(User).options(joinedload(User.clients).joinedload(Client.inbound)).where(User.id == user_id)
     )
@@ -203,31 +201,36 @@ async def update_user_limits(
     
     if not user: 
         raise HTTPException(status_code=404, detail="User not found")
+    print(data) # traffic_limit=100 add_days=None auto_reset_traffic=True reset_period='day'
+
+    if data.auto_reset_traffic is not None:
+        user.auto_reset_traffic = data.auto_reset_traffic
+    
+    if data.reset_period is not None:
+        user.reset_period = data.reset_period
 
     # 2. Обновляем лимиты
-    if traffic_gb is not None:
-        user.traffic_limit = traffic_gb * 1024 * 1024 * 1024
+    if data.traffic_limit is not None:
+        user.traffic_limit = data.traffic_limit * 1024 * 1024 * 1024
     
-    if expiry_days is not None:
-        if expiry_days == 0:
+    if data.add_days is not None:
+        if data.add_days == 0:
             user.expiry_time = None
         else:
-            # Продлеваем от текущей даты или от даты истечения (если она в будущем)
             start_date = user.expiry_time if (user.expiry_time and user.expiry_time > datetime.now()) else datetime.now()
-            user.expiry_time = start_date + timedelta(days=expiry_days)
+            user.expiry_time = start_date + timedelta(days=data.add_days)
 
     # 3. Логика автоматической активации
     now = datetime.now()
+    # Важно: суммируем текущий расход
     total_used = user.total_up + user.total_down
     time_ok = not user.expiry_time or user.expiry_time > now
     traffic_ok = user.traffic_limit == 0 or total_used < user.traffic_limit
 
-    # Если лимиты теперь в норме, но юзер был выключен — включаем!
     if time_ok and traffic_ok and not user.is_active:
         user.is_active = True
-        logger.info(f"🚀 Активация пользователя {user.email} после обновления лимитов")
+        logger.info(f"🚀 Активация пользователя {user.email}")
         
-        # Добавляем каждого клиента пользователя обратно в Xray через gRPC
         for client in user.clients:
             if client.inbound and client.inbound.is_active:
                 try:
@@ -237,17 +240,19 @@ async def update_user_limits(
                         client_key=client.uuid,
                         flow=client.flow,   
                         level=client.level  
-                        )
+                    )
                 except Exception as e:
-                    logger.error(f"Ошибка при добавлении клиента {user.email} в Xray: {e}")
+                    logger.error(f"Ошибка Xray: {e}")
 
-    # 4. Сохраняем изменения в БД
     await db.commit()
-
-    # 5. Обновляем конфиг на диске (чтобы изменения выжили после рестарта контейнера)
     await xray_service.generate_full_config()
 
-    return {"status": "success", "is_active": user.is_active}
+    return {
+        "status": "success", 
+        "is_active": user.is_active,
+        "auto_reset": user.auto_reset_traffic,
+        "reset_period": user.reset_period
+    }
 
 @router.post("/users/{user_id}/reset-token")
 async def reset_subscription_token(

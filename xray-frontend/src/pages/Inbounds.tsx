@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { toast } from 'react-hot-toast';
+import { useTranslation } from "react-i18next";
+import { useConfirm } from "../context/ConfirmContext";
 import { useOutletContext } from "react-router-dom";
 import AddInboundModal from "../components/AddInboundModal";
 import EditInboundModal from "../components/EditInboundModal"; 
@@ -20,6 +23,8 @@ interface ContextType {
 }
 
 export default function InboundsPage() {
+  const confirm = useConfirm();
+  const { t } = useTranslation();
   const context = useOutletContext<ContextType>() || {};
   const { refreshStatus } = context;
   
@@ -48,17 +53,28 @@ export default function InboundsPage() {
   useEffect(() => { loadInbounds(); }, []);
 
   const handleDelete = async (e: React.MouseEvent, id: number, tag: string) => {
-    e.stopPropagation();
-    if (window.confirm(`Удалить инбаунд "${tag}"?`)) {
+      e.stopPropagation();
+      
+      const isConfirmed = await confirm({
+        title: t("inbounds.deleteInbounds") ,
+        message: t("inbounds.deleteConfirm", { tag }),
+        type: 'danger',
+        confirmText: t("common.delete"),
+        cancelText: t("common.cancel")
+      });
+  
+      if (!isConfirmed) return;
       try {
         await deleteInbound(id);
+        toast.success(t("inbiunds.deleteSuccess"), {
+          icon: '🗑️',
+          style: { borderRadius: '15px', background: '#1a1a1a', color: '#fff' }
+        });
         loadInbounds();
-        if (refreshStatus) refreshStatus();
-      } catch (e) {
-        alert("Не удалось удалить");
+      } catch (err) {
+        toast.error(t("users.deleteError"));
       }
-    }
-  };
+    };
 
   const handleEdit = (id: number) => {
     setSelectedInboundId(id);

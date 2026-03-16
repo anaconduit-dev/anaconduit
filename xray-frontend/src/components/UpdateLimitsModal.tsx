@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next"; // Импорт
 import { X, ShieldAlert, Zap, Calendar, Save, Loader2, Plus } from "lucide-react";
+import { Switch } from "../components/ui/Switch";
+import { toast } from "react-hot-toast";
 import { updateLimits } from "../api/user";
 
 interface Props {
@@ -12,18 +14,27 @@ interface Props {
 
 export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: Props) {
   const { t } = useTranslation();
-  const [traffic, setTraffic] = useState<string>("");
-  const [days, setDays] = useState<string>("");
   const [loading, setLoading] = useState(false);
+
+  const [formData, setFormData] = useState({
+    traffic: "",
+    days: "",
+    auto_reset_traffic: false,
+    reset_period: "month"
+  });
 
   useEffect(() => {
     if (user && isOpen) {
-      // Конвертируем байты из БД обратно в GB для отображения
       const currentLimitGb = user.traffic_limit 
         ? Math.floor(user.traffic_limit / (1024 ** 3)) 
         : "";
-      setTraffic(currentLimitGb.toString());
-      setDays(""); // Срок жизни всегда вводим "плюсом", поэтому обнуляем
+      
+      setFormData({
+        traffic: currentLimitGb.toString(),
+        days: "",
+        auto_reset_traffic: user.auto_reset_traffic || false,
+        reset_period: user.reset_period || "month"
+      });
     }
   }, [user, isOpen]);
 
@@ -32,15 +43,22 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Если поле пустое — отправляем null, чтобы API понимал, что менять не нужно
-      const trafficVal = traffic === "" ? null : parseInt(traffic);
-      const daysVal = days === "" ? null : parseInt(days);
+      const trafficVal = formData.traffic === "" ? null : parseInt(formData.traffic);
+      const daysVal = formData.days === "" ? null : parseInt(formData.days);
       
-      await updateLimits(user.id, trafficVal, daysVal);
+      // Отправляем расширенный объект данных в API
+      await updateLimits(user.id, {
+        traffic_limit: trafficVal,
+        add_days: daysVal,
+        auto_reset_traffic: formData.auto_reset_traffic,
+        reset_period: formData.reset_period
+      });
+      
+      toast.success(t("modals.limits.successUpdate"));
       onSuccess();
       onClose();
     } catch (e) {
-      alert(t("modals.limits.errorUpdate"));
+      toast.error(t("modals.limits.errorUpdate"));
     } finally {
       setLoading(false);
     }
@@ -48,8 +66,8 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
 
   // Вспомогательная функция для быстрых кнопок
   const addDays = (d: number) => {
-    const current = parseInt(days) || 0;
-    setDays((current + d).toString());
+    const current = parseInt(formData.days) || 0;
+    setFormData(prev => ({ ...prev, days: (current + d).toString() }));
   };
 
   return (
@@ -89,9 +107,9 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
               <div className="relative group">
                 <input 
                   type="number" 
-                  value={traffic}
-                  onChange={(e) => setTraffic(e.target.value)}
-                  placeholder="0 = Безлимит"
+                  value={formData.traffic} // Было value={traffic}
+                  onChange={(e) => setFormData(prev => ({ ...prev, traffic: e.target.value }))} // Было setTraffic
+                  placeholder={t("modals.limits.unlimited")}
                   className="w-full bg-card border border-line rounded-2xl pl-5 pr-16 py-4 font-mono font-bold text-lg text-base focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted font-black text-[10px] select-none pointer-events-none bg-main border border-line px-2.5 py-1.5 rounded-xl shadow-sm group-focus-within:border-indigo-500/30 transition-colors">
@@ -99,7 +117,35 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
                 </div>
               </div>
             </div>
+            <div className="space-y-4 p-6 bg-main/20 rounded-[2rem] border border-line">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-widest text-muted">
+                  {t("modals.limits.autoTrafficReset")}
+                </span>
+                <Switch 
+                  checked={formData.auto_reset_traffic}
+                  onChange={(val) => setFormData({...formData, auto_reset_traffic: val})}
+                />
+              </div>
 
+              {formData.auto_reset_traffic && (
+                <div className="grid grid-cols-3 gap-2">
+                  {['day', 'week', 'month'].map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => setFormData({...formData, reset_period: period})}
+                      className={`py-3 rounded-xl font-black text-[10px] uppercase tracking-tighter transition-all ${
+                        formData.reset_period === period 
+                        ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' 
+                        : 'bg-card text-muted hover:text-white'
+                      }`}
+                    >
+                      {t(`periods.${period}`)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {/* Продление времени */}
             <div className="space-y-3">
               <label className="text-[10px] font-black uppercase tracking-[0.15em] text-muted flex items-center gap-2 ml-1">
@@ -107,8 +153,8 @@ export default function UpdateLimitsModal({ isOpen, onClose, onSuccess, user }: 
               </label>
               <input 
                 type="number" 
-                value={days}
-                onChange={(e) => setDays(e.target.value)}
+                value={formData.days} // Было value={days}
+                onChange={(e) => setFormData(prev => ({ ...prev, days: e.target.value }))} // Было setDays
                 placeholder={t("modals.limits.daysPlaceholder")}
                 className="w-full bg-card border border-line rounded-2xl px-5 py-4 font-mono font-bold text-lg text-base focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all"
               />

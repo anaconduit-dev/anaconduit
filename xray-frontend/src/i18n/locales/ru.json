@@ -1,8 +1,18 @@
 {
+  "periods":{
+    "day": "день",
+    "week": "неделя",
+    "month": "месяц"
+  },
   "common": {
-    "reset": "сброс",
-    "cancel": "отмена",
-    "delete": "удалить"
+    "reset": "Сброс",
+    "cancel": "Отмена",
+    "delete": "Удалить"
+  },
+  "inbounds":{
+    "deleteInbounds":"Удалить инбаунд?",
+    "deleteConfirm": "Полностью удалить инбаунд {{tag}}?",
+    "deleteSuccess": "Инбаунд удален"
   },
   "status": {
     "active": "ACTIVE",
@@ -19,7 +29,10 @@
       "warningInfo": "Сохранение лимитов автоматически разблокирует пользователя в ядре Xray.",
       "errorUpdate": "Ошибка при обновлении лимитов",
       "cancel": "Отмена",
-      "apply": "Применить"
+      "apply": "Применить",
+      "successUpdate": "Лимиты обновлены",
+      "autoTrafficReset": "Автосброс трафика",
+      "unlimited": "0 = Безлимит"
     },
     "addClient": {
       "titleNew": "Новый пользователь",
@@ -132,6 +145,7 @@
     "noNodes": "Нет активных узлов",
     "deleteUser": "удалить пользователя",
     "deleteConfirm": "Полностью удалить пользователя {{email}}?",
+    "deleteSuccess":"Пользователь удален",
     "resetToken": "сброс токена",
     "resetTokenSuccess": "Токен успешно сброшен",
     "resetTokenError": "Ошибка при сбросе токена",

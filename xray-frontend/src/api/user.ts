@@ -42,13 +42,14 @@ export const removeUserFromInbound = async (userId: number, inboundId: number) =
 };
 
 /** Обновить лимиты трафика или дату истечения */
-export const updateLimits = async (userId: number, trafficGb: number | null, expiryDays: number | null) => {
-  // Формируем query параметры вручную или через URLSearchParams
-  const params = new URLSearchParams();
-  if (trafficGb !== null) params.append('traffic_gb', trafficGb.toString());
-  if (expiryDays !== null) params.append('expiry_days', expiryDays.toString());
-
-  const res = await api.patch(`/client/update-limits/${userId}?${params.toString()}`);
+export const updateLimits = async (userId: number, data: {
+  traffic_limit: number | null, 
+  add_days: number | null,
+  auto_reset_traffic?: boolean,
+  reset_period?: string
+}) => {
+  // Отправляем данные в теле запроса (Body)
+  const res = await api.patch(`/client/update-limits/${userId}`, data);
   return res.data;
 };
 /** Сбросить токен подписки (сгенерировать новую ссылку) */

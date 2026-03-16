@@ -358,7 +358,30 @@ class XrayService:
         
         await session.commit()
 
+    async def check_and_reset_traffic(self):
+        async with AsyncSessionLocal() as session:
+            # Ищем пользователей с включенным автосбросом
+            result = await session.execute(
+                select(User).where(User.auto_reset_traffic == True)
+            )
+            users = result.scalars().all()
+            now = datetime.now()
+            xray_service = XrayService(XrayAPIClient())
 
+            for user in users:
+                should_reset = False
+                delta = now - (user.last_reset_at or user.created_at)
+
+                if user.reset_period == "day" and delta.days >= 1:
+                    should_reset = True
+                elif user.reset_period == "week" and delta.days >= 7:
+                    should_reset = True
+                elif user.reset_period == "month" and delta.days >= 30:
+                    should_reset = True
+
+                if should_reset:
+                    # Используем нашу готовую функцию сброса (из прошлых шагов)
+                    await self.reset_user_traffic(session, user.id)
     # app/services/xray_service.py
 
     async def update_stats_in_db(self):

@@ -29,7 +29,7 @@ def upgrade() -> None:
         batch_op.add_column(sa.Column('summary_total_up', sa.BigInteger(), server_default='0', nullable=True))
         batch_op.add_column(sa.Column('summary_total_down', sa.BigInteger(), server_default='0', nullable=True))
         batch_op.add_column(sa.Column('auto_reset_traffic', sa.Boolean(), server_default='false', nullable=True))
-        batch_op.add_column(sa.Column('reset_period', sa.String(), nullable=True))
+        batch_op.add_column(sa.Column('reset_period', sa.String(), server_default='month', nullable=True))
 
     # ### end Alembic commands ###
 

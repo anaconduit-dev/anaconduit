@@ -1,8 +1,18 @@
 {
+  "periods":{
+    "day": "day",
+    "week": "week",
+    "month": "month"
+  },
   "common": {
     "reset": "Reset",
     "cancel": "Cancel",
     "delete": "delete"
+  },
+  "inbounds":{
+    "deleteInbounds":"Delete inbound?",
+    "deleteConfirm": "Do you want to completely delete the inbound {{tag}}?",
+    "deleteSuccess": "Inbound has been removed"
   },
   "status": {
     "active": "ACTIVE",
@@ -19,7 +29,10 @@
       "warningInfo": "Saving limits will automatically unlock the user in the Xray core.",
       "errorUpdate": "Error updating limits",
       "cancel": "Cancel",
-      "apply": "Apply"
+      "apply": "Apply",
+      "successUpdate": "Limits have been updated",
+      "autoTrafficReset": "Automatic traffic reset",
+      "unlimited": "0 = Unlimited"
     },
     "addClient": {
       "titleNew": "New User",
@@ -132,6 +145,7 @@
     "noNodes": "No active nodes",
     "deleteUser": "delete user",
     "deleteConfirm": "Fully delete user {{email}}?",
+    "deleteSuccess":"User deleted",
     "resetToken": "reset the token",
     "resetTokenSuccess": "Token reset successfully",
     "resetTokenError": "Error resetting token",

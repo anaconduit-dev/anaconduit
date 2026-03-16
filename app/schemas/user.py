@@ -49,3 +49,11 @@ class AddClientRequest(BaseModel):
     id_or_password: str
     flow: Optional[str] = ""
     level: int = 0
+
+
+
+class UpdateLimitsSchema(BaseModel):
+    traffic_limit: Optional[int] = None # В ГБ
+    add_days: Optional[int] = None
+    auto_reset_traffic: Optional[bool] = None
+    reset_period: Optional[str] = None # "day", "week", "month"

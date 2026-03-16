@@ -1,8 +1,8 @@
 import logging
 import asyncio
+import time
 import os
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -83,15 +83,32 @@ async def create_initial_admin():
 async def stats_updater_task():
     client = get_xray_client()
     xray_service = get_xray_service(client)
+    
+    # Переменная для отслеживания времени последнего сброса
+    last_reset_check = 0 
+    RESET_CHECK_INTERVAL = 3600  # Проверяем автосброс раз в час (3600 сек)
+
     while True:
         try:
-            await asyncio.sleep(10) 
+            # 1. Быстрая задача (каждые 10 секунд)
+            # Обновляем статистику в БД и отключаем тех, кто превысил лимит
             await xray_service.update_stats_in_db()
             await xray_service.check_limits_and_disable()
+
+            # 2. Тяжелая задача (раз в час)
+            current_time = time.time()
+            if current_time - last_reset_check >= RESET_CHECK_INTERVAL:
+                logger.info("⏰ Запуск плановой проверки автосброса трафика...")
+                # Вызываем нашу новую логику (реализуем её в сервисе)
+                await xray_service.check_and_reset_traffic()
+                last_reset_check = current_time
+
+            await asyncio.sleep(10) 
+
         except asyncio.CancelledError:
             break
         except Exception as e:
-            logger.error(f"❌ Ошибка в фоновом планировщике статистики: {e}")
+            logger.error(f"❌ Ошибка в фоновом планировщике: {e}")
             await asyncio.sleep(30)
 
 @asynccontextmanager
