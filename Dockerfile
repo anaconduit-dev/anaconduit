@@ -12,13 +12,6 @@ FROM python:3.13-slim
 # Установка uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Используем кэш для apt, чтобы не качать всё заново при каждом билде
-# Упрощенный вариант без BuildKit
-RUN apt-get update && apt-get install -y \
-    git \
-    docker.io \
-    docker-compose \
-    && rm -rf /var/lib/apt/lists/*
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
