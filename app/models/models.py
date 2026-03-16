@@ -50,6 +50,7 @@ class User(Base):
     # Поля для автоматизации
     auto_reset_traffic = Column(Boolean, default=False, server_default="false")
     reset_period = Column(String, default="month")
+    last_reset_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     clients = relationship("Client", back_populates="user", cascade="all, delete-orphan")
 
@@ -76,7 +77,7 @@ class Client(Base):
     # Накопители для конкретного ключа
     summary_up = Column(BigInteger, default=0, server_default="0")
     summary_down = Column(BigInteger, default=0, server_default="0")
-    
+
     user = relationship("User", back_populates="clients")
     
     inbound = relationship("Inbound") 

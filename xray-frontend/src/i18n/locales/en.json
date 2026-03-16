@@ -1,4 +1,9 @@
 {
+  "common": {
+    "reset": "Reset",
+    "cancel": "Cancel",
+    "delete": "delete"
+  },
   "status": {
     "active": "ACTIVE",
     "expired": "EXPIRED"
@@ -114,6 +119,9 @@
   "accessError": "Access Error",
   "tryAgain": "Try Again",
   "users": {
+    "resetTraffic": "Reset traffic",
+    "resetTrafficConfirm": "Are you sure you want to reset the current traffic for {{email}}? The data will be transferred to the overall statistics.",
+    "resetTrafficSuccess": "Traffic has been successfully reset",
     "title": "Clients Monitor",
     "subtitle": "Access Management & Traffic Monitoring",
     "searchPlaceholder": "Search by email or token...",
@@ -122,7 +130,9 @@
     "newUser": "New Client",
     "live": "Live",
     "noNodes": "No active nodes",
-    "deleteConfirm": "Fully delete user {{name}}?",
+    "deleteUser": "delete user",
+    "deleteConfirm": "Fully delete user {{email}}?",
+    "resetToken": "reset the token",
     "resetTokenSuccess": "Token reset successfully",
     "resetTokenError": "Error resetting token",
     "resetTokenConfirm": "Are you sure you want to reset the subscription token? The user's old link will stop working.",

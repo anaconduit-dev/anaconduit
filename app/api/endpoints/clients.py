@@ -261,3 +261,27 @@ async def reset_subscription_token(
     user.subscription_token = secrets.token_urlsafe(16)
     await db.commit()
     return {"new_token": user.subscription_token}
+
+@router.post("/{user_id}/reset-traffic")
+async def reset_user_traffic(
+    user_id: int, 
+    db: AsyncSession = Depends(get_db),
+    admin: dict = Depends(get_current_admin),
+    xray_service: XrayService = Depends(get_xray_service)
+):
+    # 1. Проверяем существование пользователя
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        # 2. Обновляем Clients (накопители + обнуление текущих)
+        # Используем ленивое обновление через update statement
+        await xray_service.reset_user_traffic(db, user_id)
+        return {"status": "success", "message": f"Traffic reset for user {user.email}"}
+
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")

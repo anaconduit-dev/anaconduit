@@ -1,16 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
+import { toast } from 'react-hot-toast';
 import { useTranslation } from "react-i18next";
 import UserDetailModal from "../components/UserDetailModal";
 import AddClientModal from "../components/AddClientModal";
 import UpdateLimitsModal from "../components/UpdateLimitsModal"
+import { useConfirm } from "../context/ConfirmContext";
 import { 
-  UserPlus, Clock, Zap, 
+  UserPlus, Clock, Zap, RotateCcw,
   Trash2, Key, Search, Loader2, AlertCircle,
   CheckCircle2, Copy, PlusCircle, Activity
 } from "lucide-react";
-import { getUsers, deleteFullUser, resetSubscriptionToken } from "../api/user";
+import { getUsers, deleteFullUser, resetSubscriptionToken, resetUserTraffic } from "../api/user";
 
 export default function UsersPage() {
+  const confirm = useConfirm();
   const { t } = useTranslation();
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [users, setUsers] = useState<any[]>([]);
@@ -28,6 +31,28 @@ export default function UsersPage() {
   const [userForNewInbound, setUserForNewInbound] = useState<any | null>(null);
   const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
   const [userForLimits, setUserForLimits] = useState<any | null>(null);
+
+  const handleResetTraffic = async (e: React.MouseEvent, user: any) => {
+    e.stopPropagation();
+
+    // Теперь это работает как надо и выглядит красиво!
+    const isConfirmed = await confirm({
+      title: t("users.resetTraffic") || "Сброс трафика",
+      message: t("users.resetTrafficConfirm", { email: user.email }),
+      type: 'danger',
+      confirmText: t("common.reset"),
+      cancelText: t("common.cancel")
+    });
+
+    if (!isConfirmed) return;
+
+    // Логика тоста сработает только после подтверждения
+    toast.promise(resetUserTraffic(user.id), {
+      loading: 'Resetting...',
+      success: () => { loadData(); return t("users.resetTrafficSuccess"); },
+      error: t("users.resetTrafficError"),
+    });
+  };
 
   const handleOpenLimits = (e: React.MouseEvent, user: any) => {
     e.stopPropagation();
@@ -111,37 +136,64 @@ export default function UsersPage() {
     setIsAddModalOpen(true);
   };
 
-  const handleCopy = async (e: React.MouseEvent, text: string, tag: string) => {
+  const handleCopy = (e: React.MouseEvent, text: string, tag: string) => {
     e.stopPropagation();
-    if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedTag(tag);
-      setTimeout(() => setCopiedTag(null), 2000);
-    } catch (err) { console.error("Ошибка копирования", err); }
+    navigator.clipboard.writeText(text);
+    setCopiedTag(tag);
+    
+    toast.success(t("common.copied"), {
+      icon: '📋',
+      style: { borderRadius: '15px', background: '#1a1a1a', color: '#fff' }
+    });
+    
+    setTimeout(() => setCopiedTag(null), 2000);
   };
 
-  const handleDelete = (e: React.MouseEvent, id: number, name: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: number, user: any) => {
     e.stopPropagation();
-    if (window.confirm(t("users.deleteConfirm", { name }))) { // Параметр в confirm
-      deleteFullUser(id)
-        .then(() => loadData())
-        .catch(() => alert(t("users.deleteError")));
+    
+    const isConfirmed = await confirm({
+      title: t("users.deleteUser") ,
+      message: t("users.deleteConfirm", { email: user.email }),
+      type: 'danger',
+      confirmText: t("common.delete"),
+      cancelText: t("common.cancel")
+    });
+
+    if (!isConfirmed) return;
+    try {
+      await deleteFullUser(id);
+      toast.success(t("users.deleteSuccess"), {
+        icon: '🗑️',
+        style: { borderRadius: '15px', background: '#1a1a1a', color: '#fff' }
+      });
+      loadData();
+    } catch (err) {
+      toast.error(t("users.deleteError"));
     }
   };
 
-  const handleResetToken = (e: React.MouseEvent, id: number) => {
+  const handleResetToken = async (e: React.MouseEvent, user: any) => {
     e.stopPropagation();
 
-    // Добавляем проверку перед выполнением
-    if (!window.confirm(t("users.resetTokenConfirm"))) return;
+    const isConfirmed = await confirm({
+      title: t("users.resetToken") ,
+      message: t("users.resetTokenConfirm", { email: user.email }),
+      type: 'danger',
+      confirmText: t("common.reset"),
+      cancelText: t("common.cancel")
+    });
 
-    resetSubscriptionToken(id)
-      .then(() => {
-        alert(t("users.resetTokenSuccess"));
+    if (!isConfirmed) return;
+
+    toast.promise(resetSubscriptionToken(user.id), {
+      loading: 'Updating token...',
+      success: () => {
         loadData();
-      })
-      .catch(() => alert(t("users.resetTokenError")));
+        return t("users.resetTokenSuccess");
+      },
+      error: t("users.resetTokenError"),
+    });
   };
 
   const filteredUsers = users.filter(u => 
@@ -259,8 +311,15 @@ export default function UsersPage() {
                       <div className="flex gap-1 lg:opacity-0 lg:group-hover:opacity-100 lg:translate-y-1 lg:group-hover:translate-y-0 transition-all duration-300">
                         <button onClick={(e) => {e.stopPropagation(); handleAddInboundToExisting(e, user)}} className="p-2 hover:bg-indigo-500/10 rounded-xl text-muted hover:text-indigo-500 transition-colors"><PlusCircle size={14} /></button>
                         <button onClick={(e) => {e.stopPropagation(); handleOpenLimits(e, user)}} className="p-2 hover:bg-amber-500/10 rounded-xl text-muted hover:text-amber-500 transition-colors"><Activity size={14} /></button>
-                        <button onClick={(e) => {e.stopPropagation(); handleResetToken(e, user.id)}} className="p-2 hover:bg-indigo-500/10 rounded-xl text-muted hover:text-indigo-400 transition-colors"><Key size={14} /></button>
+                        <button onClick={(e) => {e.stopPropagation(); handleResetToken(e, user)}} className="p-2 hover:bg-indigo-500/10 rounded-xl text-muted hover:text-indigo-400 transition-colors"><Key size={14} /></button>
                         <button onClick={(e) => {e.stopPropagation(); handleDelete(e, user.id, user.email)}} className="p-2 hover:bg-red-500/10 rounded-xl text-muted hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                        <button 
+                          onClick={(e) => handleResetTraffic(e, user)} 
+                          className="p-3 lg:p-2 hover:bg-indigo-500/10 rounded-xl text-muted hover:text-indigo-500 transition-colors"
+                          title={t("users.resetTraffic")}
+                        >
+                          <RotateCcw size={18} className="lg:w-[14px] lg:h-[14px]" />
+                        </button>
                       </div>
                     </div>
 

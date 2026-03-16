@@ -57,6 +57,10 @@ export const resetSubscriptionToken = async (userId: number) => {
   return res.data;
 };
 
+export const resetUserTraffic = async (userId: number) => {
+  const response = await api.post(`/client/${userId}/reset-traffic`);
+  return response.data;
+};
 
 // --- TOOLS ---
 

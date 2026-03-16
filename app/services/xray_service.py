@@ -14,7 +14,7 @@ import shutil
 from fastapi import Response
 from typing import List, Dict, Any, Tuple
 from datetime import datetime, timezone
-from sqlalchemy import update, select
+from sqlalchemy import update, select, func
 from sqlalchemy.orm import joinedload
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import x25519
@@ -333,7 +333,8 @@ class XrayService:
                 raise Exception(f"Не удалось удалить из Xray: {e}")
 
     # ---------- Stats & DB Update ----------
-    async def reset_user_traffic_logic(self, session: AsyncSessionLocal, user_id: int):
+
+    async def reset_user_traffic(self, session: AsyncSessionLocal, user_id: int):
         user = await session.get(User, user_id)
         if not user:
             return
@@ -344,7 +345,7 @@ class XrayService:
         # Обнуляем текущие
         user.total_up = 0
         user.total_down = 0
-        
+        user.last_reset_at = func.now()
         # 2. Обновляем накопители всех Client этого пользователя
         result = await session.execute(select(Client).where(Client.user_id == user_id))
         clients = result.scalars().all()
@@ -356,6 +357,8 @@ class XrayService:
             client.down = 0
         
         await session.commit()
+
+
     # app/services/xray_service.py
 
     async def update_stats_in_db(self):
@@ -504,9 +507,6 @@ class XrayService:
     async def stop(self): return await self.docker.stop(self.CONTAINER_NAME)
     async def logs(self, tail: int = 100): return await self.docker.logs(self.CONTAINER_NAME, tail=tail)
 
-    
-
-    
 
     async def generate_reality_keys(self) -> Dict[str, str]:
         private_key = x25519.X25519PrivateKey.generate()

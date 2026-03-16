@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-// ... твои импорты
+import { Toaster } from 'react-hot-toast';
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -11,6 +11,7 @@ import Settings from "./pages/Settings";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import { getToken } from "./store/auth";
 import './i18n/config'; // Просто импорт для инициализации
+import { ConfirmProvider } from "./context/ConfirmContext";
 function ProtectedRoute({ children }: any) {
   const token = getToken();
   if (!token) return <Navigate to="/login" />;
@@ -50,26 +51,52 @@ export default function App() {
   // Логика для АДМИН-ПАНЕЛИ
   return (
     <BrowserRouter basename={dynamicBasename}>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        
-        <Route 
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/settxray" element={<SettXray />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/inbounds" element={<Inbounds />} />
-          <Route path="/nginx" element={<SettNginx />} />
-          <Route path="/settings" element={<Settings />} />
-        </Route>
+      <ConfirmProvider>
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: '#1a1a1a', // Твой bg-card
+              color: '#fff',
+              borderRadius: '24px',
+              border: '1px solid rgba(99, 102, 241, 0.2)', // Твой indigo-500/20
+              padding: '16px 24px',
+              fontSize: '12px',
+              fontWeight: '900',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+            },
+            success: {
+              iconTheme: { primary: '#10b981', secondary: '#fff' },
+            },
+            error: {
+              iconTheme: { primary: '#ef4444', secondary: '#fff' },
+            }
+          }} 
+        />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          
+          <Route 
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/settxray" element={<SettXray />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/inbounds" element={<Inbounds />} />
+            <Route path="/nginx" element={<SettNginx />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
 
-        <Route path="*" element={<Navigate to="/dashboard" />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/dashboard" />} />
+        </Routes>
+      </ConfirmProvider>
     </BrowserRouter>
   );
 }
