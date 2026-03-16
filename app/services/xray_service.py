@@ -333,7 +333,29 @@ class XrayService:
                 raise Exception(f"Не удалось удалить из Xray: {e}")
 
     # ---------- Stats & DB Update ----------
-
+    async def reset_user_traffic_logic(self, session: AsyncSessionLocal, user_id: int):
+        user = await session.get(User, user_id)
+        if not user:
+            return
+        
+        # 1. Обновляем накопители User
+        user.summary_total_up += user.total_up
+        user.summary_total_down += user.total_down
+        # Обнуляем текущие
+        user.total_up = 0
+        user.total_down = 0
+        
+        # 2. Обновляем накопители всех Client этого пользователя
+        result = await session.execute(select(Client).where(Client.user_id == user_id))
+        clients = result.scalars().all()
+        
+        for client in clients:
+            client.summary_up += client.up
+            client.summary_down += client.down
+            client.up = 0
+            client.down = 0
+        
+        await session.commit()
     # app/services/xray_service.py
 
     async def update_stats_in_db(self):

@@ -36,7 +36,12 @@ async def get_dashboard_summary(db: AsyncSession = Depends(get_db),
 
     # 3. Суммируем весь трафик (из агрегированных полей пользователей)
     traffic_query = await db.execute(
-        select(func.sum(User.total_up + User.total_down))
+        select(
+            func.sum(
+                User.total_up + User.total_down + 
+                User.summary_total_up + User.summary_total_down
+            )
+        )
     )
     total_traffic_bytes = traffic_query.scalar() or 0
 

@@ -43,6 +43,13 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
     subscription_token = Column(String, unique=True, index=True, default=lambda: secrets.token_urlsafe(16))
+    # Глобальные накопители (никогда не сбрасываются)
+    summary_total_up = Column(BigInteger, default=0, server_default="0")
+    summary_total_down = Column(BigInteger, default=0, server_default="0")
+    
+    # Поля для автоматизации
+    auto_reset_traffic = Column(Boolean, default=False, server_default="false")
+    reset_period = Column(String, default="month")
 
     clients = relationship("Client", back_populates="user", cascade="all, delete-orphan")
 
@@ -66,7 +73,10 @@ class Client(Base):
     down = Column(BigInteger, default=0)
     enable = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
-
+    # Накопители для конкретного ключа
+    summary_up = Column(BigInteger, default=0, server_default="0")
+    summary_down = Column(BigInteger, default=0, server_default="0")
+    
     user = relationship("User", back_populates="clients")
     
     inbound = relationship("Inbound") 
