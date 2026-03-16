@@ -6,7 +6,7 @@ from pydantic import Field
 
 class Settings(BaseSettings):
     # --- Общие настройки ---
-    VERSION: str = "1.0.04"
+    VERSION: str = "1.0.05"
     GITHUB_REPO: str = "anaconduit-dev/anaconduit"
 
     app_name: str = "Anaconduit"
