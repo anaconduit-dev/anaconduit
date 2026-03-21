@@ -216,12 +216,12 @@ export default function UsersPage() {
             </p>
           </div>
           
-          <div className="flex items-center gap-3 bg-card border border-line p-2 pl-4 rounded-[1.5rem] shadow-xl">
+          <div className="flex items-center gap-3 bg-card border border-line p-2 pl-4 rounded-3xl shadow-xl">
             <Clock size={14} className="text-indigo-500" />
             <select 
               value={refreshInterval} 
               onChange={(e) => setRefreshInterval(Number(e.target.value))}
-              className="text-[10px] font-black uppercase bg-transparent border-none focus:ring-0 cursor-pointer text-base outline-none tracking-widest"
+              className="text-[10px] font-black uppercase bg-transparent border-none focus:ring-0 cursor-pointer text-base outline-none pr-4 tracking-widest"
             >
               <option value={0} className="bg-main">{t("users.refresh.off")}</option>
               <option value={10} className="bg-main">{t("users.refresh.seconds", { count: 10 })}</option>
@@ -240,7 +240,7 @@ export default function UsersPage() {
           <input 
             type="text"
             placeholder={t("users.searchPlaceholder")}
-            className="w-full pl-14 pr-6 py-5 bg-card border border-line rounded-[2rem] focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-lg text-sm font-bold tracking-tight text-base placeholder:text-muted/50 placeholder:font-normal"
+            className="w-full pl-14 pr-6 py-5 bg-card border border-line rounded-4xl focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-lg text-sm font-bold tracking-tight text-base placeholder:text-muted/50 placeholder:font-normal"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -252,7 +252,7 @@ export default function UsersPage() {
             <p className="text-[10px] font-black uppercase tracking-[0.3em]">{t("users.syncing")}</p>
           </div>
         ) : error ? (
-          <div className="bg-red-500/5 border border-red-500/20 p-6 rounded-[2rem] text-red-500 flex items-center gap-4 animate-in zoom-in-95">
+          <div className="bg-red-500/5 border border-red-500/20 p-6 rounded-4xl text-red-500 flex items-center gap-4 animate-in zoom-in-95">
             <AlertCircle size={24} />
             <p className="text-sm font-black uppercase tracking-tight">{error}</p>
           </div>
@@ -263,7 +263,7 @@ export default function UsersPage() {
               onClick={handleAddNewUser}
               className="bg-main/40 border-2 border-dashed border-line rounded-[2.5rem] flex flex-col items-center justify-center p-8 group cursor-pointer hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all duration-300 min-h-[280px]"
             >
-              <div className="w-16 h-16 bg-card border border-line rounded-[1.5rem] flex items-center justify-center text-muted group-hover:text-white group-hover:bg-indigo-600 group-hover:border-indigo-500 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-2xl mb-4">
+              <div className="w-16 h-16 bg-card border border-line rounded-3xl flex items-center justify-center text-muted group-hover:text-white group-hover:bg-indigo-600 group-hover:border-indigo-500 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-2xl mb-4">
                   <UserPlus size={28} />
               </div>
               <span className="text-[10px] font-black uppercase text-muted tracking-[0.2em] group-hover:text-indigo-500 transition-colors">
@@ -359,7 +359,7 @@ export default function UsersPage() {
                           </span>
                         )}
                       </div>
-                      <div className="w-full h-1.5 bg-main rounded-full overflow-hidden border border-line p-[1px]">
+                      <div className="w-full h-1.5 bg-main rounded-full overflow-hidden border border-line p-px">
                         <div 
                           className={`h-full rounded-full transition-all duration-1000 ${
                             !user.is_active ? 'bg-red-500/50' : percent > 85 ? 'bg-amber-500' : 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]'
