@@ -15,6 +15,7 @@ services:
     environment:
       - HOST_DATA_PATH=${HOST_DATA_PATH}
       - DATABASE_URL=${DATABASE_URL}
+      - TZ=UTC
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_DATA_PATH}:/app/data

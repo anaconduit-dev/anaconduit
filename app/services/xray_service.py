@@ -342,6 +342,7 @@ class XrayService:
         # 1. Обновляем накопители User
         user.summary_total_up += user.total_up
         user.summary_total_down += user.total_down
+        
         # Обнуляем текущие
         user.total_up = 0
         user.total_down = 0
@@ -366,19 +367,18 @@ class XrayService:
             )
             users = result.scalars().all()
             now = datetime.now()
-            xray_service = XrayService(XrayAPIClient())
 
             for user in users:
                 should_reset = False
                 delta = now - (user.last_reset_at or user.created_at)
-
+                logger.debug(f"проверка usera:{user.email} прошло дней {delta}, цикл сброса каждый {user.reset_period}")
                 if user.reset_period == "day" and delta.days >= 1:
                     should_reset = True
                 elif user.reset_period == "week" and delta.days >= 7:
                     should_reset = True
                 elif user.reset_period == "month" and delta.days >= 30:
                     should_reset = True
-
+                logger.debug(f"готовность к сбросу: {should_reset}")
                 if should_reset:
                     # Используем нашу готовую функцию сброса (из прошлых шагов)
                     await self.reset_user_traffic(session, user.id)
@@ -479,11 +479,14 @@ class XrayService:
             name=self.CONTAINER_NAME,
             image=image,
             command='sh -c "rm -f /run/xray/*.sock && xray -confdir /etc/xray"',
-            ports={}, 
+            ports={},
+            environment={
+                "TZ": "UTC"
+            },
             volumes={
                 self.host_xray_dir: {"bind": "/etc/xray", "mode": "rw"},
                 self.host_log_dir: {"bind": "/var/log/xray", "mode": "rw"},
-                self.host_sockets_dir: {"bind": "/run/xray", "mode": "rw"}
+                self.host_sockets_dir: {"bind": "/run/xray", "mode": "rw"},
             },
             network="anaconduit_net",
             restart_policy={"Name": "always"},

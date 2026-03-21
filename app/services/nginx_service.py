@@ -147,7 +147,17 @@ events {{
 }}
 
 stream {{
-    resolver 127.0.0.11 valid=30s;
+    resolver 127.0.0.11 ipv6=off valid=30s;
+    
+    # Таймаут на установку соединения с Xray
+    proxy_connect_timeout 2s; 
+    
+    # Время ожидания между двумя операциями чтения или записи
+    # Ставим побольше, чтобы не рвать сессию при простое
+    proxy_timeout 1h; 
+    
+    # Оптимизация TCP для уменьшения задержек
+    tcp_nodelay on;
     include /etc/nginx/stream-enabled/*.conf;
 }}
 
@@ -548,6 +558,9 @@ location ~ ^/(?P<fwdport>\\d+)/ {{
             name=self.CONTAINER_NAME,
             image=self.IMAGE,
             ports={"80/tcp": 80, "443/tcp": 443},
+            environment={
+                "TZ": "UTC"
+            },
             volumes=volumes,
             network="anaconduit_net",
             restart_policy={"Name": "always"},

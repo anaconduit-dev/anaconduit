@@ -23,7 +23,7 @@ class XrayAPIClient:
         self.handler_stub = proxyman_command_pb2_grpc.HandlerServiceStub(self.channel)
 
     async def get_stats(self, reset: bool = False) -> List[Dict[str, Any]]:
-        logger.info(f"Запрос статистики (reset={reset})...")
+        # logger.info(f"Запрос статистики (reset={reset})...")
         # Передаем параметр reset в запрос gRPC
         request = command_pb2.QueryStatsRequest(pattern="", reset=reset)
         

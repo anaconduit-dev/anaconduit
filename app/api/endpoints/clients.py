@@ -201,7 +201,6 @@ async def update_user_limits(
     
     if not user: 
         raise HTTPException(status_code=404, detail="User not found")
-    print(data) # traffic_limit=100 add_days=None auto_reset_traffic=True reset_period='day'
 
     if data.auto_reset_traffic is not None:
         user.auto_reset_traffic = data.auto_reset_traffic
