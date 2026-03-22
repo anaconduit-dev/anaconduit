@@ -1,4 +1,33 @@
 {
+  "settXray": {
+    "info": "Core lifecycle and version management",
+    "management": "Container management",
+    "errorLoadVersion": "Error loading versions",
+    "installVersion": "Install version {{version}}? The current version {{currentVersion}} will be replaced.",
+    "installSuccess": "Version {{version}} successfully installed",
+    "installError": "Error installing version {{version}}",
+    "action": "Xray Core: {{actionName}} completed",
+    "actionError": "Error: {{actionName}}",
+    "run": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
+    "version": "Available versions",
+    "synchronization": "Synchronizing with GitHub...",
+    "confirmStop": "Stop Xray?",
+    "confirmRestart": "Restart Xray?",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "dashboard":{
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "totalTraffic": "Total traffic",
+    "today": "today",
+    "host": "Host Resources",
+    "cpu": "CPU Load",
+    "managementPanel": "Server node management panel",
+    "conteinersStatus": "Containerization Status"
+  },
   "periods":{
     "day": "day",
     "week": "week",
@@ -7,7 +36,9 @@
   "common": {
     "reset": "Reset",
     "cancel": "Cancel",
-    "delete": "delete"
+    "delete": "delete",
+    "confirm": "Confirm",
+    "areYouSure": "Confirm action?"
   },
   "inbounds":{
     "deleteInbounds":"Delete inbound?",

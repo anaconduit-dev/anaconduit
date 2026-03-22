@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Users, BarChart3, Activity, HardDrive, Cpu, Database } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getStats, getStatsSystem } from "../api/stats";
 import type { DockerListResponse } from "../api/docker";
 
@@ -13,6 +14,7 @@ const formatBytes = (bytes: number) => {
 };
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { xrayStatus, dockerData } = useOutletContext<{ 
     xrayStatus: any; 
     dockerData: DockerListResponse | null 
@@ -44,9 +46,9 @@ export default function Dashboard() {
 
   const stats = [
     { 
-      name: "Пользователи", 
+      name: t("dashboard.users"), 
       value: summary?.total_clients ?? "...", 
-      sub: `+${summary?.new_today ?? 0} сегодня`, 
+      sub: `+${summary?.new_today ?? 0} ${t("dashboard.today")}`, 
       icon: <Users size={18}/>, 
       color: "bg-blue-500",
       customContent: (
@@ -59,9 +61,9 @@ export default function Dashboard() {
       )
     },
     { 
-      name: "Общий Трафик", 
+      name: t("dashboard.totalTraffic"), 
       value: summary ? formatBytes(summary.total_traffic_bytes) : "...", 
-      sub: "Всего прогнано", 
+      sub: "", 
       icon: <Database size={18}/>, 
       color: "bg-emerald-500",
       customContent: (
@@ -74,9 +76,9 @@ export default function Dashboard() {
       )
     },
     { 
-      name: "Ядро Xray", 
+      name: t("layout.xrayCore"), 
       value: xrayStatus.status === 'running' ? "ONLINE" : "OFFLINE", 
-      sub: `v${xrayStatus.version || '0.0'}`, 
+      sub: `${xrayStatus.version || '0.0'}`, 
       icon: <Activity size={18}/>, 
       color: xrayStatus.status === 'running' ? "bg-indigo-500" : "bg-red-500",
       customContent: (
@@ -93,9 +95,9 @@ export default function Dashboard() {
       )
     },
     { 
-      name: "Host Resources", 
+      name: t("dashboard.host"),
       value: `${systemStats?.system?.cpu_percent ?? 0}%`, 
-      sub: "CPU Load", 
+      sub: t("dashboard.cpu"), 
       icon: <Cpu size={18}/>, 
       color: (systemStats?.system?.cpu_percent > 80) ? "bg-red-600" : "bg-purple-500",
       customContent: (
@@ -114,16 +116,16 @@ export default function Dashboard() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-4xl font-black text-base tracking-tighter italic uppercase italic-important">
-              Dashboard<span className="text-indigo-500">.</span>
+              {t("dashboard.dashboard")}<span className="text-indigo-500">.</span>
             </h1>
             <p className="text-muted text-xs font-bold uppercase tracking-[0.2em]">
-              Server node management panel
+              {t("dashboard.managementPanel")}
             </p>
           </div>
           <div className="px-4 py-2 bg-card border border-line rounded-2xl flex items-center gap-3">
              <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
              <span className="text-[10px] font-black text-base uppercase tracking-widest">
-                Xray Core: <span className="text-indigo-500">{xrayStatus.version}</span>
+                {t("layout.xrayCore")} <span className="text-indigo-500">{xrayStatus.version}</span>
              </span>
           </div>
         </header>
@@ -155,7 +157,7 @@ export default function Dashboard() {
         <section className="bg-card/30 border border-line rounded-[3rem] p-8">
            <div className="flex items-center gap-3 mb-8">
               <HardDrive className="text-indigo-500" size={20} />
-              <h2 className="text-xs font-black text-base uppercase tracking-[0.3em]">Containerization Status</h2>
+              <h2 className="text-xs font-black text-base uppercase tracking-[0.3em]">{t("dashboard.conteinersStatus")}</h2>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {dockerData?.containers.map(c => (

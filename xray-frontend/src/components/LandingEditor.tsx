@@ -64,6 +64,41 @@ const LandingEditor = () => {
     }
   };
 
+  const handleDelete = async (file: LandingFile) => {
+    // Формируем текст сообщения в зависимости от типа объекта
+    let message = `Вы уверены, что хотите удалить файл "${file.name}"?`;
+    
+    if (file.is_dir) {
+      message = `⚠️ ВНИМАНИЕ: Вы удаляете ПАПКУ "${file.name}". \n\nВсе файлы и подпапки внутри неё будут удалены БЕЗВОЗВРАТНО! Продолжить?`;
+    }
+
+    // Используем стандартный confirm (или твой кастомный модал, если он есть)
+    if (!window.confirm(message)) return;
+
+    try {
+      setLoading(true); // Покажем спиннер во время удаления
+      await deleteLandingFile(file.path);
+      
+      // Если мы удалили папку, в которой сейчас находимся, или выше по дереву
+      if (file.is_dir && currentPath.startsWith(file.path)) {
+        await loadFileList(""); // Возвращаемся в корень
+        setCurrentFile("index.html"); // Сбрасываем редактор на главную
+        await loadFile("index.html");
+      } else {
+        // Иначе просто обновляем текущий список
+        await loadFileList(currentPath);
+      }
+      
+      // Можно добавить тост об успехе
+      // toast.success("Удалено успешно");
+    } catch (e) {
+      console.error("Ошибка при удалении", e);
+      alert("Не удалось удалить: " + e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadFileList(""); // Начинаем с корня
     loadFile('index.html');
@@ -139,10 +174,7 @@ const LandingEditor = () => {
                 <button 
                   onClick={async (e) => {
                     e.stopPropagation();
-                    if(confirm(`Удалить ${file.name}?`)) {
-                      await deleteLandingFile(file.path);
-                      loadFileList(currentPath);
-                    }
+                    handleDelete(file);
                   }}
                   className="opacity-0 group-hover:opacity-100 p-2 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
                 >

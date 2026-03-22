@@ -1,4 +1,33 @@
 {
+  "settXray":{
+    "info": "Управление жизненным циклом и версиями ядра",
+    "management": "Управление контейнером",
+    "errorLoadVersion": "Ошибка загрузки версий",
+    "installVersion": "Установить версию {{version}}? Текущая версия {{currentVersion}} будет заменена.",
+    "installSuccess": "Версия {{version}} успешно установлена",
+    "installError": "Ошибка при установке версии {{version}}",
+    "action": "Xray Core: {{actionName}} выполнено",
+    "actionError": "Ошибка: {{actionName}}",
+    "run": "Запуск",
+    "stop": "Стоп",
+    "restart": "Рестарт",
+    "version": "Доступные версии",
+    "synchronization": "Синхронизация с GitHub...",
+    "confirmStop": "Остановить Xray?",
+    "confirmRestsrt": "Перезапустить Xray?",
+    "confirm": "Подтвердить",
+    "cancel": "Отмена"
+  },
+  "dashboard":{
+    "dashboard": "Панель управления",
+    "users": "Пользователи",
+    "totalTraffic": "Общий трафик",
+    "today": "сегодня",
+    "host": "Использование ресурсов хоста",
+    "cpu": "Загрузка CPU",
+    "managementPanel": "Панель управления серверными узлами",
+    "conteinersStatus": "Статус контейнеризации"
+  },
   "periods":{
     "day": "день",
     "week": "неделя",
@@ -7,7 +36,9 @@
   "common": {
     "reset": "Сброс",
     "cancel": "Отмена",
-    "delete": "Удалить"
+    "delete": "Удалить",
+    "areYouSure": "Подтвердить действие?",
+    "confirm": "Подтвердить"
   },
   "inbounds":{
     "deleteInbounds":"Удалить инбаунд?",
