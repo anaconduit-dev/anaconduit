@@ -3,3 +3,11 @@ xray-frontend/dist
 .git
 .venv
 __pycache__
+.git
+.gitignore
+node_modules
+__pycache__
+*.pyc
+.env
+dist
+build

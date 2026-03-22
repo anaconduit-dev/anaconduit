@@ -1,27 +1,34 @@
-# --- Этап 1: Сборка фронтенда ---
+# --- Stage 1: frontend build ---
 FROM node:20-slim AS frontend-builder
 WORKDIR /build
+
 COPY xray-frontend/package*.json ./
-RUN npm install
+RUN npm ci
+
 COPY xray-frontend/ ./
 RUN npm run build
 
-# --- Этап 2: Финальный образ ---
+
+# --- Stage 2: backend ---
 FROM python:3.13-slim
 
-# Установка uv
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Копируем зависимости и устанавливаем их в систему
+# зависимости
+# зависимости
 COPY pyproject.toml uv.lock ./
 RUN uv pip install --system --no-cache .
-# Копируем всё остальное (включая папку alembic и alembic.ini)
+
+# код
 COPY . .
 
-# Копируем собранный фронтенд
+# фронт
 COPY --from=frontend-builder /build/dist ./app/static
 
 # Настройка прав и папок
