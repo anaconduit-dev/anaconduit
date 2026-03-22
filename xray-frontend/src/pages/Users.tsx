@@ -22,7 +22,7 @@ export default function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshInterval, setRefreshInterval] = useState<number>(0); 
-  const [previousData, setPreviousData] = useState<Record<number, number>>({});
+  const [previousData, setPreviousData] = useState<Record<string, number>>({});
   const [onlineUsers, setOnlineUsers] = useState<Record<number, boolean>>({});
   const [userSpeeds, setUserSpeeds] = useState<Record<number, string>>({});
   const [lastFetchTime, setLastFetchTime] = useState<number>(Date.now());
@@ -31,7 +31,8 @@ export default function UsersPage() {
   const [userForNewInbound, setUserForNewInbound] = useState<any | null>(null);
   const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
   const [userForLimits, setUserForLimits] = useState<any | null>(null);
-
+  const [onlineClients, setOnlineClients] = useState<Record<number, boolean>>({});
+  
   const handleResetTraffic = async (e: React.MouseEvent, user: any) => {
     e.stopPropagation();
 
@@ -71,25 +72,42 @@ export default function UsersPage() {
   const loadData = useCallback(async () => {
     try {
       const now = Date.now();
-      const interval = (now - lastFetchTime) / 1000; 
+      const interval = (now - lastFetchTime) / 1000;
       const data = await getUsers();
       const usersArray = Array.isArray(data) ? data : [];
-      
+
       const newOnlineMap: Record<number, boolean> = {};
-      const newDataMap: Record<number, number> = {};
+      const newDataMap: Record<string, number> = {}; // Теперь ключ - строка
       const newSpeedsMap: Record<number, string> = {};
+      const newOnlineClientsMap: Record<number, boolean> = {}; // Новая карта для клиентов
 
       usersArray.forEach(u => {
-        const currentTotal = u.total_up + u.total_down;
-        newDataMap[u.id] = currentTotal;
-        
-        if (previousData[u.id] !== undefined) {
-          const diff = currentTotal - previousData[u.id];
-          if (diff > 0) {
+        // 1. Логика для пользователя (общая)
+        const userTotal = u.total_up + u.total_down;
+        newDataMap[`user_${u.id}`] = userTotal;
+
+        if (previousData[`user_${u.id}`] !== undefined) {
+          const diff = userTotal - previousData[`user_${u.id}`];
+          if (diff > 0.1) { // Небольшой порог чувствительности
             newOnlineMap[u.id] = true;
-            const bytesPerSecond = diff / interval;
-            newSpeedsMap[u.id] = formatSpeed(bytesPerSecond);
+            newSpeedsMap[u.id] = formatSpeed(diff / interval);
           }
+        }
+
+        // 2. Логика для каждого инбаунда (клиента)
+        if (u.clients) {
+          u.clients.forEach((client: any) => {
+            const clientTotal = client.up + client.down;
+            const clientKey = `client_${client.id}`;
+            newDataMap[clientKey] = clientTotal;
+
+            if (previousData[clientKey] !== undefined) {
+              const clientDiff = clientTotal - previousData[clientKey];
+              if (clientDiff > 0.1) {
+                newOnlineClientsMap[client.id] = true;
+              }
+            }
+          });
         }
       });
 
@@ -98,6 +116,8 @@ export default function UsersPage() {
       setPreviousData(newDataMap);
       setLastFetchTime(now);
       setUsers(usersArray);
+      setOnlineClients(newOnlineClientsMap); 
+      
       setError(null);
     } catch (e) {
       setError(t("users.updateError"));
@@ -371,19 +391,42 @@ export default function UsersPage() {
 
                     <div className="pt-2 space-y-1.5 border-t border-line/50">
                       {user.clients && user.clients.length > 0 ? (
-                        user.clients.map((client: any) => (
-                          <div key={client.id} className="flex items-center justify-between bg-main/30 p-2 rounded-xl border border-line/30 group/item hover:bg-main/60 transition-colors">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="font-black text-indigo-500 uppercase px-1.5 py-0.5 bg-indigo-500/10 rounded-lg italic text-[8px] border border-indigo-500/20">
-                                {client.inbound?.protocol}
-                              </span>
-                              <span className="text-muted font-bold text-[10px] truncate group-hover/item:text-base transition-colors">{client.inbound?.tag}</span>
+                        user.clients.map((client: any) => {
+                          const isClientOnline = onlineClients[client.id]; // Проверяем активность ноды
+
+                          return (
+                            <div key={client.id} className="flex items-center justify-between bg-main/30 p-2 rounded-xl border border-line/30 group/item hover:bg-main/60 transition-colors relative overflow-hidden">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {/* Метка протокола с индикатором активности */}
+                                <div className="relative">
+                                  <span className={`font-black uppercase px-1.5 py-0.5 rounded-lg italic text-[8px] border transition-all duration-500 ${
+                                    isClientOnline 
+                                      ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.2)]' 
+                                      : 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20'
+                                  }`}>
+                                    {client.inbound?.protocol}
+                                  </span>
+                                  {isClientOnline && (
+                                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-ping opacity-75" />
+                                  )}
+                                </div>
+                                
+                                <span className={`text-[10px] font-bold truncate transition-colors ${
+                                  isClientOnline ? 'text-base font-black' : 'text-muted group-hover/item:text-base'
+                                }`}>
+                                  {client.inbound?.tag}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {isClientOnline && <Activity size={10} className="text-emerald-500 animate-pulse" />}
+                                <span className={`text-[9px] font-mono font-black ${isClientOnline ? 'text-emerald-400' : 'text-muted group-hover/item:text-indigo-400'}`}>
+                                  {formatSmallTraffic(client.up + client.down)}
+                                </span>
+                              </div>
                             </div>
-                            <span className="text-[9px] font-mono font-black text-muted group-hover/item:text-indigo-400">
-                              {formatSmallTraffic(client.up + client.down)}
-                            </span>
-                          </div>
-                        ))
+                          );
+                        })
                       ) : (
                         <div className="text-[9px] text-muted/40 font-black uppercase tracking-widest text-center py-2 italic">
                           {t("users.noNodes")}
