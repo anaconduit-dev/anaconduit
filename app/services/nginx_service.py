@@ -3,6 +3,8 @@ import logging
 import socket
 import os
 import re
+import shutil
+from pathlib import Path
 from sqlalchemy import select
 from app.models.models import Inbound
 from app.core.config import settings
@@ -111,30 +113,89 @@ p {{ color: #666; }}
         logger.info("🎨 Landing page updated via API")
 
     async def get_file_content(self, filename: str):
-        # Защита от выхода за пределы папки (Path Traversal)
-        safe_filename = os.path.basename(filename)
-        file_path = self.base_dir / "www" / safe_filename
-        if not file_path.exists():
+        relative_path = Path(filename.lstrip("/"))
+        file_path = (self.base_dir / "www" / relative_path).resolve()
+        base_www_dir = (self.base_dir / "www").resolve()
+
+        if not str(file_path).startswith(str(base_www_dir)) or not file_path.exists():
             return ""
+            
         return file_path.read_text()
 
     async def save_file_content(self, filename: str, content: str):
-        safe_filename = os.path.basename(filename)
-        file_path = self.base_dir / "www" / safe_filename
+        # 1. Формируем полный путь и нормализуем его (убираем .. и .)
+        # На входе может быть "temp1/index.html" или "/temp1/index.html"
+        relative_path = Path(filename.lstrip("/")) 
+        file_path = (self.base_dir / "www" / relative_path).resolve()
+        base_www_dir = (self.base_dir / "www").resolve()
+
+        # 2. Защита от Path Traversal (проверяем, что итоговый путь внутри www)
+        if not str(file_path).startswith(str(base_www_dir)):
+            logger.error(f"❌ Attempt to exit directory: {filename}")
+            raise Exception("Access denied: path is outside of www directory")
+
+        # 3. Автоматически создаем подпапки, если их нет (например, /temp1/)
+        # parent вернет путь до папки, в которой должен лежать файл
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # 4. Записываем контент
         await self._write(file_path, content)
+        logger.info(f"📂 File saved in subfolder: {relative_path}")
     
-    async def delete_file(self, filename: str):
-        safe_filename = os.path.basename(filename)
-        file_path = self.base_dir / "www" / safe_filename
+    async def list_files(self, subpath: str = ""):
+        """Рекурсивно возвращает список всех файлов и папок внутри www/subpath"""
+        base_www_dir = (self.base_dir / "www").resolve()
+        target_dir = (base_www_dir / subpath.lstrip("/")).resolve()
+
+        # Защита: не даем смотреть папки выше www
+        if not str(target_dir).startswith(str(base_www_dir)):
+            raise Exception("Access denied")
+
+        if not target_dir.exists():
+            return []
+
+        files_tree = []
         
+        # Используем os.scandir для производительности
+        with os.scandir(target_dir) as entries:
+            for entry in entries:
+                relative_entry_path = os.path.relpath(entry.path, base_www_dir)
+                
+                stats = entry.stat()
+                files_tree.append({
+                    "name": entry.name,
+                    "path": relative_entry_path,
+                    "is_dir": entry.is_dir(),
+                    "size": stats.st_size if entry.is_file() else 0,
+                    "last_modified": stats.st_mtime
+                })
+
+        # Сортируем: сначала папки, потом файлы (по алфавиту)
+        return sorted(files_tree, key=lambda x: (not x["is_dir"], x["name"].lower()))
+
+    async def delete_file(self, filename: str):
+        relative_path = Path(filename.lstrip("/"))
+        file_path = (self.base_dir / "www" / relative_path).resolve()
+        base_www_dir = (self.base_dir / "www").resolve()
+
+        # 1. Безопасность: Проверка на выход за пределы www
+        if not str(file_path).startswith(str(base_www_dir)):
+            raise Exception("Access denied: path is outside of www directory")
+
+        # 2. Запрет на удаление корня или index.html в корне
+        if file_path == base_www_dir or (file_path.name == "index.html" and file_path.parent == base_www_dir):
+            raise Exception("Cannot delete root index.html or base directory")
+
         if file_path.exists():
-            # Не даем удалить index.html, так как это база
-            if safe_filename == "index.html":
-                raise Exception("Cannot delete index.html")
-            
-            # Удаляем файл синхронно через anyio для безопасности потоков
-            await anyio.to_thread.run_sync(file_path.unlink)
-            logger.info(f"🗑️ File deleted: {safe_filename}")
+            if file_path.is_dir():
+                # Удаляем директорию со всем содержимым
+                # Выполняем в отдельном потоке, так как rmtree блокирующий
+                await anyio.to_thread.run_sync(shutil.rmtree, file_path)
+                logger.info(f"🗑️ Directory deleted: {relative_path}")
+            else:
+                # Удаляем одиночный файл
+                await anyio.to_thread.run_sync(file_path.unlink)
+                logger.info(f"🗑️ File deleted: {relative_path}")
     
     async def generate_main_nginx_conf(self):
         content = f"""

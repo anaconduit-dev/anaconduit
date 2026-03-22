@@ -19,6 +19,19 @@ export interface LandingData {
   html: string;
 }
 
+export interface LandingFile {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  size: number;
+  last_modified: number;
+}
+
+// Обновим старый интерфейс или заменим его
+export interface LandingFilesResponse {
+  files: LandingFile[]; // если бэкенд возвращает { "files": [...] }
+  // или просто LandingFile[], если возвращает прямой массив
+}
 /**
  * Управление статусом Nginx
  */
@@ -53,23 +66,32 @@ export const updateLandingContent = async (html: string): Promise<{ status: stri
   return response.data;
 };
 
-export const getLandingFiles = async (): Promise<string[]> => {
-  const response = await api.get('/nginx/landing/files');
-  return response.data.files;
+export const getLandingFiles = async (subpath: string = ""): Promise<LandingFile[]> => {
+  // Передаем subpath как query-параметр
+  const response = await api.get('/nginx/landing/list_files', {
+    params: { subpath }
+  });
+  return response.data; // Бэкенд возвращает массив напрямую (судя по твоему коду в FastAPI)
 };
 
 // Получить контент конкретного файла
 export const getFileContent = async (filename: string): Promise<string> => {
-  const response = await api.get(`/nginx/landing/file/${filename}`);
+  // Используем encodeURIComponent, чтобы слэши в пути не ломали URL
+  const encodedPath = encodeURIComponent(filename);
+  const response = await api.get(`/nginx/landing/file/${encodedPath}`);
   return response.data.content;
 };
-
 // Сохранить контент (создает или обновляет файл)
-export const saveFileContent = async (filename: string, content: string): Promise<void> => {
-  await api.post('/nginx/landing/save', { filename, html: content });
+export const saveFileContent = async (filename: string, content: string): Promise<{ status: string; message: string }> => {
+  const response = await api.post('/nginx/landing/save', { 
+    filename, 
+    html: content 
+  });
+  return response.data;
 };
 
 // Удалить файл
 export const deleteLandingFile = async (filename: string): Promise<void> => {
-  await api.delete(`/nginx/landing/file/${filename}`);
+  const encodedPath = encodeURIComponent(filename);
+  await api.delete(`/nginx/landing/file/${encodedPath}`);
 };

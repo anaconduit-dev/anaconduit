@@ -27,16 +27,7 @@ async def get_landing_content(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Не удалось прочитать файл: {e}")
 
-@router.get("/landing/files")
-async def list_files(
-    nginx_service = Depends(get_nginx_service),
-    current_admin=Depends(get_current_admin)
-    ):
-    """Список всех файлов в папке www"""
-    path = nginx_service.base_dir / "www"
-    return {"files": [f.name for f in path.iterdir() if f.is_file()]}
-
-@router.get("/landing/file/{filename}")
+@router.get("/landing/file/{filename:path}")
 async def get_file(
     filename: str,
     nginx_service = Depends(get_nginx_service),
@@ -160,7 +151,7 @@ async def save_file(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/landing/file/{filename}")
+@router.delete("/landing/file/{filename:path}")
 async def delete_file_endpoint(
     filename: str, 
     nginx_service = Depends(get_nginx_service),
@@ -174,3 +165,16 @@ async def delete_file_endpoint(
         # Если это наша ошибка про index.html — отдаем 400
         status = 400 if "index.html" in str(e) else 500
         raise HTTPException(status_code=status, detail=str(e))
+
+
+@router.get("/landing/list_files")
+async def get_list_files(
+    subpath: str = "", # Добавляем возможность передать подпапку
+    nginx_service = Depends(get_nginx_service),
+    current_admin = Depends(get_current_admin) 
+):
+    try:
+        # Передаем subpath в метод сервиса
+        return await nginx_service.list_files(subpath)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
