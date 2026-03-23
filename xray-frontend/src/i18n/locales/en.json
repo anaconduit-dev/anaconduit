@@ -1,4 +1,50 @@
 {
+  "settings": {
+    "title": "Configuration",
+    "subtitle": "Appearance and security parameters of Anaconduit",
+    "landingTitle": "Landing Page",
+    "landingDesc": "Editing placeholder files (HTML, CSS)",
+    "edit": "Edit",
+    "adminTitle": "Admin Credentials",
+    "adminDesc": "Change login and password for panel access",
+    "changeData": "Change Data",
+    "notifications": "Telegram Notifications",
+    "backups": "Database Backups",
+    "comingSoon": "(Coming Soon)",
+    "securityConfig": "SECURITY CONFIG",
+    "landingEditor": "LANDING EDITOR"
+  },
+  "inbounds": {
+    "title": "Inbounds",
+    "info": "Active Xray Core inbound ports",
+    "total": "Total ports",
+    "addInbound": "Add Port",
+    "deleteInbound": "Delete Inbound",
+    "deleteConfirm": "Are you sure you want to delete inbound {{tag}}? This will disconnect all associated clients.",
+    "deleteSuccess": "Port deleted successfully",
+    "deleteError": "Error deleting port",
+    "statusActive": "Active",
+    "statusDisabled": "Disabled",
+    "mappingPorts": "Mapping network ports...",
+    "port": "Port",
+    "clients": "Clients",
+    "protocol": "Protocol"
+  },
+  "settNginx": {
+    "info": "Gateway for your subscriptions and web interface",
+    "status": "Container Status",
+    "management": "Nginx Management",
+    "run": "Start",
+    "apply": "Apply",
+    "restart": "Restart",
+    "entryPoints": "Entry Points",
+    "mainHttp": "Main (HTTP)",
+    "engineVersion": "Engine Version",
+    "confirmApply": "Apply configuration changes?",
+    "confirmRestart": "Restart Nginx container?",
+    "actionSuccess": "Nginx: {{actionName}} completed successfully",
+    "actionError": "Nginx Error: {{actionName}}"
+  },
   "settXray": {
     "info": "Core lifecycle and version management",
     "management": "Container management",
@@ -39,11 +85,6 @@
     "delete": "delete",
     "confirm": "Confirm",
     "areYouSure": "Confirm action?"
-  },
-  "inbounds":{
-    "deleteInbounds":"Delete inbound?",
-    "deleteConfirm": "Do you want to completely delete the inbound {{tag}}?",
-    "deleteSuccess": "Inbound has been removed"
   },
   "status": {
     "active": "ACTIVE",
@@ -106,7 +147,7 @@
     "updateAvailable": "UPDATE",
     "menu": {
       "home": "Dashboard",
-      "xrayConfig": "Xray Config",
+      "xrayConfig": "Xray",
       "inbounds": "Inbounds",
       "users": "Users",
       "nginx": "Nginx",

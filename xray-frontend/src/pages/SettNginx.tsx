@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { toast } from 'react-hot-toast';
+import { useConfirm } from "../context/ConfirmContext";
 import { 
   RefreshCcw, 
   Play, 
-  AlertCircle, 
-  CheckCircle2,
   ShieldCheck,
   Globe,
   ExternalLink,
   Zap,
-  Lock // Добавили Lock сюда
+  Lock,
+  Loader2
 } from "lucide-react";
 
 import { startNginx, restartNginx, applyNginx, getNginxLogs } from "../api/nginx";
@@ -22,28 +24,41 @@ interface ContextType {
 
 export default function SettNginx() {
   const { nginxStatus, refreshStatus } = useOutletContext<ContextType>();
+  const { t } = useTranslation();
+  const confirm = useConfirm();
   
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
-  const [message, setMessage] = useState({ text: "", type: "" });
 
   const runAction = async (
     actionName: string, 
     actionFn: () => Promise<any>, 
-    confirmText?: string
+    confirmKey?: string
   ) => {
-    if (confirmText && !window.confirm(confirmText)) return;
+    if (confirmKey) {
+      const isConfirmed = await confirm({
+        title: t(`settNginx.${actionName}`),
+        message: t(`settNginx.${confirmKey}`),
+        type: actionName === 'restart' ? 'danger' : 'info',
+        confirmText: t("common.confirm"),
+        cancelText: t("common.cancel")
+      });
+      if (!isConfirmed) return;
+    }
     
     setLoadingAction(actionName);
-    try {
-      await actionFn();
-      setMessage({ text: `Nginx: ${actionName} выполнен успешно`, type: "success" });
-      setTimeout(() => refreshStatus(), 2000);
-    } catch (error) {
-      setMessage({ text: `Ошибка Nginx: ${actionName}`, type: "error" });
-    } finally {
-      setLoadingAction(null);
-      setTimeout(() => setMessage({ text: "", type: "" }), 5000);
-    }
+
+    toast.promise(actionFn(), {
+      loading: `${actionName}...`,
+      success: () => {
+        setTimeout(() => refreshStatus(), 1500);
+        setLoadingAction(null);
+        return t("settNginx.actionSuccess", { actionName: t(`settNginx.${actionName}`) });
+      },
+      error: () => {
+        setLoadingAction(null);
+        return t("settNginx.actionError", { actionName: t(`settNginx.${actionName}`) });
+      }
+    });
   };
 
   return (
@@ -62,20 +77,19 @@ export default function SettNginx() {
               </h1>
             </div>
             <p className="text-muted text-[10px] font-black uppercase tracking-[0.2em] ml-1">
-              Шлюз для ваших подписок и веб-интерфейса
+              {t("settNginx.info")}
             </p>
           </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           
-          {/* ЛЕВАЯ КОЛОНКА (Управление) */}
           <div className="lg:col-span-2 space-y-8">
             <div className="bg-main border border-line rounded-[2.5rem] overflow-hidden shadow-sm">
               <div className="p-6 border-b border-line bg-card/30 flex justify-between items-center">
-                <div className="flex items-center gap-3 text-base font-black uppercase text-[10px] tracking-widest">
-                  <ShieldCheck size={16} className="text-indigo-500" />
-                  Статус контейнера
+                <div className="flex items-center gap-3 text-base font-black uppercase text-[10px] tracking-widest text-muted">
+                  <ShieldCheck size={16} className="text-emerald-500" />
+                  {t("settNginx.status")}
                 </div>
                 <div className={`text-[9px] font-black px-3 py-1.5 rounded-xl border tracking-[0.1em] ${
                   nginxStatus.status === 'running' 
@@ -88,69 +102,59 @@ export default function SettNginx() {
               
               <div className="p-10">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  {/* Start */}
                   <button
-                    onClick={() => runAction('start', startNginx)}
+                    onClick={() => runAction('run', startNginx)}
                     disabled={!!loadingAction || nginxStatus.status === 'running'}
                     className="group flex flex-col items-center gap-4 p-8 rounded-[2rem] bg-card border border-line hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all disabled:opacity-30 active:scale-95 shadow-xl"
                   >
                     <div className={`p-4 rounded-2xl ${nginxStatus.status !== 'running' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-900/40" : "bg-main text-muted"}`}>
-                      <Play size={24} fill="currentColor" />
+                      {loadingAction === 'run' ? <Loader2 className="animate-spin" size={24} /> : <Play size={24} fill="currentColor" />}
                     </div>
-                    <span className="font-black text-[10px] text-base uppercase tracking-widest group-hover:text-emerald-500 transition-colors">Запустить</span>
+                    <span className="font-black text-[10px] text-base uppercase tracking-widest group-hover:text-emerald-500 transition-colors">{t("settNginx.run")}</span>
                   </button>
 
+                  {/* Apply */}
                   <button
-                    onClick={() => runAction('apply', applyNginx, "Применить изменения конфигурации?")}
+                    onClick={() => runAction('apply', applyNginx, "confirmApply")}
                     disabled={!!loadingAction || nginxStatus.status !== 'running'}
                     className="group flex flex-col items-center gap-4 p-8 rounded-[2rem] bg-card border border-line hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all disabled:opacity-30 active:scale-95 shadow-xl"
                   >
                     <div className={`p-4 rounded-2xl ${nginxStatus.status === 'running' ? "bg-indigo-500 text-white shadow-lg shadow-indigo-900/40" : "bg-main text-muted"}`}>
-                      <Zap size={24} fill="currentColor" />
+                      {loadingAction === 'apply' ? <Loader2 className="animate-spin" size={24} /> : <Zap size={24} fill="currentColor" />}
                     </div>
-                    <span className="font-black text-[10px] text-base uppercase tracking-widest group-hover:text-indigo-500 transition-colors">Применить</span>
+                    <span className="font-black text-[10px] text-base uppercase tracking-widest group-hover:text-indigo-500 transition-colors">{t("settNginx.apply")}</span>
                   </button>
 
+                  {/* Restart */}
                   <button
-                    onClick={() => runAction('restart', restartNginx, "Перезапустить контейнер?")}
+                    onClick={() => runAction('restart', restartNginx, "confirmRestart")}
                     disabled={!!loadingAction}
                     className="group flex flex-col items-center gap-4 p-8 rounded-[2rem] bg-card border border-line hover:border-blue-500/50 hover:bg-blue-500/5 transition-all disabled:opacity-30 active:scale-95 shadow-xl"
                   >
                     <div className="p-4 rounded-2xl bg-blue-500 text-white shadow-lg shadow-blue-900/40">
                       <RefreshCcw size={24} className={loadingAction === 'restart' ? 'animate-spin' : ''} />
                     </div>
-                    <span className="font-black text-[10px] text-base uppercase tracking-widest group-hover:text-blue-500 transition-colors">Рестарт</span>
+                    <span className="font-black text-[10px] text-base uppercase tracking-widest group-hover:text-blue-500 transition-colors">{t("settNginx.restart")}</span>
                   </button>
                 </div>
-
-                {message.text && (
-                  <div className={`mt-10 p-5 rounded-[1.5rem] border flex items-center gap-4 text-xs font-bold uppercase tracking-tight animate-in slide-in-from-top-4 ${
-                    message.type === 'success' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500' : 'bg-red-500/5 border-red-500/20 text-red-500'
-                  }`}>
-                    {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-                    {message.text}
-                  </div>
-                )}
               </div>
             </div>
 
             <div className="rounded-[2.5rem] overflow-hidden border border-line shadow-2xl">
-              <LogTerminal 
-                title="Nginx Access & Error Logs" 
-                fetchFn={getNginxLogs} 
-              />
+              <LogTerminal title="Nginx Access & Error Logs" fetchFn={getNginxLogs} />
             </div>
           </div>
 
-          {/* ПРАВАЯ КОЛОНКА (Инфо) */}
           <div className="space-y-6 shrink-0">
             <div className="bg-card/50 border border-line rounded-[2.5rem] p-8 space-y-6">
-              <h3 className="font-black text-base text-[10px] uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
+              <h3 className="font-black text-base text-[10px] uppercase tracking-[0.2em] mb-4 flex items-center gap-3 text-muted">
                 <ExternalLink size={16} className="text-indigo-500" />
-                Точки входа
+                {t("settNginx.entryPoints")}
               </h3>
               <div className="space-y-4">
                 <a href="/" target="_blank" className="flex items-center justify-between p-5 rounded-[1.5rem] bg-main border border-line hover:border-indigo-500/50 hover:shadow-lg transition-all group active:scale-95">
-                  <span className="text-[10px] font-black text-base uppercase tracking-widest">Главная (HTTP)</span>
+                  <span className="text-[10px] font-black text-base uppercase tracking-widest">{t("settNginx.mainHttp")}</span>
                   <ExternalLink size={14} className="text-muted group-hover:text-indigo-500 transition-colors" />
                 </a>
                 
@@ -167,10 +171,9 @@ export default function SettNginx() {
               </div>
             </div>
 
-            {/* Инфо-виджет */}
             <div className="bg-[#0c0c0e] rounded-[2.5rem] p-8 text-white overflow-hidden relative min-h-[160px] flex flex-col justify-end border border-white/5 shadow-2xl">
               <div className="relative z-10">
-                  <p className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-2">Engine Version</p>
+                  <p className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-2">{t("settNginx.engineVersion")}</p>
                   <p className="text-2xl font-mono font-black text-white tracking-tighter">
                      {nginxStatus.version || 'nginx:stable'}
                   </p>

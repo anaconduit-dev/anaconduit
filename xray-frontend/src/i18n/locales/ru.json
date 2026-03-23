@@ -1,4 +1,50 @@
 {
+  "settings": {
+    "title": "Конфигурация",
+    "subtitle": "Внешний вид и параметры безопасности Anaconduit",
+    "landingTitle": "Landing Page",
+    "landingDesc": "Редактирование файлов заглушки (HTML, CSS)",
+    "edit": "Редактировать",
+    "adminTitle": "Admin Credentials",
+    "adminDesc": "Смена логина и пароля для входа в панель",
+    "changeData": "Изменить данные",
+    "notifications": "Telegram Уведомления",
+    "backups": "Бэкапы базы данных",
+    "comingSoon": "(Скоро)",
+    "securityConfig": "НАСТРОЙКИ БЕЗОПАСНОСТИ",
+    "landingEditor": "РЕДАКТОР ЛЕНДИНГА"
+  },
+  "inbounds": {
+    "title": "Инбаунды",
+    "info": "Активные входящие порты Xray Core",
+    "total": "Всего портов",
+    "addInbound": "Добавить порт",
+    "deleteInbound": "Удалить инбаунд",
+    "deleteConfirm": "Вы уверены, что хотите удалить входящий порт {{tag}}? Это отключит всех привязанных к нему клиентов.",
+    "deleteSuccess": "Порт успешно удален",
+    "deleteError": "Ошибка при удалении порта",
+    "statusActive": "Активен",
+    "statusDisabled": "Отключен",
+    "mappingPorts": "Сканирование сетевых портов...",
+    "port": "Порт",
+    "clients": "Клиенты",
+    "protocol": "Протокол"
+  },
+  "settNginx": {
+    "info": "Шлюз для ваших подписок и веб-интерфейса",
+    "status": "Статус контейнера",
+    "management": "Управление Nginx",
+    "run": "Запустить",
+    "apply": "Применить",
+    "restart": "Рестарт",
+    "entryPoints": "Точки входа",
+    "mainHttp": "Главная (HTTP)",
+    "engineVersion": "Версия движка",
+    "confirmApply": "Применить изменения конфигурации?",
+    "confirmRestart": "Перезапустить контейнер Nginx?",
+    "actionSuccess": "Nginx: {{actionName}} выполнен успешно",
+    "actionError": "Ошибка Nginx: {{actionName}}"
+  },
   "settXray":{
     "info": "Управление жизненным циклом и версиями ядра",
     "management": "Управление контейнером",
@@ -39,11 +85,6 @@
     "delete": "Удалить",
     "areYouSure": "Подтвердить действие?",
     "confirm": "Подтвердить"
-  },
-  "inbounds":{
-    "deleteInbounds":"Удалить инбаунд?",
-    "deleteConfirm": "Полностью удалить инбаунд {{tag}}?",
-    "deleteSuccess": "Инбаунд удален"
   },
   "status": {
     "active": "ACTIVE",
@@ -106,7 +147,7 @@
     "updateAvailable": "ОБНОВЛЕНИЕ",
     "menu": {
       "home": "Главная",
-      "xrayConfig": "Конфиг Xray",
+      "xrayConfig": "Xray",
       "inbounds": "Подключения",
       "users": "Пользователи",
       "nginx": "Nginx",

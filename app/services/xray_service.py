@@ -334,34 +334,41 @@ class XrayService:
 
     # ---------- Stats & DB Update ----------
 
-    async def reset_user_traffic(self, session: AsyncSessionLocal, user_id: int):
+    async def reset_user_traffic(self, session, user_id: int):
+        # Используем одну сессию, переданную сверху
         user = await session.get(User, user_id)
-        if not user:
-            return
+        if not user: return
         
-        # 1. Обновляем накопители User
-        user.summary_total_up += user.total_up
-        user.summary_total_down += user.total_down
+        logger.info(f"--- СБРОС ТРАФИКА ДЛЯ {user.email} ---")
+        logger.info(f"Было: up={user.total_up}, down={user.total_down}")
+
+        # Важно: приводим к 0, если там None
+        current_up = user.total_up or 0
+        current_down = user.total_down or 0
+
+        # 1. Обновляем накопители (summary)
+        user.summary_total_up = (user.summary_total_up or 0) + current_up
+        user.summary_total_down = (user.summary_total_down or 0) + current_down
         
-        # Обнуляем текущие
+        # 2. Обнуляем текущие
         user.total_up = 0
         user.total_down = 0
-        user.last_reset_at = func.now()
-        # 2. Обновляем накопители всех Client этого пользователя
+        user.last_reset_at = datetime.now() # Используем объект даты, а не функцию SQL
+
+        # 3. Обновляем клиентов
         result = await session.execute(select(Client).where(Client.user_id == user_id))
         clients = result.scalars().all()
-        
         for client in clients:
-            client.summary_up += client.up
-            client.summary_down += client.down
+            client.summary_up = (client.summary_up or 0) + (client.up or 0)
+            client.summary_down = (client.summary_down or 0) + (client.down or 0)
             client.up = 0
             client.down = 0
         
-        await session.commit()
+        # НЕ делаем тут session.commit(), сделаем его один раз в check_and_reset_traffic
+        logger.info(f"Стало: summary_up={user.summary_total_up}, summary_down={user.summary_total_down}")
 
     async def check_and_reset_traffic(self):
         async with AsyncSessionLocal() as session:
-            # Ищем пользователей с включенным автосбросом
             result = await session.execute(
                 select(User).where(User.auto_reset_traffic == True)
             )
@@ -369,19 +376,22 @@ class XrayService:
             now = datetime.now()
 
             for user in users:
+                # Считаем разницу во времени
+                last_check = user.last_reset_at or user.created_at
+                delta = now - last_check
+                
                 should_reset = False
-                delta = now - (user.last_reset_at or user.created_at)
-                logger.debug(f"проверка usera:{user.email} прошло дней {delta}, цикл сброса каждый {user.reset_period}")
                 if user.reset_period == "day" and delta.days >= 1:
                     should_reset = True
                 elif user.reset_period == "week" and delta.days >= 7:
                     should_reset = True
                 elif user.reset_period == "month" and delta.days >= 30:
                     should_reset = True
-                logger.debug(f"готовность к сбросу: {should_reset}")
+
                 if should_reset:
-                    # Используем нашу готовую функцию сброса (из прошлых шагов)
                     await self.reset_user_traffic(session, user.id)
+            
+            await session.commit() # Один коммит на всех
     # app/services/xray_service.py
 
     async def update_stats_in_db(self):
