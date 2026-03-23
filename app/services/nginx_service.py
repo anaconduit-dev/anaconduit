@@ -117,10 +117,22 @@ p {{ color: #666; }}
         file_path = (self.base_dir / "www" / relative_path).resolve()
         base_www_dir = (self.base_dir / "www").resolve()
 
+        # Проверка пути (защита от Path Traversal)
         if not str(file_path).startswith(str(base_www_dir)) or not file_path.exists():
             return ""
-            
-        return file_path.read_text()
+
+        # Список разрешенных расширений для текстового редактора
+        text_extensions = {'.html', '.css', '.js', '.json', '.txt', '.conf'}
+        
+        if file_path.suffix.lower() not in text_extensions:
+            # Если это картинка или бинарник — не пытаемся читать как текст
+            return f"Error: File type {file_path.suffix} is not editable as text."
+
+        try:
+            return file_path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            # Если файл все равно не читается (не та кодировка)
+            return "Error: File contains binary data or invalid encoding."
 
     async def save_file_content(self, filename: str, content: str):
         # 1. Формируем полный путь и нормализуем его (убираем .. и .)

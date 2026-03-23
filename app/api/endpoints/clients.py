@@ -284,6 +284,7 @@ async def reset_user_traffic(
         # 2. Обновляем Clients (накопители + обнуление текущих)
         # Используем ленивое обновление через update statement
         await xray_service.reset_user_traffic(db, user_id)
+        await db.commit()
         return {"status": "success", "message": f"Traffic reset for user {user.email}"}
 
     except Exception as e:
