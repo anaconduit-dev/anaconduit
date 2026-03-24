@@ -379,7 +379,7 @@ class XrayService:
                 # Считаем разницу во времени
                 last_check = user.last_reset_at or user.created_at
                 delta = now - last_check
-                
+                logger.info(f"пользователь {user.email}, период {user.reset_period} прошло {delta}")
                 should_reset = False
                 if user.reset_period == "day" and delta.days >= 1:
                     should_reset = True

@@ -222,7 +222,7 @@ async def update_user_limits(
     # 3. Логика автоматической активации
     now = datetime.now()
     # Важно: суммируем текущий расход
-    total_used = user.total_up + user.total_down
+    total_used = (user.total_up or 0) + (user.total_down or 0)
     time_ok = not user.expiry_time or user.expiry_time > now
     traffic_ok = user.traffic_limit == 0 or total_used < user.traffic_limit
 
