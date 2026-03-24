@@ -1,0 +1,25 @@
+version: "3.8"
+
+networks:
+  anaconduit_net:
+    name: anaconduit_net
+    driver: bridge
+
+services:
+  backend:
+    image: ghcr.io/${GHCR_USER:-anaconduit-dev}/anaconduit:${VERSION}
+    container_name: anaconduit_backend
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - HOST_DATA_PATH=${HOST_DATA_PATH}
+      - DATABASE_URL=${DATABASE_URL}
+      - TZ=UTC
+    ports:
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOST_DATA_PATH}:/app/data
+    networks:
+      - anaconduit_net
