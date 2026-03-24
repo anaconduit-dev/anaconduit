@@ -41,7 +41,7 @@
 Запустите команду установки. Скрипт автоматически установит Docker, настроит Nginx и подготовит конфигурации Xray:
 
 ```bash
-sudo bash -c "$(curl -sL [https://github.com/anaconduit-dev/anaconduit-script/raw/main/install.sh](https://github.com/anaconduit-dev/anaconduit-script/raw/main/install.sh))" @ install
+sudo bash -c "$(curl -sL https://github.com/anaconduit-dev/anaconduit-script/raw/main/install.sh)" @ install
 ```
 ## 🛠 Технологический стек
 
