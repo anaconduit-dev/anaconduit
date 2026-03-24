@@ -345,11 +345,15 @@ map $ssl_preread_server_name $backend {{
 
 server {{
     listen 443;
+    listen [::]:443;
 
     proxy_pass $backend;
 
     ssl_preread on;
     proxy_protocol on;
+
+    proxy_connect_timeout 5s;
+    proxy_timeout 1h;
 }}
 """
         await self._write(self.stream_d / "00-sni-router.conf", content)
@@ -359,7 +363,10 @@ server {{
         redirect_conf = f"""
 server {{
     listen 80;
+    listen [::]:80;
     server_name {self.domain} {self.reality_domain};
+
+    client_header_timeout 10s;
 
     return 301 https://$host$request_uri;
 }}
@@ -379,6 +386,12 @@ server {{
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_certificate     /etc/nginx/certs/live/{self.domain}/fullchain.pem;
     ssl_certificate_key /etc/nginx/certs/live/{self.domain}/privkey.pem;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:10m;
+
+    client_max_body_size 1m;
+    client_header_timeout 10s;
+    send_timeout 10s;
 
     server_tokens off;
 
