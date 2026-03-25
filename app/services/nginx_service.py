@@ -25,6 +25,7 @@ class NginxService:
         self.sites_e_d = self.base_dir / "sites-enabled"
         self.snippets = self.base_dir / "snippets"
         self.certs_dir = self.base_dir / "certs"
+        self.user_conf_d = self.base_dir / "user-conf.d"
         self.host_sockets_dir = f"{settings.host_data_path}/run"
         os.makedirs(self.host_sockets_dir, exist_ok=True)
         # Важно: даем права, чтобы контейнеры могли писать/читать сокеты
@@ -69,10 +70,12 @@ class NginxService:
             self.sites_e_d,
             self.snippets,
             self.certs_dir,
+            self.user_conf_d,
         ]
     
         for d in dirs:
             d.mkdir(parents=True, exist_ok=True)
+        os.chmod(self.user_conf_d, 0o775)
 
 
     async def generate_placeholder_page(self):
@@ -252,6 +255,9 @@ http {{
 
     keepalive_timeout 65;
     include /etc/nginx/sites-enabled/*;
+
+    # Позволяет пользователю добавлять свои server блоки или настройки
+    include /etc/nginx/user-conf.d/*.conf;
 }}
 """
         await self._write(self.base_dir / "nginx.conf", content)
@@ -377,6 +383,11 @@ server {{
     http2 on;
 
     server_name {self.domain};
+
+    # 1. Точка входа для кастомных путей (location)
+    # Пользователь может создать файл /etc/nginx/snippets/custom_paths.conf
+    include /etc/nginx/snippets/user-*.conf;
+
     port_in_redirect off;
 
     root /var/www/html/;
@@ -629,6 +640,7 @@ location ~ ^/(?P<fwdport>\\d+)/ {{
             f"{host_nginx_dir}/www": {"bind": "/var/www/html", "mode": "rw"},
             f"{host_nginx_dir}/sites-available": {"bind": "/etc/nginx/sites-available", "mode": "rw"},
             f"{host_nginx_dir}/sites-enabled": {"bind": "/etc/nginx/sites-enabled", "mode": "rw"},
+            f"{host_nginx_dir}/user-conf.d": {"bind": "/etc/nginx/user-conf.d", "mode": "rw"},
         }
         volumes[self.host_sockets_dir] = {"bind": "/run/xray", "mode": "ro"}
 
