@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.api import xray, docker
-from app.api.endpoints import auth, inbounds, clients, config, sub, nginx, stats, admin, app
+from app.api.endpoints import auth, inbounds, clients, config, sub, nginx, stats, admin, app, backup
 
 
 
@@ -66,4 +66,10 @@ api_router.include_router(
     stats.router, 
     prefix="/stats", 
     tags=["stats"]
+)
+
+api_router.include_router(
+    backup.router, 
+    prefix="/backup", 
+    tags=["backup"]
 )

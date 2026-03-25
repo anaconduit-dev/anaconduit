@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.xray_api.client import XrayAPIClient
 from app.services.xray_service import XrayService
 from app.services.nginx_service import NginxService
+from app.services.backup_service import BackupService
 
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,8 @@ def get_xray_service(client: XrayAPIClient = Depends(get_xray_client)) -> XraySe
 def get_nginx_service() -> NginxService:
     return NginxService()
 
-
+def get_backup_service() -> BackupService:
+    return BackupService()
 # --- Аутентификация ---
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/auth/login",

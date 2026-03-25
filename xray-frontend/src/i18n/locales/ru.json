@@ -1,4 +1,19 @@
 {
+  "system": {
+      "backups": "Резервные копии",
+      "createBackup": "Создать бэкап",
+      "noBackups": "Список бэкапов пуст",
+      "fileName": "Имя файла",
+      "size": "Размер",
+      "createdAt": "Дата создания",
+      "deleteConfirm": "Вы уверены, что хотите удалить бэкап {{filename}}?",
+      "createSuccess": "Бэкап успешно создан",
+      "deleteSuccess": "Бэкап удален",
+      "downloadError": "Ошибка при скачивании",
+      "table": {
+          "actions": "Действия"
+      }
+    },
   "settings": {
     "title": "Конфигурация",
     "subtitle": "Внешний вид и параметры безопасности Anaconduit",
@@ -12,7 +27,9 @@
     "backups": "Бэкапы базы данных",
     "comingSoon": "(Скоро)",
     "securityConfig": "НАСТРОЙКИ БЕЗОПАСНОСТИ",
-    "landingEditor": "РЕДАКТОР ЛЕНДИНГА"
+    "landingEditor": "РЕДАКТОР ЛЕНДИНГА",
+    "backupsDesc": "Управление точками восстановления и снимками базы данных SQLite",
+    "manage": "Управлять"
   },
   "inbounds": {
     "title": "Инбаунды",

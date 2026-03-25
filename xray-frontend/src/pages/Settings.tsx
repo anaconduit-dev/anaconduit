@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Edit3, Globe, Lock, ShieldCheck, BellOff, Database } from 'lucide-react';
+import { Edit3, Globe, Lock, ShieldCheck, BellOff, Database, Archive } from 'lucide-react';
 import LandingEditor from '../components/LandingEditor';
 import AdminCredentialsForm from '../components/AdminCredentialsForm';
 import Modal from '../components/Modal';
+import BackupModal from '../components/BackupModal'; // Импортируем нашу новую модалку
 
 const SettingsPage = () => {
   const { t } = useTranslation();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false); // Состояние для бэкапов
 
   return (
     <div className="p-8 h-full overflow-y-auto custom-scrollbar">
@@ -74,6 +76,31 @@ const SettingsPage = () => {
               {t("settings.changeData")}
             </button>
           </section>
+
+          {/* НОВАЯ КАРТОЧКА: Резервные копии */}
+          <section className="bg-main border border-line rounded-[2.5rem] p-8 flex flex-col md:flex-row items-start md:items-center justify-between group hover:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/5 transition-all duration-500 gap-6">
+            <div className="flex items-center gap-6">
+              <div className="p-4 bg-blue-500/10 rounded-[2rem] text-blue-500 group-hover:scale-110 transition-transform shadow-inner border border-blue-500/10">
+                <Database size={32} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-lg uppercase tracking-tight italic">
+                  {t("settings.backups")}
+                </h3>
+                <p className="text-muted text-[10px] font-bold uppercase tracking-wider mt-1 opacity-70">
+                  {t("settings.backupsDesc") || "Управление точками восстановления базы данных"}
+                </p>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => setIsBackupModalOpen(true)}
+              className="w-full md:w-auto flex items-center justify-center gap-3 bg-card border border-line hover:border-blue-500/50 hover:text-blue-500 text-muted px-8 py-4 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 shadow-xl group/btn"
+            >
+              <Archive size={18} className="group-hover/btn:-translate-y-1 transition-transform" />
+              {t("settings.manage")}
+            </button>
+          </section>
         </div>
 
         {/* Прочие настройки (Плейсхолдеры) */}
@@ -87,16 +114,8 @@ const SettingsPage = () => {
                 <span className="text-indigo-500/40">{t("settings.comingSoon")}</span>
               </span>
           </div>
-
-          <div className="bg-card/20 border-2 border-dashed border-line rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center group grayscale hover:grayscale-0 transition-all duration-500">
-              <div className="w-12 h-12 rounded-2xl bg-line/50 flex items-center justify-center text-muted/30 mb-4 group-hover:scale-110 transition-transform">
-                <Database size={24} />
-              </div>
-              <span className="text-[10px] font-black text-muted/40 uppercase tracking-[0.3em] group-hover:text-muted transition-colors">
-                {t("settings.backups")} <br/>
-                <span className="text-indigo-500/40">{t("settings.comingSoon")}</span>
-              </span>
-          </div>
+          
+          {/* Здесь можно добавить еще один плейсхолдер для симметрии или оставить пустым */}
         </div>
 
         {/* Модалки */}
@@ -119,6 +138,12 @@ const SettingsPage = () => {
             <AdminCredentialsForm onSuccess={() => setIsAuthModalOpen(false)} />
           </div>
         </Modal>
+
+        {/* Наша новая модалка бэкапов */}
+        <BackupModal 
+          isOpen={isBackupModalOpen} 
+          onClose={() => setIsBackupModalOpen(false)} 
+        />
 
       </div>
     </div>

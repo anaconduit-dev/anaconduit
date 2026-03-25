@@ -1,4 +1,19 @@
 {
+  "system": {
+    "backups": "Backups",
+    "createBackup": "Create Backup",
+    "noBackups": "Backup list is empty",
+    "fileName": "File name",
+    "size": "Size",
+    "createdAt": "Creation date",
+    "deleteConfirm": "Are you sure you want to delete the backup {{filename}}?",
+    "createSuccess": "Backup created successfully",
+    "deleteSuccess": "Backup deleted",
+    "downloadError": "Download error",
+    "table": {
+        "actions": "Actions"
+    }
+  },
   "settings": {
     "title": "Configuration",
     "subtitle": "Appearance and security parameters of Anaconduit",
@@ -12,7 +27,9 @@
     "backups": "Database Backups",
     "comingSoon": "(Coming Soon)",
     "securityConfig": "SECURITY CONFIG",
-    "landingEditor": "LANDING EDITOR"
+    "landingEditor": "LANDING EDITOR",
+    "backupsDesc": "Manage SQLite database restore points and snapshots",
+    "manage": "Manage"
   },
   "inbounds": {
     "title": "Inbounds",
