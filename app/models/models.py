@@ -52,7 +52,7 @@ class User(Base):
     reset_period = Column(String, default="month")
     last_reset_at = Column(DateTime, server_default=func.now(), nullable=True)
 
-    clients = relationship("Client", back_populates="user", cascade="all, delete-orphan")
+    clients = relationship("Client", back_populates="user", cascade="all")
 
 class Client(Base):
     """Конкретный 'ключ' (UUID) пользователя для конкретного инбаунда"""
