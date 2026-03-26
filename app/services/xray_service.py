@@ -418,10 +418,10 @@ class XrayService:
             result = await session.execute(
                 select(Client.id, Client.user_id, User.email, Inbound.tag)
                 .join(User).join(Inbound)
-                .where(User.email.in_(needed_identifiers))
+                .where(func.lower(User.email).in_(needed_identifiers))
             )
             # Создаем карту для быстрого поиска: {(email, tag): (client_id, user_id)}
-            mapping = {(r.email, r.tag): (r.id, r.user_id) for r in result}
+            mapping = {(r.email.lower(), r.tag.lower()): (r.id, r.user_id) for r in result}
 
             client_deltas = defaultdict(lambda: {"up": 0, "down": 0})
             user_deltas = defaultdict(lambda: {"up": 0, "down": 0})
