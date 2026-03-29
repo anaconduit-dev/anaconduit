@@ -243,6 +243,7 @@ class XrayService:
                 reality_settings = clean_stream_settings.get("realitySettings", {})
                 if settings.reality_dest_domain in reality_settings.get("dest", ""):
                     reality_settings["dest"] = "nginx:9443"
+                    reality_settings["xver"] = 1
                     clean_stream_settings["realitySettings"] = reality_settings
             
 

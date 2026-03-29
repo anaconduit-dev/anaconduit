@@ -480,11 +480,19 @@ server {{
 """
         reality_conf = fr"""
 server {{
-    listen 9443 ssl;
-    listen [::]:9443 ssl;
+    listen 9443 ssl proxy_protocol;
+    listen [::]:9443 ssl proxy_protocol;
     http2 on;
 
     server_name {self.reality_domain};
+    
+    # 2. Настройки для извлечения реального IP
+    set_real_ip_from  172.18.0.0/16;
+    set_real_ip_from  10.0.0.0/8;
+    set_real_ip_from  192.168.0.0/16;
+    real_ip_header    proxy_protocol;
+    real_ip_recursive on;
+
     root /var/www/html/;
     index index.html index.htm;
 
@@ -507,8 +515,8 @@ server {{
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $proxy_protocol_addr;
-        proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }}
     include /etc/nginx/snippets/xui-common-locations.conf;
