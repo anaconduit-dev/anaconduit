@@ -355,3 +355,15 @@ class DockerService:
             return output.decode("utf-8", errors="ignore").strip()
 
         return await anyio.to_thread.run_sync(_exec)
+
+    async def inspect_container(self, name: str):
+        """Возвращает низкоуровневую информацию о контейнере (инспект)"""
+        try:
+            # Выполняем в потоке, так как docker-py блокирующий
+            container = await anyio.to_thread.run_sync(
+                lambda: self.client.containers.get(name)
+            )
+            return container.attrs # Это и есть словарь со всеми параметрами
+        except Exception:
+            # Если контейнер не найден, docker-py выбросит исключение
+            return None

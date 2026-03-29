@@ -15,11 +15,12 @@ logger = logging.getLogger(__name__)
 
 class NginxService:
     CONTAINER_NAME = "nginx"
-    IMAGE = "nginx:latest"
+    IMAGE = "nginx:1.28.3"
 
     def __init__(self):
         self.docker = DockerService()
         self.base_dir = settings.internal_data_path / "nginx"
+        self.log_dir = settings.internal_data_path / "nginx_log"
         self.stream_d = self.base_dir / "stream-enabled"
         self.sites_a_d = self.base_dir / "sites-available"
         self.sites_e_d = self.base_dir / "sites-enabled"
@@ -27,6 +28,7 @@ class NginxService:
         self.certs_dir = self.base_dir / "certs"
         self.user_conf_d = self.base_dir / "user-conf.d"
         self.host_sockets_dir = f"{settings.host_data_path}/run"
+        self.log_dir = settings.internal_data_path / "nginx_log"
         os.makedirs(self.host_sockets_dir, exist_ok=True)
         # Важно: даем права, чтобы контейнеры могли писать/читать сокеты
         os.chmod(self.host_sockets_dir, 0o777)
@@ -62,9 +64,37 @@ class NginxService:
             os.symlink(src.resolve(), dst)
         await anyio.to_thread.run_sync(create)
 
+    def _get_container_config(self):
+        """Централизованное описание конфигурации контейнера"""
+        host_nginx_dir = f"{settings.host_data_path}/nginx"
+        log_nginx_dir = f"{settings.host_data_path}/nginx_log"
+        
+        volumes = {
+            f"{host_nginx_dir}/nginx.conf": {"bind": "/etc/nginx/nginx.conf", "mode": "ro"},
+            f"{host_nginx_dir}/stream-enabled": {"bind": "/etc/nginx/stream-enabled", "mode": "rw"},
+            f"{host_nginx_dir}/snippets": {"bind": "/etc/nginx/snippets", "mode": "rw"},
+            f"{host_nginx_dir}/certs": {"bind": "/etc/nginx/certs", "mode": "ro"},
+            f"{host_nginx_dir}/www": {"bind": "/var/www/html", "mode": "rw"},
+            f"{host_nginx_dir}/sites-available": {"bind": "/etc/nginx/sites-available", "mode": "rw"},
+            f"{host_nginx_dir}/sites-enabled": {"bind": "/etc/nginx/sites-enabled", "mode": "rw"},
+            f"{host_nginx_dir}/user-conf.d": {"bind": "/etc/nginx/user-conf.d", "mode": "rw"},
+            f"{log_nginx_dir}": {"bind": "/var/log/nginx", "mode": "rw"},
+            self.host_sockets_dir: {"bind": "/run/xray", "mode": "ro"}
+        }
+        
+        ports = {"80/tcp": 80, "443/tcp": 443}
+        
+        return {
+            "image": self.IMAGE,
+            "volumes": volumes,
+            "ports": ports,
+            "network": "anaconduit_net"
+        }
+
     async def ensure_directories(self):
         dirs = [
             self.base_dir,
+            self.log_dir,
             self.stream_d,
             self.sites_a_d,
             self.sites_e_d,
@@ -76,6 +106,7 @@ class NginxService:
         for d in dirs:
             d.mkdir(parents=True, exist_ok=True)
         os.chmod(self.user_conf_d, 0o775)
+        os.chmod(self.log_dir, 0o775)
 
 
     async def generate_placeholder_page(self):
@@ -224,6 +255,15 @@ events {{
 
 stream {{
     resolver 127.0.0.11 ipv6=off valid=30s;
+
+    # ФОРМАТ ЛОГОВ ДЛЯ STREAM (L4)
+    log_format proxy '$remote_addr [$time_local] '
+                     '$protocol $status $bytes_sent $bytes_received '
+                     '$session_time "$upstream_addr" '
+                     'sni="$ssl_preread_server_name"'; # Здесь мы увидим SNI домен
+
+    # Пишем логи стрима в отдельный файл
+    access_log /var/log/nginx/stream_access.log proxy;
     
     # Таймаут на установку соединения с Xray
     proxy_connect_timeout 2s; 
@@ -246,6 +286,23 @@ http {{
         default upgrade;
         ''      close;
     }}
+    set_real_ip_from  172.18.0.0/16;
+    set_real_ip_from  10.0.0.0/8;
+    set_real_ip_from  192.168.0.0/16;
+    
+    
+    real_ip_header    proxy_protocol;
+    # Рекурсивный поиск (если прокси несколько)
+    real_ip_recursive on;
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    'rt=$request_time ua="$http_user_agent" ';
+    
+    # Куда писать общий лог доступа
+    access_log /var/log/nginx/access.log main;
+    # Куда писать ошибки
+    error_log /var/log/nginx/error.log warn;
+    
 
     http2_max_concurrent_streams 1000;
     
@@ -607,7 +664,8 @@ location ~ ^/(?P<fwdport>\\d+)/ {{
                 if version_raw: version = version_raw.split(' ')[2].split('/')[1]
             except: pass
         return {"container": self.CONTAINER_NAME, "status": state, "version": version}
-        
+    
+
     async def apply_all(self):
         await self.ensure_directories()
         await self.generate_placeholder_page()
@@ -623,38 +681,27 @@ location ~ ^/(?P<fwdport>\\d+)/ {{
             logger.info("♻️ Nginx перезагружен")
 
     async def install_and_run(self):
-        
-        host_nginx_dir = f"{settings.host_data_path}/nginx"
         await self.docker.remove_container(self.CONTAINER_NAME)
         await self.apply_all()
-        mime_path = self.base_dir / "mime.types"
-        if not mime_path.exists():
-            mime_content = "types { text/html html; text/css css; application/javascript js; image/png png; }"
-            await self._write(mime_path, mime_content)
+        
+        config = self._get_container_config()
 
-        volumes = {
-            f"{host_nginx_dir}/nginx.conf": {"bind": "/etc/nginx/nginx.conf", "mode": "ro"},
-            f"{host_nginx_dir}/stream-enabled": {"bind": "/etc/nginx/stream-enabled", "mode": "rw"},
-            f"{host_nginx_dir}/snippets": {"bind": "/etc/nginx/snippets", "mode": "rw"},
-            f"{host_nginx_dir}/certs": {"bind": "/etc/nginx/certs", "mode": "ro"},
-            f"{host_nginx_dir}/www": {"bind": "/var/www/html", "mode": "rw"},
-            f"{host_nginx_dir}/sites-available": {"bind": "/etc/nginx/sites-available", "mode": "rw"},
-            f"{host_nginx_dir}/sites-enabled": {"bind": "/etc/nginx/sites-enabled", "mode": "rw"},
-            f"{host_nginx_dir}/user-conf.d": {"bind": "/etc/nginx/user-conf.d", "mode": "rw"},
-        }
-        volumes[self.host_sockets_dir] = {"bind": "/run/xray", "mode": "ro"}
-
-        await self.docker.remove_container(self.CONTAINER_NAME)
         container = await self.docker.run_container(
             name=self.CONTAINER_NAME,
-            image=self.IMAGE,
-            ports={"80/tcp": 80, "443/tcp": 443},
-            environment={
-                "TZ": "UTC"
-            },
-            volumes=volumes,
-            network="anaconduit_net",
+            image=config['image'],
+            ports=config['ports'],
+            volumes=config['volumes'],
+            network=config['network'],
+            environment={"TZ": "UTC"},
             restart_policy={"Name": "always"},
+            command=[
+                "sh", "-c", 
+                "touch /var/log/nginx/access.log /var/log/nginx/error.log /var/log/nginx/stream_access.log && "
+                "tail -F /var/log/nginx/stream_access.log > /dev/stdout & "
+                "tail -F /var/log/nginx/access.log > /dev/stdout & "
+                "tail -F /var/log/nginx/error.log > /dev/stderr & "
+                "nginx -g 'daemon off;'"
+            ]
         )
         return container
 
@@ -670,11 +717,57 @@ location ~ ^/(?P<fwdport>\\d+)/ {{
     async def logs(self, tail: int = 100):
         return await self.docker.logs(self.CONTAINER_NAME, tail=tail)
 
+    async def is_config_changed(self):
+        inspect_data = await self.docker.inspect_container(self.CONTAINER_NAME)
+        if not inspect_data:
+            return True # Контейнера нет
+
+        target_config = self._get_container_config()
+        
+        # 1. Сравнение Image
+        current_image = inspect_data.get('Config', {}).get('Image')
+        if current_image != target_config['image']:
+            return True
+
+        # 2. АВТОМАТИЧЕСКАЯ проверка всех Volumes
+        # Достаем текущие маунты из Docker (Source: Destination)
+        # Важно: Docker может добавлять слеши в конце путей, нормализуем их
+        current_mounts = {
+            Path(m['Source']).resolve(): Path(m['Destination']).resolve() 
+            for m in inspect_data.get('Mounts', [])
+        }
+        
+        for host_path, vol_info in target_config['volumes'].items():
+            h_path = Path(host_path).resolve()
+            c_path = Path(vol_info['bind']).resolve()
+            
+            # Проверяем, существует ли такая связка в текущем контейнере
+            if h_path not in current_mounts or current_mounts[h_path] != c_path:
+                logger.info(f"🔄 Изменение в Volume: {h_path} -> {c_path}")
+                return True
+
+        # 3. Проверка портов
+        current_ports = inspect_data.get('HostConfig', {}).get('PortBindings', {})
+        for port_key, host_port in target_config['ports'].items():
+            # Docker хранит порты как {'80/tcp': [{'HostIp': '', 'HostPort': '80'}]}
+            bindings = current_ports.get(port_key, [])
+            if not bindings or int(bindings[0].get('HostPort')) != host_port:
+                return True
+
+        return False
+
     async def ensure_nginx_running(self):
         status = await self.docker.get_status(self.CONTAINER_NAME)
-        if status == "running":
-            logger.info("✅ Nginx уже запущен, перезагрузка конфигов")
+        conf_changed = await self.is_config_changed()
+        
+        if status == "running" and not conf_changed:
+            logger.info("✅ Nginx запущен и актуален, просто обновляем конфиги")
             await self.apply_all()
         else:
-            logger.info("🚀 Запуск Nginx контейнера")
+            if conf_changed:
+                logger.info("🔄 Конфигурация контейнера изменилась, пересоздаем...")
+            else:
+                logger.info("🚀 Контейнер не запущен, выполняем чистую установку")
+            
+            # install_and_run сам удалит старый и создаст новый
             await self.install_and_run()

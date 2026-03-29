@@ -11,6 +11,7 @@ import asyncio
 import urllib.parse
 import time
 import shutil
+from pathlib import Path
 from fastapi import Response
 from typing import List, Dict, Any, Tuple
 from datetime import datetime, timezone
@@ -67,6 +68,24 @@ class XrayService:
                 json.dump(config, f, indent=2)
             return config_path
         return await anyio.to_thread.run_sync(_write)
+
+    def _get_container_config(self, version: str):
+        """Возвращает эталонную конфигурацию для сравнения и запуска"""
+        clean_v = version.lstrip('v')
+        image = f"teddysun/xray:{clean_v}"
+        
+        volumes = {
+            self.host_xray_dir: {"bind": "/etc/xray", "mode": "rw"},
+            self.host_log_dir: {"bind": "/var/log/xray", "mode": "rw"},
+            self.host_sockets_dir: {"bind": "/run/xray", "mode": "rw"},
+        }
+
+        return {
+            "image": image,
+            "volumes": volumes,
+            "command": 'sh -c "rm -f /run/xray/*.sock && xray -confdir /etc/xray"',
+            "network": "anaconduit_net"
+        }
         
     async def get_available_xray_versions(self) -> List[str]:
         current_time = time.time()
@@ -130,7 +149,11 @@ class XrayService:
 
         # Базовая структура (переносим из твоего старого метода)
         config = {
-            "log": {"loglevel": "warning", "access": "none", "error": ""},
+            "log": {
+                "access": container_access_log,
+                "error": container_error_log,
+                "loglevel": "warning" # Можно вынести в настройки, чтобы не забивать диск
+            },
             "stats": {},
             "api": {
                 "tag": "api",
@@ -453,77 +476,95 @@ class XrayService:
 
     # ---------- Контейнер и Жизненный цикл ----------
 
-    async def install(self, version: str) -> Dict[str, Any]:
-        await self.generate_full_config()
-        # 1. Настройка путей для логов
-        # settings.host_data_path обычно указывает на /home/vpsadmin/data/anaconduit
+    async def is_config_changed(self, version: str):
+        inspect_data = await self.docker.inspect_container(self.CONTAINER_NAME)
+        if not inspect_data:
+            return True
+
+        target = self._get_container_config(version)
         
+        # 1. Проверка образа (версии)
+        current_image = inspect_data.get('Config', {}).get('Image')
+        if current_image != target['image']:
+            logger.info(f"🔄 Версия Xray изменилась: {current_image} -> {target['image']}")
+            return True
+
+        # 2. Проверка Volumes
+        current_mounts = {
+            Path(m['Source']).resolve(): Path(m['Destination']).resolve() 
+            for m in inspect_data.get('Mounts', [])
+        }
+        for host_path, vol_info in target['volumes'].items():
+            h_path = Path(host_path).resolve()
+            c_path = Path(vol_info['bind']).resolve()
+            if h_path not in current_mounts or current_mounts[h_path] != c_path:
+                logger.info(f"🔄 Изменились маунты Xray")
+                return True
+
+        return False
+
+    async def install(self, version: str) -> Dict[str, Any]:
+        # 1. Генерируем конфиги Xray (теперь с путями к логам внутри json)
+        await self.generate_full_config()
+        
+        # 2. Подготовка хоста (логи и сокеты)
         os.makedirs(self.host_log_dir, exist_ok=True)
         
-        
-            
+        # Чистим старые сокеты перед запуском
+        if os.path.exists(self.host_sockets_dir):
+            for filename in os.listdir(self.host_sockets_dir):
+                file_path = os.path.join(self.host_sockets_dir, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.unlink(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                except Exception as e:
+                    logger.error(f"Failed to delete socket {file_path}: {e}")
 
-        # Гарантируем наличие custom.json
+        # 3. Гарантируем наличие custom.json
         custom_config_path = self.internal_xray_dir / "custom.json"
         if not custom_config_path.exists():
             with open(custom_config_path, "w") as f:
                 json.dump({"inbounds": []}, f)
-            
-        
-        for filename in os.listdir(self.host_sockets_dir):
-            file_path = os.path.join(self.host_sockets_dir, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path) # Удаляем файлы сокетов
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print(f"Failed to delete {file_path}. Reason: {e}")
-        # lstrip('v') гарантирует, что мы не получим 'teddysun/xray:vv1.8.4'
-        clean_v = version.lstrip('v')
-        image = f"teddysun/xray:{clean_v}"
-        
+
+        # 4. Получаем параметры для Docker
+        config = self._get_container_config(version)
+
+        # 5. Пересоздаем контейнер
         await self.docker.remove_container(self.CONTAINER_NAME)
         
         container = await self.docker.run_container(
             name=self.CONTAINER_NAME,
-            image=image,
-            command='sh -c "rm -f /run/xray/*.sock && xray -confdir /etc/xray"',
+            image=config["image"],
+            command=config["command"],
             ports={},
-            environment={
-                "TZ": "UTC"
-            },
-            volumes={
-                self.host_xray_dir: {"bind": "/etc/xray", "mode": "rw"},
-                self.host_log_dir: {"bind": "/var/log/xray", "mode": "rw"},
-                self.host_sockets_dir: {"bind": "/run/xray", "mode": "rw"},
-            },
-            network="anaconduit_net",
+            environment={"TZ": "UTC"},
+            volumes=config["volumes"],
+            network=config["network"],
             restart_policy={"Name": "always"},
         )
 
-        return {"status": "installed", "version": clean_v}
+        return {"status": "installed", "version": version.lstrip('v')}
 
     async def ensure_xray_running(self, version: str = "latest") -> Dict[str, Any]:
-        """
-        Проверяет, запущен ли контейнер Xray нужной версии.
-        Если нет — устанавливает и запускает.
-        """
         status = await self.get_current_status()
         current_version = status.get("version", "unknown")
+        
+        # Если вызвано с "latest", но контейнер уже есть, 
+        # используем его версию, чтобы не было ложных срабатываний
+        target_version = version if version != "latest" else current_version
+        if target_version == "unknown":
+            target_version = "26.1.23" # Дефолт, если совсем ничего нет
+
+        should_restart = await self.is_config_changed(target_version)
         container_state = status.get("status", "exited")
 
-        logger.info(f"Текущий контейнер Xray: {container_state}, версия: {current_version}")
-
-        # Если контейнер не запущен или версия не совпадает
-        if container_state != "running" or (version != "latest" and current_version != version.lstrip("v")):
-            logger.info(f"♻️ Устанавливаем Xray версии {version}...")
-            result = await self.install(version)
-            logger.info(f"✅ Xray {result['version']} установлен и запущен")
-            return result
-        else:
-            logger.info(f"✅ Xray уже работает, версия {current_version}")
-            return {"status": "already_running", "version": current_version}
+        if container_state != "running" or should_restart:
+            logger.info(f"♻️ Перезапуск/Обновление Xray (цель: {target_version})...")
+            return await self.install(target_version)
+        logger.info("✅ Xray запущен и актуален")
+        return {"status": "already_running", "version": current_version}
 
     async def get_current_status(self):
         state = await self.docker.get_status(self.CONTAINER_NAME)
