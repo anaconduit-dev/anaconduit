@@ -105,7 +105,7 @@ const LandingEditor = () => {
   }, []);
 
   return (
-    <div className="flex bg-main border border-line rounded-[2rem] overflow-hidden h-[700px] shadow-2xl animate-in fade-in zoom-in-95 duration-500">
+    <div className="flex bg-main border border-line rounded-[2rem] overflow-hidden h-full shadow-2xl animate-in fade-in zoom-in-95 duration-500">
       
       {/* Sidebar - File Explorer */}
       <div className="w-80 border-r border-line flex flex-col bg-main/40 backdrop-blur-xl">
