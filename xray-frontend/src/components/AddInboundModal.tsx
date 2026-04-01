@@ -62,9 +62,9 @@ const getEmptyForm = () => ({
     
     // --- 3. Reality Settings ---
     show: false,
-    dest: "www.microsoft.com:443",
+    dest: "www.example.com:443",
     xver: 0,
-    serverNames: "www.microsoft.com, microsoft.com",
+    serverNames: "www.example.com, example.com",
     privateKey: "",
     publicKey: "", 
     minClientVer: "",
