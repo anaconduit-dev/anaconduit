@@ -26,15 +26,29 @@ class XrayResourceManager:
         self.host_log_dir = os.path.join(os.path.dirname(self.host_xray_dir), "xray_log")
         self.host_sockets_dir = f"{settings.host_data_path}/run"
         
+        self._ensure_dirs_exist()
+
         # Кэш версий
         self._version_cache = None
         self._cache_last_updated = 0
 
     # --- Работа с файлами ---
 
+    def _ensure_dirs_exist(self):
+        """Создает необходимые папки, если их нет. Работает синхронно."""
+        try:
+            os.makedirs(self.host_xray_dir, exist_ok=True)
+            os.makedirs(self.host_log_dir, exist_ok=True)
+            os.makedirs(self.host_sockets_dir, exist_ok=True)
+            logger.info(f"✅ Инфраструктура папок Xray готова: {self.host_xray_dir}")
+        except Exception as e:
+            logger.error(f"❌ Ошибка при создании папок Xray: {e}")
+
     async def save_config(self, config: dict):
         config_path = self.internal_xray_dir / "config.json"
         def _write():
+            # На случай если папку удалили "на лету"
+            os.makedirs(os.path.dirname(config_path), exist_ok=True) 
             with open(config_path, "w") as f:
                 json.dump(config, f, indent=2)
         await anyio.to_thread.run_sync(_write)
@@ -56,10 +70,7 @@ class XrayResourceManager:
 
     async def install(self, version: str) -> Dict[str, Any]:
         """Полная установка/переустановка контейнера"""
-        # 1. Сохраняем конфиг и готовим папки
-        os.makedirs(self.host_log_dir, exist_ok=True)
-        
-        # 2. Чистка сокетов
+        # 1. Чистка сокетов
         if os.path.exists(self.host_sockets_dir):
             for filename in os.listdir(self.host_sockets_dir):
                 file_path = os.path.join(self.host_sockets_dir, filename)
@@ -70,13 +81,13 @@ class XrayResourceManager:
                         shutil.rmtree(file_path)
                 except Exception as e:
                     logger.error(f"Failed to delete socket {file_path}: {e}")
-        # 3. Гарантируем наличие custom.json
+        # 2. Гарантируем наличие custom.json
         custom_config_path = self.internal_xray_dir / "custom.json"
         if not custom_config_path.exists():
             with open(custom_config_path, "w") as f:
                 json.dump({"inbounds": []}, f)
 
-        # 4. Параметры Docker
+        # 3. Параметры Docker
         params = self._get_container_params(version)
 
         # 4. Рестарт через DockerService
