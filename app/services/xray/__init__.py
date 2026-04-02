@@ -84,7 +84,7 @@ class XrayService:
     async def reset_user_traffic(self, user_id: int):
         """Сбрасывает текущие счетчики трафика конкретного пользователя."""
         return await self.traffic.reset_user_traffic(AsyncSessionLocal, user_id)
-        
+
     async def check_limits_and_disable(self):
         """Отключает просроченных пользователей или превысивших лимит."""
         await self.traffic.check_limits_and_disable(
@@ -140,21 +140,16 @@ class XrayService:
         if target_version == "unknown":
             target_version = "26.1.23" # Твой дефолт
 
-        # 3. Генерируем конфиг из БД для сравнения
-        async with AsyncSessionLocal() as session:
-            target_config = await self.generator.build_config(session)
-
-        # 4. Проверяем изменения
-        config_changed = await self.manager.is_config_different(target_config)
+        await self.generate_full_config()
         
-        # 5. Проверяем версию (если принудительно передана другая версия)
+        # 3. Проверяем версию (если принудительно передана другая версия)
         version_changed = (version != "latest" and current_version != version.lstrip('v'))
 
-        if container_state != "running" or config_changed or version_changed:
+        if container_state != "running" or version_changed:
             logger.info(f"♻️ Обновление Xray (цель: {target_version}, reason: "
-                        f"state={container_state}, cfg_ch={config_changed}, ver_ch={version_changed})")
+                        f"state={container_state}, ver_ch={version_changed})")
             # Сохраняем и устанавливаем
-            return await self.manager.install(target_version, target_config)
+            return await self.manager.install(target_version)
 
         logger.info("✅ Xray запущен и актуален (конфиг на диске совпадает с БД)")
         return {"status": "already_running", "version": current_version}
