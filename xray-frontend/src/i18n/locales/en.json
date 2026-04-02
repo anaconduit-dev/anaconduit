@@ -1,18 +1,30 @@
 {
   "routing": {
-    "newRoute": "New Route",
+    "newRoute": "New Routing Rule",
     "steeringLogic": "Traffic Steering Logic",
     "targetOutbound": "Target Outbound",
     "selectGateway": "Select gateway...",
     "priorityLabel": "Priority (Higher = First)",
     "sourceInbounds": "Source Inbounds",
-    "noInbounds": "No inbounds found",
     "domainsFilters": "Domain Filters",
     "ipFilters": "IP Filters",
     "ports": "Ports",
     "emptyFieldsInfo": "If fields are empty, the rule will apply to all traffic from the selected Inbounds.",
     "commentPlaceholder": "e.g., Force Netflix via WARP",
-    "createRule": "Create Rule"
+    "createRule": "Create Rule",
+    "userRouting": "User-based Routing",
+    "noInbounds": "No available inbounds",
+    "selectedCount": "Selected: {{count}}",
+    "selectAll": "Select All",
+    "deselect": "Deselect",
+    "failedData": "Failed to fetch data",
+    "ruleAdded": "The rule has been successfully added",
+    "errorCreating": "Error creating a rule",
+    "usersRouting": "Users Routing (email#tag)",
+    "ruleUpdated": "Rule updated",
+    "updateError": "Update error",
+    "editRoute": "Edit Routing Rule",
+    "updateRule": "Update Rule"
   },
   "outbounds": {
     "title": "Outbound Gateways",
@@ -145,7 +157,8 @@
     "errorConnection": "Server connection error",
     "selected": "selected",
     "onePerLine": "One per line",
-    "comment": "Comment"
+    "comment": "Comment",
+    "success": "Successful"
   },
   "status": {
     "active": "ACTIVE",

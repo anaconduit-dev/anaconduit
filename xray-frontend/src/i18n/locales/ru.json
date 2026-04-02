@@ -1,18 +1,30 @@
 {
   "routing": {
-    "newRoute": "Новый Маршрут",
     "steeringLogic": "Логика управления трафиком",
-    "targetOutbound": "Целевой шлюз",
     "selectGateway": "Выберите шлюз...",
     "priorityLabel": "Приоритет (выше = первее)",
-    "sourceInbounds": "Входящие подключения",
-    "noInbounds": "Входящие подключения не найдены",
-    "domainsFilters": "Фильтры доменов",
-    "ipFilters": "Фильтры IP",
     "ports": "Порты",
     "emptyFieldsInfo": "Если поля пусты, правило сработает на весь трафик выбранных Inbounds.",
     "commentPlaceholder": "например, Направить Netflix через WARP",
-    "createRule": "Создать правило"
+    "newRoute": "Новый маршрут",
+    "targetOutbound": "Целевой шлюз (Outbound)",
+    "sourceInbounds": "Входящие теги (Inbounds)",
+    "userRouting": "Маршрутизация по пользователям",
+    "domainsFilters": "Фильтр по доменам",
+    "ipFilters": "Фильтр по IP",
+    "createRule": "Создать правило",
+    "noInbounds": "Нет доступных входящих подключений",
+    "selectedCount": "Выбрано: {{count}}",
+    "selectAll": "Выбрать всех",
+    "deselect": "Сбросить",
+    "failedData": "Не удалось загрузить данные",
+    "ruleAdded": "Правило успешно добавлено",
+    "errorCreating": "Ошибка при создании правила",
+    "usersRouting": "Маршрутизация пользователей (email#tag)",
+    "ruleUpdated": "Правило обновлено",
+    "updateError": "Ошибка обновления",
+    "editRoute": "Изменить правила маршрутизации",
+    "updateRule": "Обновить Правила"
   },
   "outbounds": {
     "title": "Исходящие шлюзы",
@@ -145,7 +157,8 @@
     "errorConnection": "Ошибка соединения с сервером",
     "selected": "выбрано",
     "onePerLine": "По одному в строке",
-    "comment": "Комментарий"
+    "comment": "Комментарий",
+    "success": "Успешно"
   },
   "status": {
     "active": "ACTIVE",

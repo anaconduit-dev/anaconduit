@@ -100,6 +100,12 @@ export default function EditOutboundModal({ isOpen, onClose, onSuccess, outbound
       }
     } else if (protocol === "socks") {
       settings = { servers: [{ address, port, password }] };
+    } else if (protocol === "blackhole") {
+      settings = {
+        response: {
+          type: "none" 
+        }
+      };
     }
 
     const payload = {
@@ -149,6 +155,7 @@ export default function EditOutboundModal({ isOpen, onClose, onSuccess, outbound
               <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1">Protocol</label>
               <select value={protocol} onChange={e => setProtocol(e.target.value)} className="w-full bg-card border border-line rounded-2xl px-5 py-3 text-sm font-bold outline-none cursor-pointer appearance-none">
                 <option value="freedom">Freedom (Direct)</option>
+                <option value="blackhole">Blackhole (Block)</option>
                 <option value="vless">VLESS</option>
                 <option value="trojan">Trojan</option>
                 <option value="socks">SOCKS</option>

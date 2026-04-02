@@ -1,8 +1,8 @@
-// 1. Добавь useEffect в импорты
 import { useState, useEffect } from "react"; 
-import { X, Plus, ArrowRightLeft, Globe, Shield, Hash, Loader2, Info } from "lucide-react";
+import { X, Plus, ArrowRightLeft, Globe, Shield, Hash, Loader2, Info, User, ChevronDown } from "lucide-react";
 import { addRoutingRule } from "../api/outbound";
 import { getInbounds } from "../api/inbound";
+import { getUsers } from "../api/user"; 
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 
@@ -17,9 +17,11 @@ export default function AddRoutingRuleModal({ isOpen, outbounds, onClose, onSucc
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   
-  // States
   const [availableInbounds, setAvailableInbounds] = useState<any[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const [selectedInbounds, setSelectedInbounds] = useState<string[]>([]);
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [expandedUsers, setExpandedUsers] = useState<number[]>([]);
   const [outboundTag, setOutboundTag] = useState("");
   const [priority, setPriority] = useState(10);
   const [description, setDescription] = useState("");
@@ -29,36 +31,42 @@ export default function AddRoutingRuleModal({ isOpen, outbounds, onClose, onSucc
 
   useEffect(() => {
     if (isOpen) {
-      const fetchInbounds = async () => {
+      const fetchData = async () => {
         try {
-          const data = await getInbounds();
-          setAvailableInbounds(Array.isArray(data) ? data : []);
+          const [inboundsData, usersData] = await Promise.all([
+            getInbounds(),
+            getUsers()
+          ]);
+          setAvailableInbounds(Array.isArray(inboundsData) ? inboundsData : []);
+          setAvailableUsers(Array.isArray(usersData) ? usersData : []);
         } catch (error) {
-          console.error("Failed to fetch inbounds", error);
+          console.error(t("routing.failedData"), error);
         }
       };
-      fetchInbounds();
+      fetchData();
     }
   }, [isOpen]);
+
+  const toggleUserExpansion = (userId: number) => {
+    setExpandedUsers(prev => 
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!outboundTag) return toast.error("Выберите целевой шлюз");
+    if (!outboundTag) return toast.error(t("routing.selectGateway"));
 
     setLoading(true);
 
-    // Парсим ввод
-    const domain = domainsRaw.split('\n').map(d => d.trim()).filter(d => d !== "");
-    const ip = ipsRaw.split('\n').map(i => i.trim()).filter(i => i !== "");
-
     const payload = {
       outbound_tag: outboundTag,
-      domain: domain.length > 0 ? domain : null,
-      ip: ip.length > 0 ? ip : null,
-      // ИСПРАВЛЕНО: берем данные из массива выбранных чекбоксов
+      domain: domainsRaw.split('\n').map(d => d.trim()).filter(Boolean),
+      ip: ipsRaw.split('\n').map(i => i.trim()).filter(Boolean),
       inbound_tags: selectedInbounds.length > 0 ? selectedInbounds : null,
+      client_emails: selectedEmails.length > 0 ? selectedEmails : null, // user#tag
       port: port.trim() || null,
       priority: Number(priority),
       description: description.trim() || null,
@@ -67,19 +75,21 @@ export default function AddRoutingRuleModal({ isOpen, outbounds, onClose, onSucc
 
     try {
       await addRoutingRule(payload);
-      toast.success("Правило успешно добавлено");
-      onSuccess();
-      onClose();
+      toast.success(t("routing.ruleAdded"));
       
-      // Сброс полей
+      
       setDomainsRaw("");
       setIpsRaw("");
       setPort("");
       setDescription("");
       setOutboundTag("");
-      setSelectedInbounds([]); // Сбрасываем тут
+      setSelectedInbounds([]);
+      setSelectedEmails([]);
+      
+      onSuccess();
+      onClose();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "Ошибка при создании правила");
+      toast.error(error.response?.data?.detail || t("routing.errorCreating"));
     } finally {
       setLoading(false);
     }
@@ -142,57 +152,115 @@ export default function AddRoutingRuleModal({ isOpen, outbounds, onClose, onSucc
           </div>
         </div>
 
-        {/* Source Inbounds Selection */}
+        {/* Source Inbounds */}
         <div className="space-y-3">
-          <div className="flex justify-between items-center ml-1">
-            <label className="text-[10px] font-black uppercase text-muted tracking-widest flex items-center gap-2">
-              <Shield size={12} className="text-indigo-500" /> {t("routing.sourceInbounds")}
-            </label>
-            <span className="text-[8px] font-black text-muted/50 uppercase tracking-tighter">
-              {selectedInbounds.length} {t("common.selected")}
-            </span>
+          <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1 flex items-center gap-2">
+            <Shield size={12} className="text-indigo-500" /> {t("routing.sourceInbounds")}
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {availableInbounds.map((inbound) => {
+              const isSelected = selectedInbounds.includes(inbound.tag);
+              return (
+                <button
+                  key={inbound.id}
+                  type="button"
+                  onClick={() => setSelectedInbounds(prev => isSelected ? prev.filter(t => t !== inbound.tag) : [...prev, inbound.tag])}
+                  className={`p-3 rounded-xl border text-[10px] font-black uppercase transition-all ${
+                    isSelected ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-900/20" : "bg-card border-line text-muted hover:border-indigo-500/50"
+                  }`}
+                >
+                  {inbound.tag}
+                </button>
+              );
+            })}
           </div>
+        </div>
+
+        {/* --- USER ROUTING (COLLAPSIBLE) --- */}
+        <div className="space-y-3">
+          <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1 flex items-center gap-2">
+            <User size={12} className="text-emerald-500" /> {t("routing.usersRouting")}
+          </label>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-card/30 border border-line rounded-[2rem] max-h-[200px] overflow-y-auto custom-scrollbar">
-            {availableInbounds.length > 0 ? (
-              availableInbounds.map((inbound) => {
-                const isSelected = selectedInbounds.includes(inbound.tag);
-                return (
-                  <button
-                    key={inbound.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedInbounds(prev => 
-                        isSelected ? prev.filter(t => t !== inbound.tag) : [...prev, inbound.tag]
-                      );
-                    }}
-                    className={`flex items-center gap-3 p-3 rounded-2xl border transition-all text-left ${
-                      isSelected 
-                      ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.1)]" 
-                      : "border-line bg-main/50 hover:border-indigo-500/50"
-                    }`}
+          <div className="space-y-2 p-4 bg-card/30 border border-line rounded-[2.5rem] max-h-[350px] overflow-y-auto custom-scrollbar">
+            {availableUsers.map(user => {
+              const isExpanded = expandedUsers.includes(user.id);
+              const userEmailPairs = user.clients.map((c: any) => `${user.email.toLowerCase()}#${c.inbound.tag}`);
+              const selectedFromUser = userEmailPairs.filter((pair: string) => selectedEmails.includes(pair));
+
+              return (
+                <div key={user.id} className="bg-main/40 border border-line/50 rounded-[1.8rem] overflow-hidden transition-all">
+                  {/* Card Header */}
+                  <div 
+                    onClick={() => toggleUserExpansion(user.id)}
+                    className="flex items-center gap-3 p-4 cursor-pointer hover:bg-card/50 transition-colors"
                   >
-                    <div className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${
-                      isSelected ? "bg-indigo-600 border-indigo-600 text-white" : "border-line bg-card"
-                    }`}>
-                      {isSelected && <Plus size={12} />}
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${selectedFromUser.length > 0 ? 'bg-emerald-500 text-white' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                      <User size={12} />
                     </div>
-                    <div className="min-w-0">
-                      <p className={`text-[10px] font-black uppercase truncate ${isSelected ? "text-base" : "text-muted"}`}>
-                        {inbound.tag}
-                      </p>
-                      <p className="text-[8px] font-bold text-muted/50 uppercase leading-none">{inbound.protocol}</p>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-black uppercase tracking-tight">{user.email}</span>
+                      {selectedFromUser.length > 0 && (
+                        <span className="text-[8px] font-bold text-emerald-500 uppercase leading-none">
+                          {t("routing.selectedCount", { count: selectedFromUser.length })}
+                        </span>
+                      )}
                     </div>
-                  </button>
-                );
-              })
-            ) : (
-              <div className="col-span-full py-8 text-center">
-                <p className="text-[10px] font-black text-muted uppercase tracking-widest italic opacity-50">
-                  {t("routing.noInbounds")}
-                </p>
-              </div>
-            )}
+
+                    <div className="ml-auto flex items-center gap-4">
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const allSelected = userEmailPairs.every((tag: string) => selectedEmails.includes(tag));
+                          if (allSelected) {
+                            setSelectedEmails(prev => prev.filter(e => !userEmailPairs.includes(e)));
+                          } else {
+                            setSelectedEmails(prev => Array.from(new Set([...prev, ...userEmailPairs])));
+                          }
+                        }}
+                        className="text-[8px] font-black uppercase text-indigo-500 hover:text-indigo-400"
+                      >
+                        {userEmailPairs.every((tag: string) => selectedEmails.includes(tag)) ? "Deselect" : "Select All"}
+                      </button>
+                      <ChevronDown size={14} className={`text-muted transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                    </div>
+                  </div>
+
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 animate-fadeIn">
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-line/30">
+                        {user.clients.map((client: any) => {
+                          const xrayEmail = `${user.email.toLowerCase()}#${client.inbound.tag}`;
+                          const isSelected = selectedEmails.includes(xrayEmail);
+                          return (
+                            <button
+                              key={client.id}
+                              type="button"
+                              onClick={() => setSelectedEmails(prev => 
+                                isSelected ? prev.filter(e => e !== xrayEmail) : [...prev, xrayEmail]
+                              )}
+                              className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
+                                isSelected ? "border-emerald-500 bg-emerald-500/10" : "border-line/50 bg-card/50"
+                              }`}
+                            >
+                              <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 ${isSelected ? "bg-emerald-500 border-emerald-500 text-white" : "border-line"}`}>
+                                {isSelected && <Plus size={10} />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className={`text-[9px] font-black uppercase truncate ${isSelected ? "text-emerald-400" : "text-muted"}`}>{client.inbound.tag}</p>
+                                <p className="text-[7px] font-bold opacity-30 uppercase">{client.inbound.protocol}</p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -202,7 +270,6 @@ export default function AddRoutingRuleModal({ isOpen, outbounds, onClose, onSucc
             <label className="text-[10px] font-black uppercase text-muted tracking-widest flex items-center gap-2">
               <Globe size={12} className="text-indigo-500" /> {t("routing.domainsFilters")}
             </label>
-            <span className="text-[8px] font-black text-muted/50 uppercase tracking-tighter">{t("common.onePerLine")}</span>
           </div>
           <textarea 
             placeholder="google.com&#10;geosite:category-ads-all"
@@ -227,21 +294,19 @@ export default function AddRoutingRuleModal({ isOpen, outbounds, onClose, onSucc
               className="w-full bg-card border border-line rounded-[1.5rem] px-5 py-4 text-xs font-mono font-bold focus:border-indigo-500 outline-none resize-none custom-scrollbar"
             />
           </div>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1 flex items-center gap-2">
-                <Hash size={12} className="text-amber-500" /> {t("routing.ports")}
-              </label>
-              <input 
-                placeholder="53, 80, 443"
-                value={port}
-                onChange={(e) => setPort(e.target.value)}
-                className="w-full bg-card border border-line rounded-2xl px-5 py-4 text-sm font-bold focus:border-indigo-500 outline-none"
-              />
-            </div>
-            <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl flex gap-3">
-              <Info size={16} className="text-indigo-500 shrink-0" />
-              <p className="text-[9px] font-medium leading-relaxed text-muted italic">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1 flex items-center gap-2">
+              <Hash size={12} className="text-amber-500" /> {t("routing.ports")}
+            </label>
+            <input 
+              placeholder="53, 80, 443"
+              value={port}
+              onChange={(e) => setPort(e.target.value)}
+              className="w-full bg-card border border-line rounded-2xl px-5 py-4 text-sm font-bold focus:border-indigo-500 outline-none"
+            />
+            <div className="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl flex gap-3">
+              <Info size={14} className="text-indigo-500 shrink-0" />
+              <p className="text-[8px] font-medium leading-tight text-muted italic">
                 {t("routing.emptyFieldsInfo")}
               </p>
             </div>
@@ -254,7 +319,6 @@ export default function AddRoutingRuleModal({ isOpen, outbounds, onClose, onSucc
           <input 
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder={t("routing.commentPlaceholder")}
             className="w-full bg-card border border-line rounded-2xl px-5 py-4 text-sm font-bold focus:border-indigo-500 outline-none"
           />
         </div>
