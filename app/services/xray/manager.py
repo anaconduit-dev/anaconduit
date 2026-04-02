@@ -35,14 +35,29 @@ class XrayResourceManager:
     # --- Работа с файлами ---
 
     def _ensure_dirs_exist(self):
-        """Создает необходимые папки, если их нет. Работает синхронно."""
+        """Создает необходимые папки, если их нет. Логирует только создание."""
+        dirs_to_check = [
+            (self.host_xray_dir, "Конфигурация"),
+            (self.host_log_dir, "Логи"),
+            (self.host_sockets_dir, "Сокеты")
+        ]
+        
+        created_any = False
         try:
-            os.makedirs(self.host_xray_dir, exist_ok=True)
-            os.makedirs(self.host_log_dir, exist_ok=True)
-            os.makedirs(self.host_sockets_dir, exist_ok=True)
-            logger.info(f"✅ Инфраструктура папок Xray готова: {self.host_xray_dir}")
+            for path, name in dirs_to_check:
+                if not os.path.exists(path):
+                    os.makedirs(path, exist_ok=True)
+                    logger.info(f"📁 Создана папка Xray ({name}): {path}")
+                    created_any = True
+            
+            if not created_any:
+                # Если всё уже было, пишем только в DEBUG, чтобы не спамить в консоль
+                logger.debug(f"✅ Инфраструктура Xray уже готова: {self.host_xray_dir}")
+            else:
+                logger.info(f"🚀 Вся инфраструктура папок Xray успешно проверена и подготовлена")
+                
         except Exception as e:
-            logger.error(f"❌ Ошибка при создании папок Xray: {e}")
+            logger.error(f"❌ Критическая ошибка при подготовке папок Xray: {e}")
 
     async def save_config(self, config: dict):
         config_path = self.internal_xray_dir / "config.json"
