@@ -1,4 +1,41 @@
 {
+  "routing": {
+    "newRoute": "Новый Маршрут",
+    "steeringLogic": "Логика управления трафиком",
+    "targetOutbound": "Целевой шлюз",
+    "selectGateway": "Выберите шлюз...",
+    "priorityLabel": "Приоритет (выше = первее)",
+    "sourceInbounds": "Входящие подключения",
+    "noInbounds": "Входящие подключения не найдены",
+    "domainsFilters": "Фильтры доменов",
+    "ipFilters": "Фильтры IP",
+    "ports": "Порты",
+    "emptyFieldsInfo": "Если поля пусты, правило сработает на весь трафик выбранных Inbounds.",
+    "commentPlaceholder": "например, Направить Netflix через WARP",
+    "createRule": "Создать правило"
+  },
+  "outbounds": {
+    "title": "Исходящие шлюзы",
+    "info": "Управление точками выхода трафика",
+    "total": "Всего шлюзов",
+    "newExit": "Новый выход",
+    "configureOutbound": "Настройка протокола и маршрута",
+    "addOutbound": "Добавить шлюз",
+    "addSuccess": "Шлюз успешно добавлен",
+    "addError": "Ошибка при добавлении шлюза",
+    "deleteOutbound": "Удалить шлюз",
+    "deleteConfirm": "Вы уверены, что хотите удалить шлюз «{{tag}}»?",
+    "tag": "Тег (уникальное имя)",
+    "protocol": "Протокол",
+    "protocolSettings": "Настройки протокола",
+    "domainStrategy": "Стратегия доменов",
+    "address": "Адрес (IP или Host)",
+    "port": "Порт",
+    "blackholeNote": "Весь трафик, направленный в этот шлюз, будет бесследно уничтожен (блокировка).",
+    "statusActive": "Активен",
+    "statusDisabled": "Отключен",
+    "mappingExits": "Синхронизация шлюзов..."
+  },
   "system": {
       "backups": "Резервные копии",
       "createBackup": "Создать бэкап",
@@ -101,7 +138,14 @@
     "cancel": "Отмена",
     "delete": "Удалить",
     "areYouSure": "Подтвердить действие?",
-    "confirm": "Подтвердить"
+    "confirm": "Подтвердить",
+    "save": "Сохранить",
+    "description": "Описание (необязательно)",
+    "deleting": "Удаление...",
+    "errorConnection": "Ошибка соединения с сервером",
+    "selected": "выбрано",
+    "onePerLine": "По одному в строке",
+    "comment": "Комментарий"
   },
   "status": {
     "active": "ACTIVE",
@@ -166,6 +210,7 @@
       "home": "Главная",
       "xrayConfig": "Xray",
       "inbounds": "Подключения",
+      "outbounds": "Исходящие шлюзы",
       "users": "Пользователи",
       "nginx": "Nginx",
       "settings": "Настройки"

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Dict, Any
 
 from app.core.dependencies import get_current_admin, get_xray_service
-from app.services.xray_service import XrayService
+from app.services.xray import XrayService
 
 # Роутер без префикса (он добавится в app/api/router.py)
 router = APIRouter()
@@ -65,7 +65,7 @@ async def get_status(
     user=Depends(get_current_admin)
 ):
     """Текущий статус контейнера Xray"""
-    return await service.get_current_status()
+    return await service.get_status()
 
 @router.get("/stats")
 async def get_xray_stats(

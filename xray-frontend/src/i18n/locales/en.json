@@ -1,4 +1,41 @@
 {
+  "routing": {
+    "newRoute": "New Route",
+    "steeringLogic": "Traffic Steering Logic",
+    "targetOutbound": "Target Outbound",
+    "selectGateway": "Select gateway...",
+    "priorityLabel": "Priority (Higher = First)",
+    "sourceInbounds": "Source Inbounds",
+    "noInbounds": "No inbounds found",
+    "domainsFilters": "Domain Filters",
+    "ipFilters": "IP Filters",
+    "ports": "Ports",
+    "emptyFieldsInfo": "If fields are empty, the rule will apply to all traffic from the selected Inbounds.",
+    "commentPlaceholder": "e.g., Force Netflix via WARP",
+    "createRule": "Create Rule"
+  },
+  "outbounds": {
+    "title": "Outbound Gateways",
+    "info": "Manage traffic exit points",
+    "total": "Total Gateways",
+    "newExit": "New Outbound",
+    "configureOutbound": "Protocol and route configuration",
+    "addOutbound": "Add Gateway",
+    "addSuccess": "Outbound added successfully",
+    "addError": "Failed to add outbound",
+    "deleteOutbound": "Delete Outbound",
+    "deleteConfirm": "Are you sure you want to delete gateway '{{tag}}'?",
+    "tag": "Tag (unique name)",
+    "protocol": "Protocol",
+    "protocolSettings": "Protocol Settings",
+    "domainStrategy": "Domain Strategy",
+    "address": "Address (IP or Host)",
+    "port": "Port",
+    "blackholeNote": "All traffic sent to this gateway will be silently dropped (blocking).",
+    "statusActive": "Active",
+    "statusDisabled": "Disabled",
+    "mappingExits": "Syncing gateways..."
+  },
   "system": {
     "backups": "Backups",
     "createBackup": "Create Backup",
@@ -101,7 +138,14 @@
     "cancel": "Cancel",
     "delete": "delete",
     "confirm": "Confirm",
-    "areYouSure": "Confirm action?"
+    "areYouSure": "Confirm action?",
+    "save": "Save",
+    "description": "Description (optional)",
+    "deleting": "Deleting...",
+    "errorConnection": "Server connection error",
+    "selected": "selected",
+    "onePerLine": "One per line",
+    "comment": "Comment"
   },
   "status": {
     "active": "ACTIVE",
@@ -166,6 +210,7 @@
       "home": "Dashboard",
       "xrayConfig": "Xray",
       "inbounds": "Inbounds",
+      "outbounds": "Outbound Gateways",
       "users": "Users",
       "nginx": "Nginx",
       "settings": "Settings"

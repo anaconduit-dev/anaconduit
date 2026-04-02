@@ -10,7 +10,7 @@ from jose import JWTError, jwt
 
 from app.core.config import settings
 from app.xray_api.client import XrayAPIClient
-from app.services.xray_service import XrayService
+from app.services.xray import XrayService
 from app.services.nginx_service import NginxService
 from app.services.backup_service import BackupService
 

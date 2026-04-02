@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.api import xray, docker
-from app.api.endpoints import auth, inbounds, clients, config, sub, nginx, stats, admin, app, backup
+from app.api.endpoints import auth, inbounds, clients, config, sub, nginx, stats, admin, app, backup, outbounds, routing
 
 
 
@@ -44,7 +44,17 @@ api_router.include_router(
 api_router.include_router(
     inbounds.router,
     prefix="/inbound",
-    tags=["inbounds"])
+    tags=["inbound"])
+    
+api_router.include_router(
+    outbounds.router,
+    prefix="/outbound",
+    tags=["outbound"])
+
+api_router.include_router(
+    routing.router,
+    prefix="/routing",
+    tags=["routing"])
 
 api_router.include_router(
     clients.router,

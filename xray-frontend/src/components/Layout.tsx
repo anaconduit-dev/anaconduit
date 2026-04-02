@@ -163,6 +163,7 @@ useEffect(() => {
             { name: t("layout.menu.home"), path: "/dashboard", icon: <Activity size={18} /> },
             { name: t("layout.menu.xrayConfig"), path: "/settxray", icon: <ShieldCheck size={18} /> },
             { name: t("layout.menu.inbounds"), path: "/inbounds", icon: <Users size={18} /> },
+            { name: t("layout.menu.outbounds"), path: "/outbounds", icon: <Users size={18} /> },
             { name: t("layout.menu.users"), path: "/users", icon: <Users size={18} /> },
             { name: t("layout.menu.nginx"), path: "/nginx", icon: <Settings size={18} /> },
             { name: t("layout.menu.settings"), path: "/settings", icon: <Settings size={18} /> },

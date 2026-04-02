@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import SettXray from "./pages/SettXray";
 import Users from "./pages/Users";
 import Inbounds from "./pages/Inbounds";
+import OutboundsPage from "./pages/OutboundsPage"
 import SettNginx from "./pages/SettNginx";
 import Settings from "./pages/Settings";
 import SubscriptionPage from "./pages/SubscriptionPage";
@@ -90,6 +91,7 @@ export default function App() {
             <Route path="/settxray" element={<SettXray />} />
             <Route path="/users" element={<Users />} />
             <Route path="/inbounds" element={<Inbounds />} />
+            <Route path="/outbounds" element={<OutboundsPage />} />
             <Route path="/nginx" element={<SettNginx />} />
             <Route path="/settings" element={<Settings />} />
           </Route>

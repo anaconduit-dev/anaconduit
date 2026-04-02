@@ -1,3 +1,4 @@
+# app/main.py
 import logging
 import asyncio
 import time
@@ -17,12 +18,15 @@ from app.models import models
 from app.core.security import hash_password
 from sqlalchemy import select 
 from app.xray_api.client import XrayAPIClient
-from app.services.xray_service import XrayService
+from app.services.xray import XrayService
 from app.services.nginx_service import NginxService
 from app.api.endpoints import public_sub
+from app.core.init_db import setup_initial_data
+from app.core.spa import get_spa_content
+from app.services.scheduler import stats_updater_task
 
 xray_client = XrayAPIClient()
-xray_service = XrayService(client=xray_client)
+xray_service = XrayService(api_client=xray_client)
 nginx_service = NginxService()
 
 # Настройка логирования
@@ -33,96 +37,17 @@ logger = logging.getLogger(__name__)
 SECRET_PATH = settings.panel_secret_path.strip('/')
 SUB_PATH = settings.sub_path.strip('/')
 static_path = os.path.join(os.path.dirname(__file__), "static")
-# --- Вспомогательная логика SPA ---
 
-async def get_spa_content(mode: str):
-    """Готовит index.html с внедренным конфигом"""
-    index_file = os.path.join(static_path, "index.html")
-    if not os.path.exists(index_file):
-        return None
-        
-    try:
-        with open(index_file, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        basename = f"/{SECRET_PATH}" if mode == "admin" else f"/{SUB_PATH}"
-        
-        # Конфиг для React
-        config_script = f"""
-        <script>
-            window.__PANEL_CONFIG__ = {{ 
-                "basename": "{basename}",
-                "mode": "{mode}" 
-            }};
-        </script>
-        """
-        # Важно: добавляем <base>, чтобы относительные пути в JS/CSS работали
-        replacement = f'<head><base href="{basename}/">{config_script}'
-        content = content.replace("<head>", replacement)
-        return content
-    except Exception as e:
-        logger.error(f"Error reading index.html: {e}")
-        return None
-
-# --- Вспомогательные функции (админ, статы) остаются без изменений ---
-async def create_initial_admin():
-    if not settings.admin_user or not settings.admin_password:
-        return
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(select(models.Admin))
-        if result.scalars().first():
-            return
-        new_admin = models.Admin(
-            username=settings.admin_user,
-            password_hash=hash_password(settings.admin_password)
-        )
-        session.add(new_admin)
-        await session.commit()
-        logger.info(f"✅ Начальный администратор '{settings.admin_user}' создан успешно.")
-
-async def stats_updater_task():
-    client = get_xray_client()
-    xray_service = get_xray_service(client)
     
-    # Переменная для отслеживания времени последнего сброса
-    last_reset_check = 0 
-    RESET_CHECK_INTERVAL = 3600  # Проверяем автосброс раз в час (3600 сек)
-
-    while True:
-        try:
-            # 1. Быстрая задача (каждые 10 секунд)
-            # Обновляем статистику в БД и отключаем тех, кто превысил лимит
-            await xray_service.update_stats_in_db()
-            await xray_service.check_limits_and_disable()
-
-            # 2. Тяжелая задача (раз в час)
-            current_time = time.time()
-            if current_time - last_reset_check >= RESET_CHECK_INTERVAL:
-                logger.info("⏰ Запуск плановой проверки автосброса трафика...")
-                # Вызываем нашу новую логику (реализуем её в сервисе)
-                await xray_service.check_and_reset_traffic()
-                last_reset_check = current_time
-
-            await asyncio.sleep(10) 
-
-        except asyncio.CancelledError:
-            break
-        except Exception as e:
-            logger.error(f"❌ Ошибка в фоновом планировщике: {e}")
-            await asyncio.sleep(30)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 Приложение Anaconduit запускается")
 
+    # 1. Инициализация БД
+    await setup_initial_data()
 
-    # 2. Создание начального админа
-    try:
-        await create_initial_admin()
-    except Exception as e:
-        logger.error(f"❌ Ошибка при создании начального админа: {e}")
-
-    # 3. Установка и запуск Xray
+    # 2. Инфраструктура (Xray/Nginx)
     try:
         await xray_service.ensure_xray_running(version="latest")
         # Генерация конфигов сразу после установки
@@ -134,8 +59,8 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"❌ Не удалось запустить Nginx при старте: {e}")
 
-    # 4. Фоновый планировщик статистики
-    bg_task = asyncio.create_task(stats_updater_task())
+    # 3. Запуск фоновых задач
+    bg_task = asyncio.create_task(stats_updater_task(xray_service))
     
     yield  # --- FastAPI готов к работе ---
     
@@ -227,13 +152,11 @@ if os.path.exists(static_path):
                 is_browser = True
         # 2. Если браузер — отправляем на фронтенд (React)
         if is_browser:
-            content = await get_spa_content(mode="client")
+            content = await get_spa_content(mode="client", static_path = static_path)
             if not content:
                 return HTMLResponse("Front-end not built", status_code=500)
             return HTMLResponse(content=content)
 
-
-        xray_service = globals().get("xray_service")
         return await xray_service.generate_subscription(token, db)
 
         
@@ -247,7 +170,7 @@ if os.path.exists(static_path):
         if full_path and os.path.isfile(file_path):
             return FileResponse(file_path)
 
-        content = await get_spa_content(mode="admin")
+        content = await get_spa_content(mode="admin", static_path = static_path)
         if content:
             return HTMLResponse(content=content)
         return HTMLResponse("Index not found", status_code=404)

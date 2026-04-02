@@ -1,5 +1,6 @@
 import secrets
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, BigInteger, JSON, UniqueConstraint
+import enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, BigInteger, JSON, UniqueConstraint, Enum
 from sqlalchemy.sql import func
 from app.core.database import Base
 from sqlalchemy.orm import relationship
@@ -85,3 +86,57 @@ class Client(Base):
     __table_args__ = (
         UniqueConstraint('user_id', 'inbound_id', name='_user_inbound_uc'),
     )
+
+
+class OutboundType(str, enum.Enum):
+    FREEDOM = "freedom"
+    SOCKS = "socks"
+    HTTP = "http"
+    BLACKHOLE = "blackhole"
+    DNS = "dns"
+
+class Outbound(Base):
+    """Конфигурация выхода трафика (Freedom, WARP через SOCKS, и т.д.)"""
+    __tablename__ = "outbounds"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tag = Column(String, unique=True, index=True, nullable=False) # Например: "warp-socks", "direct"
+    protocol = Column(String, nullable=False, default="freedom") # "freedom", "socks", "http"
+    
+    # Основные настройки протокола (address, port, users для SOCKS)
+    # Для freedom может быть {"domainStrategy": "UseIP"}
+    settings = Column(JSON, nullable=False, default=dict)
+    
+    # Настройки транспорта (TLS, sockopt и т.д.)
+    stream_settings = Column(JSON, nullable=True, default=dict)
+    proxy_settings = Column(JSON, nullable=True, default=dict)
+    # Настройки мультиплексирования
+    mux = Column(JSON, nullable=True, default=lambda: {"enabled": False})
+
+    is_default = Column(Boolean, default=False, server_default="false")
+    is_active = Column(Boolean, default=True, server_default="true")
+    description = Column(String, nullable=True)
+
+class RoutingRule(Base):
+    """Правила маршрутизации: какой трафик через какой Outbound пускать"""
+    __tablename__ = "routing_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    outbound_tag = Column(String, ForeignKey("outbounds.tag", ondelete="CASCADE"), nullable=False)
+    
+    # Условия срабатывания (Xray поддерживает массивы строк для каждого поля)
+    domain = Column(JSON, nullable=True) # ["geosite:google", "netflix.com"]
+    ip = Column(JSON, nullable=True)     # ["1.1.1.1", "geoip:private"]
+    port = Column(String, nullable=True) # "53, 80, 443"
+    
+    # Можно привязать правило к конкретному входящему протоколу
+    inbound_tags = Column(JSON, nullable=True) # ["vless-reality-main"]
+    
+    # Список email пользователей (если хотим маршрутизировать конкретных юзеров)
+    client_emails = Column(JSON, nullable=True) 
+
+    priority = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True, server_default="true")
+    description = Column(String, nullable=True)
+
+    outbound = relationship("Outbound")

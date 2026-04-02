@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload
 from app.core.database import get_db
 from app.core.dependencies import get_xray_service, get_current_admin
 from app.models.models import Client, Inbound, User  # Добавили User
-from app.services.xray_service import XrayService
+from app.services.xray import XrayService
 from app.schemas.user import UserResponse, UpdateLimitsSchema
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -283,7 +283,7 @@ async def reset_user_traffic(
     try:
         # 2. Обновляем Clients (накопители + обнуление текущих)
         # Используем ленивое обновление через update statement
-        await xray_service.reset_user_traffic(db, user_id)
+        await xray_service.reset_user_traffic(user_id)
         await db.commit()
         return {"status": "success", "message": f"Traffic reset for user {user.email}"}
 

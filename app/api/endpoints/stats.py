@@ -8,7 +8,7 @@ from sqlalchemy.orm import joinedload
 from app.core.database import get_db
 from app.core.dependencies import get_xray_service, get_current_admin
 from app.models.models import Client, Inbound, User
-from app.services.xray_service import XrayService
+from app.services.xray import XrayService
 from app.schemas.user import UserResponse
 from typing import List, Optional
 from datetime import datetime, timedelta, time

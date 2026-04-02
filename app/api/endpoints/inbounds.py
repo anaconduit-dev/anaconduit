@@ -1,3 +1,5 @@
+# app/api/endpoints/inbounds.py
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -6,7 +8,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_admin, get_xray_service, get_nginx_service
 from app.schemas.inbound import InboundCreate, InboundUpdate
 from app.models.models import Inbound, Client
-from app.services.xray_service import XrayService
+from app.services.xray import XrayService
 from app.services.nginx_service import NginxService
 
 router = APIRouter()
@@ -37,7 +39,7 @@ async def create_inbound(
             detail=f"Инбаунд с тегом '{obj_in.tag}' уже существует"
         )
 
-    # 2. Сохраняем в базу данных
+    # 2. Добавляем в сессию, но НЕ комитим
     new_inbound = Inbound(
         listen=obj_in.listen,
         tag=obj_in.tag,
@@ -48,28 +50,29 @@ async def create_inbound(
         sniffing=obj_in.sniffing.model_dump(exclude_none=True),
         is_active=True
     )
-    
     db.add(new_inbound)
+    
+    # 3. ВАЛИДАЦИЯ КОНФИГА
+    await db.flush() # Данные "улетают" в сессию, чтобы генератор их увидел
+    
+    # Строим конфиг на основе текущего состояния сессии
+    test_config = await xray_service.generator.build_config(db)
+    is_valid, error_msg = await xray_service.validate_config(test_config)
+
+    if not is_valid:
+        await db.rollback() # Отменяем всё, если конфиг "битый"
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Ошибка в параметрах Xray: {error_msg}"
+        )
+    # 4. Если всё хорошо — сохраняем насовсем и рестартим
     await db.commit()
     await db.refresh(new_inbound)
 
-    # 3. МАГИЯ: Синхронизируем и рестартуем Xray
-    try:
-        await xray_service.sync_and_restart()
-        await nginx_service.apply_all()
-    except Exception as e:
-        # Если Xray не смог рестартануть, мы не удаляем запись из БД, 
-        # но сообщаем об ошибке применения конфига.
-        raise HTTPException(
-            status_code=500,
-            detail=f"Данные сохранены, но Xray не смог применить конфиг: {e}"
-        )
+    await xray_service.sync_and_restart()
+    await nginx_service.apply_all()
     
-    return {
-        "status": "success", 
-        "message": f"Подключение '{obj_in.tag}' создано и запущено",
-        "data": {"id": new_inbound.id, "port": new_inbound.port}
-    }
+    return {"status": "success", "data": {"id": new_inbound.id}}
 
 @router.get("/get_inbounds_all", response_model=List[dict])
 async def get_inbounds(
@@ -218,27 +221,24 @@ async def update_inbound_api(
                 detail=f"Инбаунд с тегом '{obj_in.tag}' уже существует"
             )
 
-    # 4. Вызываем магию XrayService (Валидация DTO -> Commit -> Restart)
-    try:
-        # Превращаем схему в словарь, удаляя неуказанные поля
-        update_data = obj_in.model_dump(exclude_unset=True)
-        
-        # Наш новый транзакционный метод в сервисе
-        await xray_service.update_inbound(inbound_id, update_data)
-        await nginx_service.apply_all()
-        
-    except ValueError as ve:
-        # Это ошибки валидации конфига Xray
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as e:
-        # Системные ошибки (Docker, БД и т.д.)
-        raise HTTPException(status_code=500, detail=f"Ошибка при обновлении: {e}")
+    update_data = obj_in.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(current_inbound, key, value)
 
-    return {
-        "status": "success",
-        "message": f"Инбаунд '{current_inbound.tag}' успешно обновлен и перезапущен",
-        "data": {"id": inbound_id}
-    }
+    # ВАЛИДАЦИЯ ПЕРЕД СОХРАНЕНИЕМ
+    await db.flush() 
+    test_config = await xray_service.generator.build_config(db)
+    is_valid, error_msg = await xray_service.validate_config(test_config)
+
+    if not is_valid:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=f"Невалидная конфигурация: {error_msg}")
+
+    await db.commit()
+    await xray_service.sync_and_restart()
+    await nginx_service.apply_all()
+
+    return {"status": "success", "message": "Обновлено и проверено"}
 
 @router.get("/get/{inbound_id}")
 async def get_inbound(

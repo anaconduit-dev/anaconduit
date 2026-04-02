@@ -1,7 +1,7 @@
 import json
 from fastapi import APIRouter, Depends, HTTPException
 from app.core.dependencies import get_xray_service, get_current_admin
-from app.services.xray_service import XrayService
+from app.services.xray import XrayService
 
 router = APIRouter()
 

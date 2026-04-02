@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload
 from app.core.database import get_db
 from app.models.models import User, Client
 from app.core.config import settings
-from app.services.xray_service import XrayService
+from app.services.xray import XrayService
 from app.core.dependencies import get_xray_service
 from sqlalchemy import text
 
