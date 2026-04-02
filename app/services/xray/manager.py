@@ -7,10 +7,14 @@ import time
 import httpx
 import anyio
 import docker
+from sqlalchemy import select
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from app.services.docker_service import DockerService
 from app.core.config import settings
+from app.core.database import AsyncSessionLocal
+from app.models.models import XrayResource
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +25,7 @@ class XrayResourceManager:
 
     def __init__(self, docker_service: DockerService):
         self.docker = docker_service
+        self.internal_resource_dir = settings.xray_internal_path
         self.internal_xray_dir = settings.xray_internal_path
         self.host_xray_dir = f"{settings.host_data_path}/xray"
         self.host_log_dir = os.path.join(os.path.dirname(self.host_xray_dir), "xray_log")
@@ -35,26 +40,38 @@ class XrayResourceManager:
     # --- Работа с файлами ---
 
     def _ensure_dirs_exist(self):
-        """Создает необходимые папки, если их нет. Логирует только создание."""
+        """
+        Создает необходимые папки, используя ВНУТРЕННИЕ пути контейнера.
+        Благодаря Docker Volumes, папки появятся и на хосте (/opt/anaconduit/data/...).
+        """
+        # Используем пути, которые бэкенд реально видит через /app/data
+        # 1. self.internal_resource_dir (это settings.xray_internal_path -> /app/data/xray)
+        # 2. Логи: /app/data/xray_log
+        # 3. Сокеты: /app/data/run
+        
+        internal_log_dir = self.internal_resource_dir.parent / "xray_log"
+        internal_run_dir = self.internal_resource_dir.parent / "run"
+
         dirs_to_check = [
-            (self.host_xray_dir, "Конфигурация"),
-            (self.host_log_dir, "Логи"),
-            (self.host_sockets_dir, "Сокеты")
+            (self.internal_resource_dir, "Конфигурация/Ресурсы"),
+            (internal_log_dir, "Логи"),
+            (internal_run_dir, "Сокеты")
         ]
         
         created_any = False
         try:
             for path, name in dirs_to_check:
-                if not os.path.exists(path):
-                    os.makedirs(path, exist_ok=True)
-                    logger.info(f"📁 Создана папка Xray ({name}): {path}")
+                # Превращаем в Path объект, если это строка, для надежности
+                p = Path(path)
+                if not p.exists():
+                    p.mkdir(parents=True, exist_ok=True)
+                    logger.info(f"📁 Создана папка Xray ({name}): {p}")
                     created_any = True
             
             if not created_any:
-                # Если всё уже было, пишем только в DEBUG, чтобы не спамить в консоль
-                logger.debug(f"✅ Инфраструктура Xray уже готова: {self.host_xray_dir}")
+                logger.debug(f"✅ Инфраструктура Xray уже готова в {self.internal_resource_dir.parent}")
             else:
-                logger.info(f"🚀 Вся инфраструктура папок Xray успешно проверена и подготовлена")
+                logger.info(f"🚀 Вся инфраструктура папок Xray успешно подготовлена")
                 
         except Exception as e:
             logger.error(f"❌ Критическая ошибка при подготовке папок Xray: {e}")
@@ -207,3 +224,70 @@ class XrayResourceManager:
         except Exception as e:
             logger.error(f"❌ Ошибка при чтении логов Docker: {e}")
             return f"Error reading logs: {str(e)}"
+
+    async def get_all_resource_configs(self) -> List[Any]:
+        """Получает список всех ресурсов из БД для проверки обновлений."""
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(XrayResource))
+            return result.scalars().all()
+
+    async def download_resource(self, resource: Any) -> bool:
+        """Логика скачивания конкретного файла и обновление статуса в БД."""
+        dest_path = self.internal_resource_dir / resource.filename
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=300.0) as client:
+                resp = await client.get(resource.url)
+                resp.raise_for_status()
+                with open(dest_path, "wb") as f:
+                    f.write(resp.content)
+            
+            # Обновляем статус в БД
+            async with AsyncSessionLocal() as session:
+                res_db = await session.get(XrayResource, resource.id)
+                if res_db:
+                    res_db.last_updated = datetime.now()
+                    res_db.status = "success"
+                    res_db.error_message = None
+                    await session.commit()
+            return True
+        except Exception as e:
+            logger.error(f"❌ Ошибка при скачивании {resource.filename}: {e}")
+            async with AsyncSessionLocal() as session:
+                res_db = await session.get(XrayResource, resource.id)
+                if res_db:
+                    res_db.status = "failed"
+                    res_db.error_message = str(e)
+                    await session.commit()
+            return False
+
+    async def sync_all_resources(self):
+        """Проверяет все ресурсы в БД и скачивает обновления при необходимости."""
+        # Получаем список всех ресурсов из БД через сессию
+        # (Предположим, у тебя есть метод получения ресурсов)
+        resources = await self.get_all_resource_configs() 
+        
+        for res in resources:
+            if not res.auto_update and os.path.exists(Path(self.host_xray_dir) / res.filename):
+                continue
+                
+            # Проверка: пора ли обновлять?
+            need_download = False
+            file_path = self.internal_resource_dir / res.filename
+            
+            if not file_path.exists():
+                need_download = True
+            elif res.last_updated:
+                deadline = res.last_updated + timedelta(hours=res.update_interval)
+                if datetime.now() > deadline:
+                    need_download = True
+            else:
+                # Если файла нет в истории обновлений
+                need_download = True
+
+            if need_download:
+                success = await self.download_resource(res)
+                if success:
+                    logger.info(f"✅ Ресурс {res.filename} обновлен.")
+                    # После обновления критически важно рестартнуть Xray
+                    # но лучше делать это один раз после всех загрузок
+                    await self.restart()

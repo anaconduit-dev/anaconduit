@@ -3,6 +3,7 @@ import asyncio
 import time
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 async def stats_updater_task(xray_service):
@@ -25,6 +26,12 @@ async def stats_updater_task(xray_service):
                 logger.info("⏰ Запуск плановой проверки автосброса трафика...")
                 # Вызываем нашу новую логику (реализуем её в сервисе)
                 await xray_service.check_and_reset_traffic()
+
+                logger.info("⏰ [Scheduler] Проверка обновлений Geo-ресурсов...")
+                # Вызываем метод менеджера ресурсов
+                # Он сам внутри проверит по БД, пора ли скачивать файлы
+                await xray_service.manager.sync_all_resources()
+                
                 last_reset_check = current_time
 
             await asyncio.sleep(10) 

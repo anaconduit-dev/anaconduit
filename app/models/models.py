@@ -1,6 +1,6 @@
 import secrets
 import enum
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, BigInteger, JSON, UniqueConstraint, Enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, BigInteger, JSON, UniqueConstraint, Enum, func
 from sqlalchemy.sql import func
 from app.core.database import Base
 from sqlalchemy.orm import relationship
@@ -140,3 +140,31 @@ class RoutingRule(Base):
     description = Column(String, nullable=True)
 
     outbound = relationship("Outbound")
+
+class XrayResource(Base):
+    __tablename__ = "xray_resources"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Имя файла на диске, например "geoip.dat" или "custom_ads.dat"
+    filename = Column(String, unique=True, nullable=False, index=True)
+    
+    # Прямая ссылка на скачивание (https://...)
+    url = Column(String, nullable=False)
+    
+    # Флаг автоматического обновления
+    auto_update = Column(Boolean, default=True)
+    
+    # Интервал обновления в часах (например, 168 = 1 неделя)
+    update_interval = Column(Integer, default=168)
+    
+    # Служебные поля для мониторинга
+    last_updated = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String, default="pending")  # pending, success, failed
+    error_message = Column(String, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<XrayResource {self.filename} (status={self.status})>"

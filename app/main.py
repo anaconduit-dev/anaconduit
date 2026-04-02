@@ -46,7 +46,9 @@ async def lifespan(app: FastAPI):
 
     # 1. Инициализация БД
     await setup_initial_data()
-
+    # 1.1 Инициализация Geo-ресурсов (наша новая функция)
+    from app.services.xray.crud import XrayCRUDManager
+    await XrayCRUDManager.init_default_resources()
     # 2. Инфраструктура (Xray/Nginx)
     try:
         await xray_service.ensure_xray_running(version="latest")

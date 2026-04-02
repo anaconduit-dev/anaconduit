@@ -4,7 +4,7 @@ import json
 from typing import Dict, Any, List, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
-from app.models.models import Inbound, Client, User
+from app.models.models import Inbound, Client, User, XrayResource
 from app.core.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,42 @@ class XrayCRUDManager:
         clean_email = email.strip().lower()
         return f"{clean_email}#{tag}"
 
+    @staticmethod
+    async def init_default_resources():
+        """Инициализация базовых Geo-баз при первом запуске (Асинхронно)."""
+        defaults = [
+            {
+                "filename": "geoip.dat",
+                "url": "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat",
+                "update_interval": 720
+            },
+            {
+                "filename": "geosite.dat",
+                "url": "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat",
+                "update_interval": 720
+            }
+        ]
+        
+        async with AsyncSessionLocal() as db:
+            for item in defaults:
+                # Асинхронная проверка существования
+                result = await db.execute(
+                    select(XrayResource).where(XrayResource.filename == item["filename"])
+                )
+                exists = result.scalars().first()
+                
+                if not exists:
+                    logger.info(f"🆕 Добавление ресурса по умолчанию: {item['filename']}")
+                    new_res = XrayResource(
+                        filename=item["filename"],
+                        url=item["url"],
+                        update_interval=item["update_interval"],
+                        auto_update=True,
+                        status="pending"
+                    )
+                    db.add(new_res)
+            
+            await db.commit()
     # ---------- Работа с ИНБАУНДАМИ (Inbounds) ----------
 
     async def update_inbound(self, inbound_id: int, update_data: Dict[str, Any]):

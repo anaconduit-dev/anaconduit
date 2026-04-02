@@ -1,3 +1,5 @@
+# app/core/config.py
+
 import os
 from pathlib import Path
 from typing import Literal
