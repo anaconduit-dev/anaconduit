@@ -1,16 +1,21 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Edit3, Globe, Lock, ShieldCheck, BellOff, Database, Archive } from 'lucide-react';
+import { 
+  Edit3, Globe, Lock, ShieldCheck, 
+  BellOff, Database, Archive, RefreshCw 
+} from 'lucide-react';
 import LandingEditor from '../components/LandingEditor';
 import AdminCredentialsForm from '../components/AdminCredentialsForm';
 import Modal from '../components/Modal';
-import BackupModal from '../components/BackupModal'; // Импортируем нашу новую модалку
+import BackupModal from '../components/BackupModal';
+import ResourceModal from '../components/ResourceModal'; // Импортируем новую модалку
 
 const SettingsPage = () => {
   const { t } = useTranslation();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false); // Состояние для бэкапов
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false); // Состояние для ресурсов
 
   return (
     <div className="p-8 h-full overflow-y-auto custom-scrollbar">
@@ -52,10 +57,10 @@ const SettingsPage = () => {
             </button>
           </section>
 
-          {/* Карточка: Безопасность (Админ) */}
-          <section className="bg-main border border-line rounded-[2.5rem] p-8 flex flex-col md:flex-row items-start md:items-center justify-between group hover:border-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/5 transition-all duration-500 gap-6">
+          {/* Карточка: Безопасность */}
+          <section className="bg-main border border-line rounded-[2.5rem] p-8 flex flex-col md:flex-row items-start md:items-center justify-between group hover:border-amber-500/30 hover:shadow-2xl hover:shadow-amber-500/5 transition-all duration-500 gap-6">
             <div className="flex items-center gap-6">
-              <div className="p-4 bg-emerald-500/10 rounded-[2rem] text-emerald-500 group-hover:scale-110 transition-transform shadow-inner border border-emerald-500/10">
+              <div className="p-4 bg-amber-500/10 rounded-[2rem] text-amber-500 group-hover:scale-110 transition-transform shadow-inner border border-amber-500/10">
                 <Lock size={32} />
               </div>
               <div>
@@ -70,14 +75,39 @@ const SettingsPage = () => {
             
             <button 
               onClick={() => setIsAuthModalOpen(true)}
-              className="w-full md:w-auto flex items-center justify-center gap-3 bg-card border border-line hover:border-emerald-500/50 hover:text-emerald-500 text-muted px-8 py-4 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 shadow-xl"
+              className="w-full md:w-auto flex items-center justify-center gap-3 bg-card border border-line hover:border-amber-500/50 hover:text-amber-500 text-muted px-8 py-4 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 shadow-xl"
             >
               <ShieldCheck size={18} />
               {t("settings.changeData")}
             </button>
           </section>
 
-          {/* НОВАЯ КАРТОЧКА: Резервные копии */}
+          {/* КАРТОЧКА: Гео-ресурсы (NEW) */}
+          <section className="bg-main border border-line rounded-[2.5rem] p-8 flex flex-col md:flex-row items-start md:items-center justify-between group hover:border-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/5 transition-all duration-500 gap-6">
+            <div className="flex items-center gap-6">
+              <div className="p-4 bg-emerald-500/10 rounded-[2rem] text-emerald-500 group-hover:scale-110 transition-transform shadow-inner border border-emerald-500/10">
+                <RefreshCw size={32} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-lg uppercase tracking-tight italic">
+                  {t("system.geoResources")}
+                </h3>
+                <p className="text-muted text-[10px] font-bold uppercase tracking-wider mt-1 opacity-70">
+                  {t("settings.geoDesc") || "Управление базами GeoIP и GeoSite для маршрутизации"}
+                </p>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => setIsResourceModalOpen(true)}
+              className="w-full md:w-auto flex items-center justify-center gap-3 bg-card border border-line hover:border-emerald-500/50 hover:text-emerald-500 text-muted px-8 py-4 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 shadow-xl group/btn"
+            >
+              <Globe size={18} className="group-hover/btn:animate-pulse transition-transform" />
+              {t("settings.manage")}
+            </button>
+          </section>
+
+          {/* Карточка: Резервные копии */}
           <section className="bg-main border border-line rounded-[2.5rem] p-8 flex flex-col md:flex-row items-start md:items-center justify-between group hover:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/5 transition-all duration-500 gap-6">
             <div className="flex items-center gap-6">
               <div className="p-4 bg-blue-500/10 rounded-[2rem] text-blue-500 group-hover:scale-110 transition-transform shadow-inner border border-blue-500/10">
@@ -88,7 +118,7 @@ const SettingsPage = () => {
                   {t("settings.backups")}
                 </h3>
                 <p className="text-muted text-[10px] font-bold uppercase tracking-wider mt-1 opacity-70">
-                  {t("settings.backupsDesc") || "Управление точками восстановления базы данных"}
+                  {t("settings.backupsDesc")}
                 </p>
               </div>
             </div>
@@ -103,7 +133,7 @@ const SettingsPage = () => {
           </section>
         </div>
 
-        {/* Прочие настройки (Плейсхолдеры) */}
+        {/* Плейсхолдеры */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-card/20 border-2 border-dashed border-line rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center group grayscale hover:grayscale-0 transition-all duration-500">
               <div className="w-12 h-12 rounded-2xl bg-line/50 flex items-center justify-center text-muted/30 mb-4 group-hover:scale-110 transition-transform">
@@ -114,8 +144,6 @@ const SettingsPage = () => {
                 <span className="text-indigo-500/40">{t("settings.comingSoon")}</span>
               </span>
           </div>
-          
-          {/* Здесь можно добавить еще один плейсхолдер для симметрии или оставить пустым */}
         </div>
 
         {/* Модалки */}
@@ -139,7 +167,13 @@ const SettingsPage = () => {
           </div>
         </Modal>
 
-        {/* Наша новая модалка бэкапов */}
+        {/* Модалка ресурсов */}
+        <ResourceModal 
+          isOpen={isResourceModalOpen} 
+          onClose={() => setIsResourceModalOpen(false)} 
+        />
+
+        {/* Модалка бэкапов */}
         <BackupModal 
           isOpen={isBackupModalOpen} 
           onClose={() => setIsBackupModalOpen(false)} 

@@ -52,7 +52,7 @@ async def update_landing_content(
 @router.post("/apply")
 async def apply_config(
     nginx_service = Depends(get_nginx_service),
-    admin: dict = Depends(get_current_admin)
+    current_admin: dict = Depends(get_current_admin)
     ):
     """Перегенерация конфига без перезапуска контейнера (nginx reload)"""
     try:
@@ -68,7 +68,7 @@ async def apply_config(
 @router.get("/status")
 async def get_status(
     nginx_service = Depends(get_nginx_service),
-    admin=Depends(get_current_admin)
+    current_admin=Depends(get_current_admin)
 ):
     """Текущий статус контейнера Xray"""
     return await nginx_service.get_current_status()
@@ -77,23 +77,16 @@ async def get_status(
 @router.post("/start")
 async def start_nginx(
     nginx_service = Depends(get_nginx_service),
-    admin=Depends(get_current_admin)
+    current_admin=Depends(get_current_admin)
 ):
     """Запустить уже созданный контейнер"""
     return await nginx_service.start()
 
-@router.post("/stop")
-async def stop_nginx(
-    nginx_service = Depends(get_nginx_service),
-    admin=Depends(get_current_admin)
-):
-    """Остановить контейнер"""
-    return await nginx_service.stop()
 
 @router.post("/restart")
 async def restart_nginx(
     nginx_service = Depends(get_nginx_service),
-    admin=Depends(get_current_admin)
+    current_admin=Depends(get_current_admin)
 ):
     """Перезагрузить контейнер"""
     return await nginx_service.restart()
@@ -102,7 +95,7 @@ async def restart_nginx(
 async def get_nginx_logs(
     tail: int = 200, # Увеличим tail, так как после фильтрации строк станет меньше
     nginx_service: NginxService = Depends(get_nginx_service),
-    admin = Depends(get_current_admin)
+    current_admin = Depends(get_current_admin)
 ):
     """
     Выводит логи Nginx, исключая запросы к админ-панели (SECRET_PATH).

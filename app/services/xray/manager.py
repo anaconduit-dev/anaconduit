@@ -232,62 +232,103 @@ class XrayResourceManager:
             return result.scalars().all()
 
     async def download_resource(self, resource: Any) -> bool:
-        """Логика скачивания конкретного файла и обновление статуса в БД."""
+        """Логика скачивания с проверкой безопасности (размер и расширение)."""
+        MAX_SIZE = 150 * 1024 * 1024  # 150 MB (Geo-базы обычно 10-100MB)
+        ALLOWED_EXT = {".dat", ".db"}
+        
         dest_path = self.internal_resource_dir / resource.filename
-        try:
-            async with httpx.AsyncClient(follow_redirects=True, timeout=300.0) as client:
-                resp = await client.get(resource.url)
-                resp.raise_for_status()
-                with open(dest_path, "wb") as f:
-                    f.write(resp.content)
-            
-            # Обновляем статус в БД
-            async with AsyncSessionLocal() as session:
-                res_db = await session.get(XrayResource, resource.id)
-                if res_db:
-                    res_db.last_updated = datetime.now()
-                    res_db.status = "success"
-                    res_db.error_message = None
-                    await session.commit()
-            return True
-        except Exception as e:
-            logger.error(f"❌ Ошибка при скачивании {resource.filename}: {e}")
-            async with AsyncSessionLocal() as session:
-                res_db = await session.get(XrayResource, resource.id)
-                if res_db:
-                    res_db.status = "failed"
-                    res_db.error_message = str(e)
-                    await session.commit()
+
+        # 1. Проверка расширения
+        if dest_path.suffix not in ALLOWED_EXT:
+            error_msg = f"🚫 Недопустимое расширение файла: {dest_path.suffix}"
+            logger.error(error_msg)
+            await self._update_res_db(resource.id, "failed", error_msg)
             return False
 
-    async def sync_all_resources(self):
-        """Проверяет все ресурсы в БД и скачивает обновления при необходимости."""
-        # Получаем список всех ресурсов из БД через сессию
-        # (Предположим, у тебя есть метод получения ресурсов)
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=300.0) as client:
+                # Используем stream, чтобы проверить размер до полной загрузки в память
+                async with client.stream("GET", str(resource.url)) as resp:
+                    resp.raise_for_status()
+                    
+                    # 2. Проверка заголовка Content-Length
+                    cl = resp.headers.get("Content-Length")
+                    if cl and int(cl) > MAX_SIZE:
+                        raise ValueError(f"Файл слишком большой: {int(cl) // 1024 // 1024}MB")
+
+                    downloaded_size = 0
+                    with open(dest_path, "wb") as f:
+                        async for chunk in resp.aiter_bytes(chunk_size=8192):
+                            downloaded_size += len(chunk)
+                            if downloaded_size > MAX_SIZE:
+                                raise ValueError("Файл превысил лимит в процессе загрузки")
+                            f.write(chunk)
+
+            # 3. Обновляем статус в БД (вынес в отдельный метод для чистоты)
+            await self._update_res_db(resource.id, "success")
+            return True
+
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"❌ Ошибка при скачивании {resource.filename}: {error_msg}")
+            await self._update_res_db(resource.id, "failed", error_msg)
+            return False
+
+    async def _update_res_db(self, res_id: int, status: str, error: str = None):
+        """Вспомогательный метод для обновления статуса в БД"""
+        async with AsyncSessionLocal() as session:
+            res_db = await session.get(XrayResource, res_id)
+            if res_db:
+                if status == "success":
+                    res_db.last_updated = datetime.now()
+                res_db.status = status
+                res_db.error_message = error
+                await session.commit()
+
+    async def sync_all_resources(self, force_resource_id: int = None):
+        """
+        Проверяет ресурсы. 
+        force_resource_id: если передан ID, обновим его игнорируя тайминги.
+        """
         resources = await self.get_all_resource_configs() 
         
+        any_updated = False 
+        target_success = True
+
         for res in resources:
-            if not res.auto_update and os.path.exists(Path(self.host_xray_dir) / res.filename):
-                continue
-                
-            # Проверка: пора ли обновлять?
-            need_download = False
+            # 1. Определяем базовый путь
             file_path = self.internal_resource_dir / res.filename
             
-            if not file_path.exists():
+            # 2. Условия для скачивания
+            need_download = False
+            
+            # Условие А: Прямое указание (через API) или статус в БД
+            if force_resource_id == res.id or res.status == "pending":
                 need_download = True
-            elif res.last_updated:
+                logger.info(f"🔄 Принудительное обновление ресурса: {res.filename}")
+
+            # Условие Б: Файла физически нет
+            elif not file_path.exists():
+                need_download = True
+
+            # Условие В: Плановое обновление (если включено автообновление)
+            elif res.auto_update and res.last_updated:
                 deadline = res.last_updated + timedelta(hours=res.update_interval)
                 if datetime.now() > deadline:
                     need_download = True
-            else:
-                # Если файла нет в истории обновлений
-                need_download = True
+                    logger.info(f"⏰ Плановое обновление по расписанию: {res.filename}")
 
             if need_download:
                 success = await self.download_resource(res)
                 if success:
-                    logger.info(f"✅ Ресурс {res.filename} обновлен.")
-                    # После обновления критически важно рестартнуть Xray
-                    # но лучше делать это один раз после всех загрузок
-                    await self.restart()
+                    any_updated = True
+                else:
+                    if force_resource_id == res.id:
+                        target_success = False
+
+        # 3. Рестартуем Xray только если хоть один файл реально скачался
+        if any_updated:
+            logger.info("🚀 Перезапуск Xray после обновления ресурсов...")
+            await self.restart()
+        
+        return target_success

@@ -10,7 +10,7 @@ router = APIRouter()
 @router.get("/versions", response_model=List[str])
 async def get_xray_versions(
     service: XrayService = Depends(get_xray_service),
-    user=Depends(get_current_admin)
+    admin=Depends(get_current_admin)
 ):
     """
     Получает список доступных версий Xray напрямую из GitHub релизов.
@@ -30,7 +30,7 @@ async def install_xray(
     version: str,
     # Вот здесь была ошибка! Исправляем:
     service: XrayService = Depends(get_xray_service), 
-    user=Depends(get_current_admin)
+    admin=Depends(get_current_admin)
 ):
     """Установка новой версии (с удалением старой)"""
     return await service.install(version)
@@ -38,7 +38,7 @@ async def install_xray(
 @router.post("/start")
 async def start_xray(
     service: XrayService = Depends(get_xray_service),
-    user=Depends(get_current_admin)
+    admin=Depends(get_current_admin)
 ):
     """Запустить уже созданный контейнер"""
     return await service.start()
@@ -46,7 +46,7 @@ async def start_xray(
 @router.post("/stop")
 async def stop_xray(
     service: XrayService = Depends(get_xray_service),
-    user=Depends(get_current_admin)
+    admin=Depends(get_current_admin)
 ):
     """Остановить контейнер"""
     return await service.stop()
@@ -54,7 +54,7 @@ async def stop_xray(
 @router.post("/restart")
 async def restart_xray(
     service: XrayService = Depends(get_xray_service),
-    user=Depends(get_current_admin)
+    admin=Depends(get_current_admin)
 ):
     """Перезагрузить контейнер"""
     return await service.restart()
@@ -62,7 +62,7 @@ async def restart_xray(
 @router.get("/status")
 async def get_status(
     service: XrayService = Depends(get_xray_service),
-    user=Depends(get_current_admin)
+    admin=Depends(get_current_admin)
 ):
     """Текущий статус контейнера Xray"""
     return await service.get_status()
@@ -70,7 +70,7 @@ async def get_status(
 @router.get("/stats")
 async def get_xray_stats(
     service: XrayService = Depends(get_xray_service),
-    user=Depends(get_current_admin)
+    admin=Depends(get_current_admin)
 ):
     """
     Запрашивает текущую статистику трафика через gRPC API Xray.
@@ -87,7 +87,7 @@ async def get_xray_stats(
 async def get_xray_logs(
     tail: int = 100,
     service: XrayService = Depends(get_xray_service),
-    user=Depends(get_current_admin)
+    admin=Depends(get_current_admin)
 ):
     """
     Выводит последние логи контейнера Xray для диагностики.

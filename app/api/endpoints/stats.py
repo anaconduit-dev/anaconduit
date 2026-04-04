@@ -21,8 +21,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("/summary")
-async def get_dashboard_summary(db: AsyncSession = Depends(get_db),
-    admin: dict = Depends(get_current_admin)):
+async def get_dashboard_summary(
+    db: AsyncSession = Depends(get_db),
+    admin: dict = Depends(get_current_admin)
+):
     # 1. Считаем общее кол-во активных юзеров
     total_query = await db.execute(select(func.count(User.id)).where(User.is_active == True))
     total_clients = total_query.scalar() or 0
@@ -53,7 +55,7 @@ async def get_dashboard_summary(db: AsyncSession = Depends(get_db),
 
 
 @router.get("/system/summary")
-async def get_dashboard_summary():
+async def get_dashboard_summary(admin: dict = Depends(get_current_admin)):
     system_cpu = psutil.cpu_percent(interval=None) # Текущая нагрузка CPU
     system_ram = psutil.virtual_memory() # Данные по RAM сервера
     

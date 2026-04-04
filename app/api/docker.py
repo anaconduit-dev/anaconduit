@@ -6,8 +6,8 @@ router = APIRouter()
 
 @router.get("/containers")
 async def list_all_allowed_containers(
-    service: DockerService = Depends(DockerService), # Можно так, если нет сложных зависимостей
-    user=Depends(get_current_admin)
+    service: DockerService = Depends(DockerService),
+    admin: dict = Depends(get_current_admin)
 ):
     """Список только разрешенных системных контейнеров"""
     return await service.list_containers()

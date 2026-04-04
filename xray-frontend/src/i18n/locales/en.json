@@ -59,6 +59,16 @@
     "createSuccess": "Backup created successfully",
     "deleteSuccess": "Backup deleted",
     "downloadError": "Download error",
+    "geoResources": "Geo Resources",
+    "addResource": "Add Resource",
+    "autoUpdate": "Auto-update",
+    "syncing": "Syncing...",
+    "syncSuccess": "Resources updated",
+    "syncError": "Update failed",
+    "syncNow": "Update now",
+    "syncAll": "Update all",
+    "noResources": "Resource list is empty",
+    "resourceDeleteConfirm": "Remove resource {{name}}? The file will remain on disk but will no longer be updated.",
     "table": {
         "actions": "Actions"
     }
@@ -78,7 +88,8 @@
     "securityConfig": "SECURITY CONFIG",
     "landingEditor": "LANDING EDITOR",
     "backupsDesc": "Manage SQLite database restore points and snapshots",
-    "manage": "Manage"
+    "manage": "Manage",
+    "geoDesc": "Management of GeoIP and GeoSite databases for routing"
   },
   "inbounds": {
     "title": "Inbounds",
@@ -146,6 +157,7 @@
     "month": "month"
   },
   "common": {
+    "add": "Add",
     "reset": "Reset",
     "cancel": "Cancel",
     "delete": "delete",
@@ -158,7 +170,9 @@
     "selected": "selected",
     "onePerLine": "One per line",
     "comment": "Comment",
-    "success": "Successful"
+    "success": "Successful",
+    "edit": "Edit",
+    "fillAll": "Please fill in all fields"
   },
   "status": {
     "active": "ACTIVE",

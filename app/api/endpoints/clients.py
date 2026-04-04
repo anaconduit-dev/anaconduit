@@ -257,7 +257,7 @@ async def update_user_limits(
 async def reset_subscription_token(
     user_id: int, db: AsyncSession = Depends(get_db),
     admin: dict = Depends(get_current_admin)
-    ):
+):
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404)

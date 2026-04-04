@@ -1,3 +1,5 @@
+# app/schemas/resource.py
+
 from pydantic import BaseModel, HttpUrl
 from datetime import datetime
 from typing import Optional
@@ -9,6 +11,7 @@ class ResourceBase(BaseModel):
     update_interval: int = 168
 
 class ResourceCreate(ResourceBase):
+    status: str = "pending"
     pass
 
 class ResourceUpdate(BaseModel):
@@ -16,6 +19,7 @@ class ResourceUpdate(BaseModel):
     url: Optional[HttpUrl] = None
     auto_update: Optional[bool] = None
     update_interval: Optional[int] = None
+    status: Optional[str] = None
 
 class ResourceInDB(ResourceBase):
     id: int
