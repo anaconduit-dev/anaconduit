@@ -7,7 +7,6 @@ from typing import Optional, Dict, Any, List
 from concurrent.futures import ThreadPoolExecutor
 
 import docker
-
 from datetime import datetime, timezone
 
 from docker.models.containers import Container
@@ -69,46 +68,60 @@ class DockerService:
     async def list_containers(self) -> Dict[str, Any]:
 
         def _list():
-
             now_ts = time.time()
+            
+            # --- ИСПРАВЛЕННЫЙ БЛОК ПОЛУЧЕНИЯ КОНТЕЙНЕРОВ ---
+            containers: List[Container] = []
+            
+            # Сначала получаем только "легкие" данные (ID и имена)
+            try:
+                raw_containers = self.client.api.containers(all=True)
+            except Exception as e:
+                logger.error(f"Ошибка при обращении к Docker API: {e}")
+                return {"containers": [], "total": {"cpu_percent": 0, "mem_usage_mb": 0, "mem_usage_percent": 0, "count": 0}}
 
-            containers: List[Container] = [
-                c for c in self.client.containers.list(all=True)
-                if c.name in self.ALLOWED_CONTAINERS
-            ]
+            for item in raw_containers:
+                # Извлекаем имя (Docker возвращает список имен типа ['/container_name'])
+                c_name = item.get('Names', [''])[0].lstrip('/')
+                
+                if c_name in self.ALLOWED_CONTAINERS:
+                    try:
+                        # Пытаемся получить полный объект контейнера
+                        c = self.client.containers.get(item['Id'])
+                        containers.append(c)
+                    except NotFound:
+                        # Контейнер был удален прямо во время итерации — пропускаем
+                        logger.warning(f"Контейнер {c_name} исчез во время формирования списка")
+                        continue
+                    except Exception as e:
+                        logger.error(f"Ошибка при получении данных контейнера {c_name}: {e}")
+                        continue
+            # -----------------------------------------------
 
             # ---------- stats cache ----------
-
             if now_ts - self._stats_cache_time > self.STATS_CACHE_TTL:
-
                 futures = [
                     self._executor.submit(self._fetch_stats, c)
                     for c in containers
                 ]
-
                 stats_results = [f.result() for f in futures]
 
                 self._stats_cache = {
                     c.name: stats
                     for c, stats in zip(containers, stats_results)
                 }
-
                 self._stats_cache_time = now_ts
 
             stats_cache = self._stats_cache
-
             container_list = []
 
             total_cpu = 0.0
             total_mem_bytes = 0
             total_mem_limit_bytes = 0
-
             now = datetime.now(timezone.utc)
 
             for container in containers:
-
                 stats = stats_cache.get(container.name)
-
                 cpu_val = 0.0
                 mem_usage_bytes = 0
                 mem_limit_bytes = 0
@@ -116,28 +129,23 @@ class DockerService:
                 uptime = "offline"
 
                 if container.status == "running":
-
-                    started_at_str = container.attrs.get("State", {}).get("StartedAt", "")
+                    # Используем .get() аккуратно, чтобы не упасть на attrs
+                    state = container.attrs.get("State", {})
+                    started_at_str = state.get("StartedAt", "")
 
                     if started_at_str:
                         try:
-
                             clean_date = started_at_str[:26] + "Z"
-
                             start_dt = datetime.strptime(
                                 clean_date,
                                 "%Y-%m-%dT%H:%M:%S.%fZ"
                             ).replace(tzinfo=timezone.utc)
-
                             uptime = str(now - start_dt).split('.')[0]
-
                         except Exception:
                             uptime = "unknown"
 
                     if stats:
-
                         mem_stats = stats.get("memory_stats", {})
-
                         mem_usage_bytes = mem_stats.get("usage", 0)
                         mem_limit_bytes = mem_stats.get("limit", 0)
 
@@ -154,59 +162,46 @@ class DockerService:
                             cpu_stats.get("cpu_usage", {}).get("total_usage", 0)
                             - precpu_stats.get("cpu_usage", {}).get("total_usage", 0)
                         )
-
                         system_delta = (
                             cpu_stats.get("system_cpu_usage", 0)
                             - precpu_stats.get("system_cpu_usage", 0)
                         )
 
                         if system_delta > 0 and cpu_delta > 0:
-
                             num_cpus = cpu_stats.get("online_cpus", 1)
-
                             cpu_val = (cpu_delta / system_delta) * num_cpus * 100.0
-
                             total_cpu += cpu_val
 
-                container_list.append({
+                # Проверка на наличие имиджа и тегов (защита от None)
+                image_tags = []
+                if container.image and hasattr(container.image, 'tags'):
+                    image_tags = [str(t) for t in container.image.tags]
 
+                container_list.append({
                     "name": container.name,
                     "status": container.status,
                     "uptime": uptime,
-
                     "cpu_percent": round(cpu_val, 2),
-
                     "memory": {
                         "usage_mb": round(mem_usage_bytes / 1048576, 2),
                         "limit_mb": round(mem_limit_bytes / 1048576, 2),
                         "percent": round(mem_percent, 2)
                     },
-
-                    "image": [str(t) for t in container.image.tags],
-
+                    "image": image_tags,
                 })
 
             total_mem_usage_percent = 0.0
-
             if total_mem_limit_bytes > 0:
                 total_mem_usage_percent = (total_mem_bytes / total_mem_limit_bytes) * 100
 
             return {
-
                 "containers": container_list,
-
                 "total": {
-
                     "cpu_percent": round(total_cpu, 2),
-
                     "mem_usage_mb": round(total_mem_bytes / 1048576, 2),
-
                     "mem_usage_percent": round(total_mem_usage_percent, 2),
-
                     "count": len(container_list)
-
                 }
-
             }
 
         return await anyio.to_thread.run_sync(_list)

@@ -44,10 +44,6 @@ class XrayResourceManager:
         Создает необходимые папки, используя ВНУТРЕННИЕ пути контейнера.
         Благодаря Docker Volumes, папки появятся и на хосте (/opt/anaconduit/data/...).
         """
-        # Используем пути, которые бэкенд реально видит через /app/data
-        # 1. self.internal_resource_dir (это settings.xray_internal_path -> /app/data/xray)
-        # 2. Логи: /app/data/xray_log
-        # 3. Сокеты: /app/data/run
         
         internal_log_dir = self.internal_resource_dir.parent / "xray_log"
         internal_run_dir = self.internal_resource_dir.parent / "run"
