@@ -35,8 +35,22 @@ const AdminCredentialsForm = ({ onSuccess }: { onSuccess: () => void }) => {
       // Можно добавить уведомление перед перезагрузкой
       window.location.reload(); 
     } catch (err: any) {
-      // Обработка ошибки через централизованный формат
-      const message = err.response?.data?.detail || 'Ошибка при обновлении данных';
+      const detail = err.response?.data?.detail;
+      
+      let message = 'Ошибка при обновлении данных';
+
+      if (typeof detail === 'string') {
+        // Если это обычная строка (наша кастомная ошибка)
+        message = detail;
+      } else if (Array.isArray(detail)) {
+        // Если это ошибка валидации Pydantic (массив)
+        // Достаем первое сообщение или склеиваем все
+        message = detail.map(d => d.msg).join(', ');
+      } else if (err.message) {
+        // Ошибка сети или другая
+        message = err.message;
+      }
+
       setError(message);
     } finally {
       setLoading(false);

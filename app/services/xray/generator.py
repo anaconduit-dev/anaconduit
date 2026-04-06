@@ -3,7 +3,7 @@ import logging
 from typing import List, Dict, Any
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
-from app.models.models import Inbound, Client, User, Outbound, RoutingRule
+from app.models.models import Inbound, Client, User, Outbound, RoutingRule, GlobalSettings
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -20,13 +20,22 @@ class XrayConfigGenerator:
         clean_email = email.strip().lower()
         return f"{clean_email}#{tag}"
 
+    async def _get_global_settings(self, session):
+        """Вспомогательный метод для получения настроек"""
+        result = await session.execute(select(GlobalSettings).where(GlobalSettings.id == 1))
+        settings = result.scalars().first()
+        return settings
+
     async def build_config(self, session) -> dict:
         """Главная точка входа для сборки JSON конфига"""
+        gs = await self._get_global_settings(session)
+        log_level = gs.log_level if gs else "warning"
+
         return {
             "log": {
-                "access": "/var/log/xray/access.log", 
-                "error": "/var/log/xray/error.log", 
-                "loglevel": "warning"
+                "access": gs.access_log if gs else "/var/log/xray/access.log",
+                "error": gs.error_log if gs else "/var/log/xray/error.log",
+                "loglevel": log_level
             },
             "stats": {},
             "api": {
@@ -35,7 +44,7 @@ class XrayConfigGenerator:
                 "services": ["HandlerService", "StatsService", "LoggerService"]
             },
             "policy": {
-                "levels": {"0": {"statsUserUplink": True, "statsUserDownlink": True}},
+                "levels": {"0": {"statsUserUplink": gs.stats_user_uplink if gs else True, "statsUserDownlink": gs.stats_user_downlink if gs else True}},
                 "system": {"statsInboundUplink": True, "statsInboundDownlink": True}
             },
             "inbounds": await self._build_inbounds(session),
@@ -184,6 +193,9 @@ class XrayConfigGenerator:
         return xray_outbounds
 
     async def _build_routing(self, session) -> dict:
+        gs = await self._get_global_settings(session)
+        strategy = gs.domain_strategy if gs else "AsIs"
+
         result = await session.execute(
             select(RoutingRule).where(RoutingRule.is_active == True).order_by(RoutingRule.priority.desc())
         )
@@ -224,6 +236,6 @@ class XrayConfigGenerator:
                 logger.warning(f"Правило {r.id} (tag: {r.outbound_tag}) пропущено: нет критериев фильтрации")
 
         return {
-            "domainStrategy": "AsIs",
+            "domainStrategy": strategy,
             "rules": xray_rules
         }

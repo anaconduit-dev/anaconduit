@@ -44,9 +44,37 @@ async def seed_default_outbound():
         await session.commit()
         logger.info("✅ Дефолтный outbound 'direct' (freedom) создан успешно.")
 
+async def init_global_settings():
+    """Создает дефолтные глобальные настройки, если они отсутствуют"""
+    async with AsyncSessionLocal() as session:
+        # Проверяем, есть ли уже запись
+        result = await session.execute(select(models.GlobalSettings).where(models.GlobalSettings.id == 1))
+        settings = result.scalars().first()
+
+        if not settings:
+            print("🚀 Initializing Global Settings with default values...")
+            default_settings = models.GlobalSettings(
+                id=1,
+                domain_strategy="AsIs",
+                log_level="warning",
+                access_log="/var/log/xray/access.log",
+                error_log="/var/log/xray/error.log",
+                stats_user_uplink=True,
+                stats_user_downlink=True,
+                dns_settings={
+                    "servers": ["8.8.8.8", "1.1.1.1", "localhost"]
+                }
+            )
+            session.add(default_settings)
+            await session.commit()
+            print("✅ Global Settings initialized.")
+        else:
+            print("ℹ️ Global Settings already exists.")
+
 async def setup_initial_data():
     """Агрегатор для вызова в lifespan"""
     try:
+        await init_global_settings()
         await create_initial_admin()
         await seed_default_outbound()
     except Exception as e:

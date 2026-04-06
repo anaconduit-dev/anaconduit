@@ -2,20 +2,22 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Edit3, Globe, Lock, ShieldCheck, 
-  BellOff, Database, Archive, RefreshCw 
+  BellOff, Database, Archive, RefreshCw, Settings2
 } from 'lucide-react';
 import LandingEditor from '../components/LandingEditor';
 import AdminCredentialsForm from '../components/AdminCredentialsForm';
 import Modal from '../components/Modal';
 import BackupModal from '../components/BackupModal';
-import ResourceModal from '../components/ResourceModal'; // Импортируем новую модалку
+import ResourceModal from '../components/ResourceModal'; 
+import SystemSettingsModal from '../components/SystemSettingsModal';
 
 const SettingsPage = () => {
   const { t } = useTranslation();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
-  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false); // Состояние для ресурсов
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
+  const [isSystemModalOpen, setIsSystemModalOpen] = useState(false);
 
   return (
     <div className="p-8 h-full overflow-y-auto custom-scrollbar">
@@ -31,7 +33,31 @@ const SettingsPage = () => {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-2 gap-6">
+          {/* КАРТОЧКА: Системные настройки (NEW) */}
+          <section className="bg-main border border-line rounded-[2.5rem] p-8 flex flex-col md:flex-row items-start md:items-center justify-between group hover:border-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/5 transition-all duration-500 gap-6">
+            <div className="flex items-center gap-6">
+              <div className="p-4 bg-indigo-500/10 rounded-[2rem] text-indigo-500 group-hover:scale-110 transition-transform shadow-inner border border-indigo-500/10">
+                <Settings2 size={32} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-lg uppercase tracking-tight italic">
+                  {t("settings.systemTitle")}
+                </h3>
+                <p className="text-muted text-[10px] font-bold uppercase tracking-wider mt-1 opacity-70">
+                  {t("settings.systemDesc")}
+                </p>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => setIsSystemModalOpen(true)}
+              className="w-full md:w-auto flex items-center justify-center gap-3 bg-card border border-line hover:border-indigo-500/50 hover:text-indigo-500 text-muted px-8 py-4 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 shadow-xl group/btn"
+            >
+              <Settings2 size={18} className="group-hover/btn:rotate-90 transition-transform duration-500" />
+              {t("settings.configure")}
+            </button>
+          </section>
           {/* Карточка: Landing Page */}
           <section className="bg-main border border-line rounded-[2.5rem] p-8 flex flex-col md:flex-row items-start md:items-center justify-between group hover:border-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/5 transition-all duration-500 gap-6">
             <div className="flex items-center gap-6">
@@ -177,6 +203,10 @@ const SettingsPage = () => {
         <BackupModal 
           isOpen={isBackupModalOpen} 
           onClose={() => setIsBackupModalOpen(false)} 
+        />
+        <SystemSettingsModal 
+          isOpen={isSystemModalOpen} 
+          onClose={() => setIsSystemModalOpen(false)} 
         />
 
       </div>

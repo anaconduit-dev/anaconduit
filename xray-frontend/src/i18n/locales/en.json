@@ -1,5 +1,25 @@
 {
   "routing": {
+    "title": "Routing",
+    "info": "Traffic steering logic & filters",
+    "tabs": {
+      "gateways": "Gateways",
+      "rules": "Rules"
+    },
+    "strategy": {
+      "title": "Domain Resolution Strategy",
+      "description": "How Xray core handles DNS & IP matching for rules"
+    },
+    "addRule": "Add Traffic Distribution Rule",
+    "noRules": "No custom rules defined",
+    "statusUpdated": "Rule status updated",
+    "deleteTitle": "Delete rule?",
+    "deleteConfirm": "Traffic will no longer be routed based on these conditions.",
+    "rule": {
+      "priority": "Priority",
+      "catchAll": "Global Catch-all",
+      "forwarding": "Forwarding to"
+    },
     "newRoute": "New Routing Rule",
     "steeringLogic": "Traffic Steering Logic",
     "targetOutbound": "Target Outbound",
@@ -46,7 +66,10 @@
     "blackholeNote": "All traffic sent to this gateway will be silently dropped (blocking).",
     "statusActive": "Active",
     "statusDisabled": "Disabled",
-    "mappingExits": "Syncing gateways..."
+    "mappingExits": "Syncing gateways...",
+    "targetDescription": "Target / Description",
+    "directSystem": "Direct System",
+    "defaultGateway": "Default Gateway"
   },
   "system": {
     "backups": "Backups",
@@ -74,6 +97,18 @@
     }
   },
   "settings": {
+    "systemTitle": "System Core",
+    "systemDesc": "Log levels and internal statistics collection",
+    "systemConfig": "Xray Core Configuration",
+    "configure": "Configure",
+    "logs": {
+      "title": "Log Level",
+      "desc": "Debug for troubleshooting, Warning is recommended for production."
+    },
+    "stats": {
+      "title": "Collect Statistics",
+      "desc": "Enables stats API for real-time traffic monitoring."
+    },
     "title": "Configuration",
     "subtitle": "Appearance and security parameters of Anaconduit",
     "landingTitle": "Landing Page",
@@ -172,7 +207,8 @@
     "comment": "Comment",
     "success": "Successful",
     "edit": "Edit",
-    "fillAll": "Please fill in all fields"
+    "fillAll": "Please fill in all fields",
+    "error": "Error"
   },
   "status": {
     "active": "ACTIVE",

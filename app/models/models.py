@@ -1,3 +1,5 @@
+# app/models/models.py
+
 import secrets
 import enum
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, BigInteger, JSON, UniqueConstraint, Enum, func
@@ -168,3 +170,26 @@ class XrayResource(Base):
 
     def __repr__(self):
         return f"<XrayResource {self.filename} (status={self.status})>"
+
+class GlobalSettings(Base):
+    """Глобальные настройки конфигурации Xray"""
+    __tablename__ = "global_settings"
+
+    id = Column(Integer, primary_key=True, default=1) # Всегда 1 для единственной записи
+    
+    # Настройки маршрутизации
+    domain_strategy = Column(String, default="IPIfNonMatch", nullable=False)
+    
+    # Системные настройки логов
+    log_level = Column(String, default="warning")
+    access_log = Column(String, default="/var/log/xray/access.log")
+    error_log = Column(String, default="/var/log/xray/error.log")
+    
+    # Лимиты и системные политики (Policy)
+    stats_user_uplink = Column(Boolean, default=True)
+    stats_user_downlink = Column(Boolean, default=True)
+    
+    # Для будущего: настройки DNS сервера внутри Xray
+    dns_settings = Column(JSON, nullable=True, default=dict)
+
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
