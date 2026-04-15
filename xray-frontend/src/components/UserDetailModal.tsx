@@ -128,27 +128,51 @@ export default function UserDetailModal({ user, onClose, onRefresh }: UserDetail
           <div className="bg-[#0c0c0e] border border-white/5 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl">
             <Globe className="absolute -right-12 -bottom-12 text-white/[0.03] rotate-12" size={200} />
             <div className="relative z-10 space-y-6">
-                <div>
-                  <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">
-                    {t("modals.userDetail.subLinkTitle")}
-                  </p>
-                  <div className="flex gap-3">
-                    <div className="flex-1 ...">
-                      {loading ? t("modals.userDetail.generating") : linksData?.link_subscription}
+              <div>
+                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">
+                  {t("modals.userDetail.subLinkTitle")}
+                </p>
+                
+                {/* Основная ссылка */}
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-mono text-white/90 truncate backdrop-blur-sm">
+                    {loading ? t("modals.userDetail.generating") : linksData?.link_subscription}
+                  </div>
+                  <button 
+                    onClick={() => handleCopy(linksData?.link_subscription, 'sub_link')} 
+                    className={`p-4 rounded-2xl transition-all active:scale-90 shrink-0 ${
+                      copiedTag === 'sub_link' 
+                        ? 'bg-emerald-500 text-white' 
+                        : 'bg-white text-slate-900 hover:bg-indigo-50'
+                    }`}
+                  >
+                    {copiedTag === 'sub_link' ? <CheckCircle2 size={20} /> : <Copy size={20} />}
+                  </button>
+                </div>
+
+                {/* НОВАЯ ССЫЛКА: BASE64 */}
+                {!loading && linksData?.link_subscription && (
+                  <div className="flex items-center justify-between px-5 py-3 bg-white/5 border border-white/5 rounded-xl group/base64 hover:border-indigo-500/30 transition-all">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-[8px] font-black bg-white/10 text-white/60 px-2 py-0.5 rounded-md uppercase tracking-tighter">
+                        Base64
+                      </span>
+                      <span className="text-[10px] font-mono text-white/40 truncate italic">
+                        {linksData.link_subscription}?format=base64
+                      </span>
                     </div>
                     <button 
-                      onClick={() => handleCopy(linksData?.link_subscription, 'sub_link')} 
-                      className={`p-4 rounded-2xl transition-all active:scale-90 ${
-                        copiedTag === 'sub_link' 
-                          ? 'bg-emerald-500 text-white' 
-                          : 'bg-white text-slate-900 hover:bg-indigo-50'
+                      onClick={() => handleCopy(`${linksData.link_subscription}?format=base64`, 'sub_link_base64')}
+                      className={`text-[10px] font-black uppercase tracking-widest transition-all ${
+                        copiedTag === 'sub_link_base64' ? 'text-emerald-400' : 'text-indigo-400 hover:text-indigo-300'
                       }`}
                     >
-                      {copiedTag === 'sub_link' ? <CheckCircle2 size={20} /> : <Copy size={20} />}
+                      {copiedTag === 'sub_link_base64' ? <CheckCircle2 size={20} /> : <Copy size={20} />}
                     </button>
                   </div>
-                </div>
-            </div>
+                )}
+              </div>
+          </div>
           </div>
 
           {/* Connections List */}

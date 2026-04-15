@@ -84,6 +84,9 @@ class XrayLinkGenerator:
         return ""
 
     def _detect_client_type(self, request: Request) -> str:
+        fmt = request.query_params.get("format")
+        if fmt == "base64":
+            return "base64"
         """Определяет тип клиента на основе User-Agent или query-параметра"""
         client_param = request.query_params.get("client")
         if client_param:
