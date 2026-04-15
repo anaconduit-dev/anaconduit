@@ -10,6 +10,8 @@ import OutboundsPage from "./pages/OutboundsPage"
 import SettNginx from "./pages/SettNginx";
 import Settings from "./pages/Settings";
 import SubscriptionPage from "./pages/SubscriptionPage";
+import SubscriptionTemplates from "./pages/SubscriptionTemplates";
+import UserGroups from "./pages/UserGroups";
 import { getToken } from "./store/auth";
 import './i18n/config'; // Просто импорт для инициализации
 import { ConfirmProvider } from "./context/ConfirmContext";
@@ -92,6 +94,8 @@ export default function App() {
             <Route path="/users" element={<Users />} />
             <Route path="/inbounds" element={<Inbounds />} />
             <Route path="/outbounds" element={<OutboundsPage />} />
+            <Route path="/subtemplates" element={<SubscriptionTemplates />} />
+            <Route path="/usergroups" element={<UserGroups />} />
             <Route path="/nginx" element={<SettNginx />} />
             <Route path="/settings" element={<Settings />} />
           </Route>

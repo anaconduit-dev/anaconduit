@@ -14,7 +14,7 @@ from app.core.logging import setup_logging
 from app.api.router import api_router
 from app.core.database import engine, Base, AsyncSessionLocal
 from app.core.database import get_db
-from app.models import models 
+import app.models  
 from app.core.security import hash_password
 from sqlalchemy import select 
 from app.xray_api.client import XrayAPIClient
@@ -159,7 +159,7 @@ if os.path.exists(static_path):
                 return HTMLResponse("Front-end not built", status_code=500)
             return HTMLResponse(content=content)
 
-        return await xray_service.generate_subscription(token, db)
+        return await xray_service.generate_subscription(token, db, request)
 
         
 

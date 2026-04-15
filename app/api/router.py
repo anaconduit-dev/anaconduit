@@ -1,6 +1,11 @@
 from fastapi import APIRouter
 from app.api import xray, docker
-from app.api.endpoints import auth, inbounds, clients, config, sub, nginx, stats, admin, app, backup, outbounds, routing, resources, settings
+from app.api.endpoints import (
+    auth, inbounds, clients, 
+    config, sub, nginx, stats, 
+    admin, app, backup, outbounds, 
+    routing, resources, settings,
+    groups, templates)
 
 
 
@@ -12,6 +17,16 @@ api_router.include_router(
     prefix="/xray", 
     tags=["Xray Management"]
 )
+
+api_router.include_router(
+    templates.router, 
+    prefix="/templates", 
+    tags=["Subscription Templates"])
+
+api_router.include_router(
+    groups.router, 
+    prefix="/groups", 
+    tags=["Groups"])
 
 api_router.include_router(
     resources.router, 

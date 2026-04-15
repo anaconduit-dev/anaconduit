@@ -7,6 +7,7 @@ import time
 import httpx
 import anyio
 import docker
+import socket
 from sqlalchemy import select
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -162,20 +163,35 @@ class XrayResourceManager:
     # --- Утилиты версий ---
 
     async def get_github_versions(self) -> List[str]:
+        # 1. Если кэш еще свежий — отдаем сразу
         if self._version_cache and (time.time() - self._cache_last_updated < self.CACHE_TTL):
             return self._version_cache
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        # 2. Настраиваем более агрессивные таймауты
+        # connect=3.0 не даст коду висеть 10 секунд на стадии DNS-запроса
+        timeout = httpx.Timeout(10.0, connect=3.0)
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
             try:
                 resp = await client.get(self.GITHUB_API_URL)
                 resp.raise_for_status()
+                
                 versions = [r["tag_name"] for r in resp.json() if not r.get("prerelease")]
-                self._version_cache = versions
-                self._cache_last_updated = time.time()
-                return versions
+                
+                if versions:
+                    self._version_cache = versions
+                    self._cache_last_updated = time.time()
+                    return versions
+                    
+            except (httpx.ConnectError, socket.gaierror) as e:
+                # Специфическая обработка ошибки DNS
+                logger.warning(f"Network/DNS issue fetching Xray versions: {e}. Using stale cache.")
             except Exception as e:
-                logger.error(f"GitHub error: {e}")
-                return self._version_cache or []
+                logger.error(f"Unexpected GitHub error: {e}")
+
+        # 3. Fallback: если запрос не удался, возвращаем то, что есть в кэше (пусть и старое)
+        # Это лучше, чем пустой список [], так как в админке не пропадет выбор версий.
+        return self._version_cache if self._version_cache else []
 
     # --- Прокси-методы к DockerService ---
     

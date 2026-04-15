@@ -1,3 +1,5 @@
+# app/schemas/user.py
+
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -57,3 +59,11 @@ class UpdateLimitsSchema(BaseModel):
     add_days: Optional[int] = None
     auto_reset_traffic: Optional[bool] = None
     reset_period: Optional[str] = None # "day", "week", "month"
+
+class UserShortResponse(BaseModel):
+    id: int
+    email: str
+    # Никаких clients и inbounds здесь!
+    
+    class Config:
+        from_attributes = True

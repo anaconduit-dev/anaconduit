@@ -54,7 +54,7 @@ class User(Base):
     auto_reset_traffic = Column(Boolean, default=False, server_default="false")
     reset_period = Column(String, default="month")
     last_reset_at = Column(DateTime, server_default=func.now(), nullable=True)
-
+    
     clients = relationship("Client", back_populates="user", cascade="all")
 
 class Client(Base):

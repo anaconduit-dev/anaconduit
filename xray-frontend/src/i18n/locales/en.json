@@ -1,4 +1,29 @@
 {
+  "templates": {
+    "title": "Subscription Builder",
+    "add": "Create Template",
+    "clientType": "Client Type",
+    "injectionTag": "Injection Tag",
+    "subtitle": "Configure and manage subscription node templates",
+    "selectPrompt": "Select a template from the left sidebar to edit",
+    "namePlaceholder": "Template Name (e.g. Premium iOS)",
+    "description": "Short Description",
+    "errorLoad": "Failed to load templates from server"
+  },
+  "groups": {
+    "title": "User Groups",
+    "attachUser": "Attach User",
+    "noTemplate": "No template assigned",
+    "subtitle": "Access Control & Subscription Logic",
+    "add": "Create Group",
+    "edit": "Edit Group",
+    "create": "Create Group",
+    "groupName": "Group Name",
+    "subscriptionTemplate": "Subscription Template",
+    "linkedTemplate": "Linked Template",
+    "errorEmptyName": "Group name cannot be empty",
+    "members": "managing group users"
+  },
   "routing": {
     "title": "Routing",
     "info": "Traffic steering logic & filters",
@@ -195,10 +220,8 @@
     "add": "Add",
     "reset": "Reset",
     "cancel": "Cancel",
-    "delete": "delete",
     "confirm": "Confirm",
     "areYouSure": "Confirm action?",
-    "save": "Save",
     "description": "Description (optional)",
     "deleting": "Deleting...",
     "errorConnection": "Server connection error",
@@ -208,7 +231,14 @@
     "success": "Successful",
     "edit": "Edit",
     "fillAll": "Please fill in all fields",
-    "error": "Error"
+    "updated": "Updated successfully",
+    "search": "Search...",
+    "saving": "Saving changes...",
+    "save": "Save Changes",
+    "delete": "Delete",
+    "error": "Something went wrong",
+    "deleted": "Deleted successfully",
+    "saved": "Created successfully"
   },
   "status": {
     "active": "ACTIVE",
@@ -276,7 +306,9 @@
       "outbounds": "Outbound Gateways",
       "users": "Users",
       "nginx": "Nginx",
-      "settings": "Settings"
+      "settings": "Settings",
+      "subtemplates": "Configuration templates",
+      "usergroups": "Configuration assignments"
     }
   },
   "apps": {

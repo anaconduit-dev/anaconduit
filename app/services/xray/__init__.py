@@ -3,6 +3,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from app.core.database import AsyncSessionLocal
 from app.services.docker_service import DockerService
+from fastapi import Response, HTTPException, Request
 
 # Импорт под-сервисов
 from .generator import XrayConfigGenerator
@@ -104,8 +105,8 @@ class XrayService:
     def generate_config_link(self, client, user, inbound):
         return self.links.generate_config_link(client, user, inbound)
 
-    async def generate_subscription(self, token: str, session: AsyncSessionLocal): 
-        return await self.links.generate_subscription(token, session)
+    async def generate_subscription(self, token: str, session: AsyncSessionLocal, request: Request): 
+        return await self.links.generate_subscription(token, session, request)
 
     # ---------- Безопасность ----------
 
