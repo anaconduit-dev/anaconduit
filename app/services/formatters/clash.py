@@ -68,11 +68,20 @@ class ClashFormatter:
         # Transport
         if net == "ws":
             ws = stream.get("wsSettings", {})
+            # Генерируем или берем стандартный User-Agent
+            default_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            
+            headers = {
+                "Host": ws.get("headers", {}).get("Host", self.domain),
+                "User-Agent": ws.get("headers", {}).get("User-Agent", default_ua)
+            }
+
             node["network"] = "ws"
             node["ws-opts"] = {
                 "path": f"/{inbound.port}/{ws.get('path', '').lstrip('/')}",
-                "headers": {"Host": ws.get("headers", {}).get("Host", self.domain)}
+                "headers": headers
             }
+            node["tls"] = True
         elif net == "grpc":
             grpc = stream.get("grpcSettings", {})
             node["network"] = "grpc"
@@ -86,6 +95,7 @@ class ClashFormatter:
                 "mode": xhttp.get("mode", "packet-up"),
                 "path": f"/{xhttp.get('path', '').lstrip('/')}"
             }
+            node["tls"] = True
         return node
 
     def format(self, template_content: str, injection_tag: str, proxies: list) -> str:
