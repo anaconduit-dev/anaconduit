@@ -114,7 +114,7 @@ class XrayLinkGenerator:
     def _get_sub_headers(self, user: User, filename: str) -> dict:
         total_traffic = user.traffic_limit or 0
         expiry = int(user.expiry_time.timestamp()) if user.expiry_time else 0
-        remark = urllib.parse.quote(filename)
+        remark = urllib.parse.quote(f"Anaconduit: {filename}")
         
         return {
             "Subscription-Userinfo": f"upload={user.total_up}; download={user.total_down}; total={total_traffic}; expire={expiry}",

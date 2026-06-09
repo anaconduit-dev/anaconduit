@@ -5,7 +5,8 @@ from app.api.endpoints import (
     config, sub, nginx, stats, 
     admin, app, backup, outbounds, 
     routing, resources, settings,
-    groups, templates)
+    groups, templates,
+    nodes)
 
 
 
@@ -16,6 +17,12 @@ api_router.include_router(
     xray.router, 
     prefix="/xray", 
     tags=["Xray Management"]
+)
+
+api_router.include_router(
+    nodes.router, 
+    prefix="/nodes", 
+    tags=["Node Management"]
 )
 
 api_router.include_router(

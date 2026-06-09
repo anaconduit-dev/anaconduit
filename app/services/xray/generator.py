@@ -3,13 +3,14 @@ import logging
 from typing import List, Dict, Any
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
-from app.models.models import Inbound, Client, User, Outbound, RoutingRule, GlobalSettings
+from app.models import Inbound, Client, User, Outbound, RoutingRule, GlobalSettings
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 class XrayConfigGenerator:
-    def __init__(self, api_port: int = 10085):
+    def __init__(self, node_id: int, api_port: int = 10085):
+        self.node_id = node_id
         self.api_port = api_port
 
     def _get_xray_email(self, email: str, tag: str) -> str:
@@ -56,7 +57,7 @@ class XrayConfigGenerator:
         """Сборка входящих соединений с учетом специфики транспорта и реальности"""
         # 1. Получаем все активные инбаунды
         result = await session.execute(
-            select(Inbound).where(Inbound.is_active == True)
+            select(Inbound).where(Inbound.is_active == True, Inbound.node_id == self.node_id)
         )
         db_inbounds = result.scalars().all()
         
@@ -149,7 +150,7 @@ class XrayConfigGenerator:
 
     async def _build_outbounds(self, session) -> List[dict]:
         """Формирование выходов с поддержкой каскадирования (Proxy Chain)"""
-        result = await session.execute(select(Outbound).where(Outbound.is_active == True))
+        result = await session.execute(select(Outbound).where(Outbound.is_active == True, Outbound.node_id == self.node_id))
         db_outbounds = result.scalars().all()
         
         xray_outbounds = []
@@ -197,7 +198,7 @@ class XrayConfigGenerator:
         strategy = gs.domain_strategy if gs else "AsIs"
 
         result = await session.execute(
-            select(RoutingRule).where(RoutingRule.is_active == True).order_by(RoutingRule.priority.desc())
+            select(RoutingRule).where(RoutingRule.is_active == True, RoutingRule.node_id == self.node_id).order_by(RoutingRule.priority.desc())
         )
         rules = result.scalars().all()
         

@@ -1,14 +1,24 @@
 import { useState, useEffect } from "react";
-import { X, Save, ArrowRightLeft, Loader2, Key, Server, Lock, Wand2, Zap, Anchor, ShieldCheck, Globe } from "lucide-react";
+import { X, Save, ArrowRightLeft, Loader2, Key, Server,
+  Lock, Wand2, Zap, Anchor, ShieldCheck, Globe, Cpu } from "lucide-react";
 import { addOutbound, getOutbounds } from "../api/outbound";
+import { type Node } from "../api/nodes";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 
-export default function AddOutboundModal({ isOpen, onClose, onSuccess }: any) {
+interface AddOutboundModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  nodes: Node[];
+}
+
+export default function AddOutboundModal({ isOpen, onClose, onSuccess, nodes }: AddOutboundModalProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [availableOutbounds, setAvailableOutbounds] = useState<any[]>([]);
   const [importUrl, setImportUrl] = useState("");
+  const [nodeId, setNodeId] = useState<number | null>(null);
 
   // Основные поля
   const [tag, setTag] = useState("");
@@ -32,6 +42,7 @@ export default function AddOutboundModal({ isOpen, onClose, onSuccess }: any) {
 
   useEffect(() => {
     if (isOpen) {
+      setNodeId(null);
       getOutbounds().then(data => setAvailableOutbounds(Array.isArray(data) ? data : []));
     }
   }, [isOpen]);
@@ -103,6 +114,7 @@ export default function AddOutboundModal({ isOpen, onClose, onSuccess }: any) {
     const payload = {
       tag: tag.trim(),
       protocol,
+      node_id: nodeId,
       description: description.trim() || null,
       settings,
       stream_settings: streamSettings,
@@ -149,14 +161,32 @@ export default function AddOutboundModal({ isOpen, onClose, onSuccess }: any) {
           </div>
 
           {/* TAG & PROTOCOL */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* ВЫБОР НОДЫ */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1 flex items-center gap-1">
+                <Cpu size={10} className="text-indigo-500" />
+                {t("inbounds.node")}
+              </label>
+              <select 
+                value={nodeId || ""} 
+                onChange={e => setNodeId(e.target.value ? parseInt(e.target.value) : null)}
+                className="w-full bg-card border border-line rounded-2xl px-5 py-3 text-sm font-bold outline-none cursor-pointer appearance-none focus:border-indigo-500 transition-all"
+              >
+                {nodes && nodes.map((node: any) => (
+                  <option key={node.id} value={node.id}>{node.name}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1">Tag</label>
               <input required value={tag} onChange={e => setTag(e.target.value)} className="w-full bg-card border border-line rounded-2xl px-5 py-3 text-sm font-bold focus:border-indigo-500 outline-none" />
             </div>
+
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1">Protocol</label>
-              <select value={protocol} onChange={e => setProtocol(e.target.value)} className="w-full bg-card border border-line rounded-2xl px-5 py-3 text-sm font-bold outline-none cursor-pointer appearance-none">
+              <select value={protocol} onChange={e => setProtocol(e.target.value)} className="w-full bg-card border border-line rounded-2xl px-5 py-3 text-sm font-bold outline-none cursor-pointer appearance-none focus:border-indigo-500">
                 <option value="freedom">Freedom (Direct)</option>
                 <option value="blackhole">Blackhole (Block)</option>
                 <option value="vless">VLESS</option>

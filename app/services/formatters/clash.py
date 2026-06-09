@@ -23,6 +23,7 @@ class ClashFormatter:
     def make_node(self, client: Client, inbound: Inbound) -> dict:
         stream = inbound.stream_settings or {}
         net = stream.get("network", "tcp")
+        fingerprint = stream.get("realitySettings", {}).get("fingerprint", "chrome")
         security = stream.get("security", "none")
         
         raw_remark = f"{inbound.tag} | {net.upper()}"
@@ -37,7 +38,7 @@ class ClashFormatter:
             "udp": True,
             "tls": True if security in ["tls", "reality"] else False,
             "skip-cert-verify": True,
-            "client-fingerprint": "chrome",
+            "client-fingerprint": fingerprint,
         }
 
         if security != "reality":

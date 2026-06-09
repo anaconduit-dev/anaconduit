@@ -256,3 +256,11 @@ class XrayAPIClient:
                     logger.info(f"📊 Кастомный трафик: {full_id} употребил {value} байт")
             
             await session.commit()
+
+    async def close(self):
+        """
+        Корректное закрытие gRPC канала
+        """
+        if self.channel:
+            logger.info("🔌 Закрытие gRPC соединения с Xray...")
+            await self.channel.close()

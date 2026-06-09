@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react"; // Добавили useMemo
 import { toast } from 'react-hot-toast';
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "../context/ConfirmContext";
@@ -14,9 +14,11 @@ import {
   AlertCircle,
   Users,
   Settings2,
-  PlusCircle
+  PlusCircle,
+  Cpu // Иконка для ноды
 } from "lucide-react";
 import { getInbounds, deleteInbound } from "../api/inbound";
+import { getNodes, type Node } from "../api/nodes"; 
 
 interface ContextType {
   refreshStatus?: () => Promise<void>;
@@ -28,6 +30,7 @@ export default function InboundsPage() {
   const { refreshStatus } = useOutletContext<ContextType>() || {};
   
   const [inbounds, setInbounds] = useState<any[]>([]);
+  const [nodes, setNodes] = useState<Node[]>([]); // Состояние для нод
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -35,11 +38,25 @@ export default function InboundsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedInboundId, setSelectedInboundId] = useState<number | null>(null);
 
-  const loadInbounds = useCallback(async () => {
+  // Создаем карту нод для быстрого поиска: { id: "Name" }
+  const nodesMap = useMemo(() => {
+    return nodes.reduce((acc, node) => {
+      acc[node.id] = node.name;
+      return acc;
+    }, {} as Record<number, string>);
+  }, [nodes]);
+
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getInbounds();
-      setInbounds(Array.isArray(data) ? data : []);
+      // Загружаем инбаунды и ноды параллельно
+      const [inboundsData, nodesData] = await Promise.all([
+        getInbounds(),
+        getNodes()
+      ]);
+      
+      setInbounds(Array.isArray(inboundsData) ? inboundsData : []);
+      setNodes(Array.isArray(nodesData) ? nodesData : []);
       setError(null);
     } catch (e) {
       setError(t("common.errorConnection"));
@@ -48,11 +65,11 @@ export default function InboundsPage() {
     }
   }, [t]);
 
-  useEffect(() => { loadInbounds(); }, [loadInbounds]);
+  useEffect(() => { loadData(); }, [loadData]);
 
+  // ... handleDelete и handleEdit остаются без изменений ...
   const handleDelete = async (e: React.MouseEvent, id: number, tag: string) => {
     e.stopPropagation();
-    
     const isConfirmed = await confirm({
       title: t("inbounds.deleteInbound"),
       message: t("inbounds.deleteConfirm", { tag }),
@@ -60,13 +77,11 @@ export default function InboundsPage() {
       confirmText: t("common.delete"),
       cancelText: t("common.cancel")
     });
-
     if (!isConfirmed) return;
-
     toast.promise(deleteInbound(id), {
       loading: t("common.deleting") || 'Deleting...',
       success: () => {
-        loadInbounds();
+        loadData();
         if (refreshStatus) refreshStatus();
         return t("inbounds.deleteSuccess");
       },
@@ -83,7 +98,7 @@ export default function InboundsPage() {
     <div className="p-8 h-full overflow-y-auto custom-scrollbar">
       <div className="max-w-7xl mx-auto">
         
-        {/* Header */}
+        {/* Header - без изменений */}
         <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
@@ -148,6 +163,14 @@ export default function InboundsPage() {
                       <Zap size={18} fill={inbound.is_running_in_xray ? "currentColor" : "none"} />
                     </div>
                     
+                    {/* Кнопка с именем ноды */}
+                    <div className="px-3 py-1.5 bg-card border border-line rounded-xl flex items-center gap-2">
+                      <Cpu size={12} className="text-indigo-500" />
+                      <span className="text-[9px] font-black uppercase tracking-tighter text-base italic">
+                        {nodesMap[inbound.node_id] || `Node ${inbound.node_id}`}
+                      </span>
+                    </div>
+
                     <div className="flex gap-2 lg:opacity-0 lg:group-hover:opacity-100 lg:translate-x-2 lg:group-hover:translate-x-0 transition-all duration-300">
                       <button 
                         onClick={() => handleEdit(inbound.id)}
@@ -204,9 +227,10 @@ export default function InboundsPage() {
       </div>
 
       <AddInboundModal 
-        isOpen={isAddModalOpen} 
+        isOpen={isAddModalOpen}
+        nodes={nodes}
         onClose={() => setIsAddModalOpen(false)} 
-        onSuccess={() => { loadInbounds(); if (refreshStatus) refreshStatus(); }} 
+        onSuccess={() => { loadData(); if (refreshStatus) refreshStatus(); }} 
       />
 
       <EditInboundModal 
@@ -217,7 +241,7 @@ export default function InboundsPage() {
           setSelectedInboundId(null);
         }} 
         onSuccess={() => { 
-          loadInbounds(); 
+          loadData(); 
           if (refreshStatus) refreshStatus(); 
         }} 
       />

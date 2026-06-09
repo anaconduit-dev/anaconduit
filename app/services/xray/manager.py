@@ -189,8 +189,6 @@ class XrayResourceManager:
             except Exception as e:
                 logger.error(f"Unexpected GitHub error: {e}")
 
-        # 3. Fallback: если запрос не удался, возвращаем то, что есть в кэше (пусть и старое)
-        # Это лучше, чем пустой список [], так как в админке не пропадет выбор версий.
         return self._version_cache if self._version_cache else []
 
     # --- Прокси-методы к DockerService ---

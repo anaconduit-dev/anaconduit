@@ -48,6 +48,7 @@
     "newRoute": "New Routing Rule",
     "steeringLogic": "Traffic Steering Logic",
     "targetOutbound": "Target Outbound",
+    "selectNode": "Select a node ...",
     "selectGateway": "Select gateway...",
     "priorityLabel": "Priority (Higher = First)",
     "sourceInbounds": "Source Inbounds",
@@ -155,7 +156,6 @@
     "title": "Inbounds",
     "info": "Active Xray Core inbound ports",
     "total": "Total ports",
-    "addInbound": "Add Port",
     "deleteInbound": "Delete Inbound",
     "deleteConfirm": "Are you sure you want to delete inbound {{tag}}? This will disconnect all associated clients.",
     "deleteSuccess": "Port deleted successfully",
@@ -165,7 +165,14 @@
     "mappingPorts": "Mapping network ports...",
     "port": "Port",
     "clients": "Clients",
-    "protocol": "Protocol"
+    "protocol": "Protocol",
+    "node": "Server (Node)",
+    "masterNode": "Master Node (Local)",
+    "tag": "Tag (Unique)",
+    "listen": "Listen IP",
+    "udsPath": "Socket Path (UDS)",
+    "protocolSelection": "Protocol Selection",
+    "addInbound": "Add Inbound"
   },
   "settNginx": {
     "info": "Gateway for your subscriptions and web interface",

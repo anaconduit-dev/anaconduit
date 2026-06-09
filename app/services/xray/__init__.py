@@ -22,12 +22,13 @@ class XrayService:
         :param api_client: Инстанс XrayAPIClient для работы через gRPC.
         :param docker_service: Инстанс DockerService для управления контейнером.
         """
+        self.node_id = 1
         self.api_client = api_client
         self.docker = docker_service or DockerService()
         self.manager = XrayResourceManager(self.docker)
         
         # Инициализация специализированных модулей
-        self.generator = XrayConfigGenerator(api_port=10085)
+        self.generator = XrayConfigGenerator(node_id = self.node_id, api_port=10085)
         self.manager = XrayResourceManager(self.docker)
         self.traffic = XrayTrafficManager(api_client)
         self.links = XrayLinkGenerator()

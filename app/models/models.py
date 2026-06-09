@@ -29,7 +29,8 @@ class Inbound(Base):
         "destOverride": ["http", "tls", "quic"]
     })
     is_active = Column(Boolean, default=True)
-
+    node_id = Column(Integer, ForeignKey("nodes.id"), nullable=True)
+    node = relationship("Node", back_populates="inbounds")
 class User(Base):
     """Сущность пользователя — владелец нескольких подключений"""
     __tablename__ = "users"
@@ -118,6 +119,9 @@ class Outbound(Base):
     is_default = Column(Boolean, default=False, server_default="false")
     is_active = Column(Boolean, default=True, server_default="true")
     description = Column(String, nullable=True)
+    node_id = Column(Integer, ForeignKey("nodes.id", ondelete="CASCADE"), nullable=True)
+    
+    node = relationship("Node", back_populates="outbounds")
 
 class RoutingRule(Base):
     """Правила маршрутизации: какой трафик через какой Outbound пускать"""
@@ -140,7 +144,9 @@ class RoutingRule(Base):
     priority = Column(Integer, default=0)
     is_active = Column(Boolean, default=True, server_default="true")
     description = Column(String, nullable=True)
-
+    node_id = Column(Integer, ForeignKey("nodes.id", ondelete="CASCADE"), nullable=True)
+    
+    node = relationship("Node", back_populates="routing_rules")
     outbound = relationship("Outbound")
 
 class XrayResource(Base):

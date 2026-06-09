@@ -3,8 +3,10 @@ import {
   X, Shield, Zap, Loader2, Search, Globe, Lock,
   Settings, Plus, Trash2, Cpu, Hash, Check
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { generateXrayKeys, addClient } from "../api/user";
 import {  addInbound } from "../api/inbound"
+import { type Node } from "../api/nodes";
 
 const generateComplexPath = () => {
   const randomStr = Math.random().toString(36).substring(2, 12); // 10 символов
@@ -48,6 +50,7 @@ const getRandomGrpcService = () => {
 const getEmptyForm = () => ({
     // --- 1. Основные настройки Inbound ---
     tag: "",
+    node_id: null as number | null,
     port: 443,
     listen: "0.0.0.0",
     protocol: "vless",
@@ -144,8 +147,15 @@ const getEmptyForm = () => ({
     tlsKeyPath: "",
     tlsCertPath: "",
 });
+  interface AddInboundModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
+    nodes: Node[]; // Получаем список нод из родителя (InboundsPage)
+  }
 
-  export default function AddInboundModal({ isOpen, onClose, onSuccess }: any) {
+  export default function AddInboundModal({ isOpen, onClose, onSuccess, nodes }: AddInboundModalProps) {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('base')
 
@@ -453,10 +463,33 @@ useEffect(() => {
           {activeTab === 'base' && (
             <div className="space-y-6 animate-in fade-in duration-300">
               
-              {/* Сетка основных параметров */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Сетка основных параметров: теперь 4 колонки */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                
+                {/* ВЫБОР НОДЫ */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-muted uppercase ml-1">Tag (Уникальный)</label>
+                  <label className="text-[10px] font-black text-muted uppercase ml-1 flex items-center gap-1">
+                    <Cpu size={10} className="text-indigo-500" />
+                    {t("inbounds.node")}
+                  </label>
+                  <select 
+                    className="w-full p-4 bg-main border border-line rounded-2xl font-bold text-sm text-base focus:border-indigo-500 transition-all outline-none"
+                    value={form.node_id || ""}
+                    onChange={e => setForm({...form, node_id: e.target.value ? parseInt(e.target.value) : null})}
+                  >
+                    {nodes.map(node => (
+                      <option key={node.id} value={node.id}>
+                        {node.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* TAG */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-muted uppercase ml-1">
+                    {t("inbounds.tag")}
+                  </label>
                   <input 
                     required 
                     className="w-full p-4 bg-main border border-line rounded-2xl font-bold text-sm text-base focus:border-indigo-500 transition-all outline-none" 
@@ -466,38 +499,28 @@ useEffect(() => {
                   />
                 </div>
                 
-                {/* Поле ПОРТ */}
+                {/* PORT */}
                 <div className="space-y-1 relative">
                   <label className="text-[10px] font-black text-muted uppercase ml-1 flex justify-between">
-                    Порт
+                    {t("inbounds.port")}
                     {form.network === 'xhttp' && <Lock size={10} className="text-indigo-500" />}
                   </label>
                   <input 
                     type="number" 
                     disabled={form.network === 'xhttp'}
-                    className={`w-full p-4 border rounded-2xl font-mono font-bold text-sm transition-all outline-none ${
-                      form.network === 'xhttp' 
-                        ? 'bg-main text-muted border-line cursor-not-allowed opacity-50' 
-                        : 'bg-card border-line text-base focus:border-indigo-500'
-                    }`} 
+                    className="w-full p-4 bg-main border border-line rounded-2xl font-mono font-bold text-sm text-base focus:border-indigo-500 transition-all outline-none disabled:opacity-50" 
                     value={form.port} 
                     onChange={e => setForm({...form, port: parseInt(e.target.value) || 0})} 
                   />
                 </div>
 
-                {/* Поле LISTEN */}
+                {/* LISTEN */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-muted uppercase ml-1 flex justify-between">
-                    { form.network === 'xhttp' ? "Путь к сокету (UDS)" : "IP прослушивания" }
-                    {form.network === 'xhttp' && <Zap size={10} className="text-emerald-500" />}
+                  <label className="text-[10px] font-black text-muted uppercase ml-1">
+                    {form.network === 'xhttp' ? t("inbounds.udsPath") : t("inbounds.listen")}
                   </label>
                   <input 
-                    readOnly={form.network === 'xhttp'}
-                    className={`w-full p-4 border rounded-2xl font-mono text-sm transition-all outline-none ${
-                      form.network === 'xhttp' 
-                        ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20 cursor-default italic' 
-                        : 'bg-card border-line text-base focus:border-indigo-500'
-                    }`} 
+                    className="w-full p-4 bg-main border border-line rounded-2xl font-mono text-sm text-base focus:border-indigo-500 transition-all outline-none" 
                     value={form.listen} 
                     onChange={e => setForm({...form, listen: e.target.value})} 
                   />

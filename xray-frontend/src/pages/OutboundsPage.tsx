@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from 'react-hot-toast';
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "../context/ConfirmContext";
 import {  
-  Trash2, 
+  Trash2, Cpu,
   Send, 
   Zap, 
   Loader2, 
@@ -22,6 +22,7 @@ import {
   deleteRoutingRule, 
   updateRoutingRule 
 } from "../api/outbound";
+import { getNodes, type Node } from "../api/nodes";
 import { getGlobalSettings, updateGlobalSettings } from "../api/settings";
 import AddOutboundModal from "../components/AddOutboundModal";
 import EditOutboundModal from "../components/EditOutboundModal";
@@ -36,6 +37,7 @@ export default function OutboundsPage() {
   const [activeTab, setActiveTab] = useState<'exits' | 'rules'>('exits');
   const [outbounds, setOutbounds] = useState<any[]>([]);
   const [rules, setRules] = useState<any[]>([]);
+  const [nodes, setNodes] = useState<Node[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalSettings, setGlobalSettings] = useState<any>(null);
@@ -48,18 +50,28 @@ export default function OutboundsPage() {
   const [selectedOutbound, setSelectedOutbound] = useState<any | null>(null);
   const [isEditRuleOpen, setIsEditRuleOpen] = useState(false);
   const [selectedRule, setSelectedRule] = useState<any | null>(null);
+
+  const nodesMap = useMemo(() => {
+    return nodes.reduce((acc, node) => {
+      acc[node.id] = node.name;
+      return acc;
+    }, {} as Record<number, string>);
+  }, [nodes]);
+
   // Загрузка всех данных (Promise.all для скорости)
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [outData, rulesData, settingsData] = await Promise.all([
+      const [outData, rulesData, settingsData, nodesData] = await Promise.all([
         getOutbounds(),
         getRoutingRules(),
-        getGlobalSettings()
+        getGlobalSettings(),
+        getNodes()
       ]);
       setOutbounds(Array.isArray(outData) ? outData : []);
       setRules(Array.isArray(rulesData) ? rulesData : []);
       setGlobalSettings(settingsData);
+      setNodes(Array.isArray(nodesData) ? nodesData : []);
     } catch (e) {
       toast.error(t("common.errorConnection"));
     } finally {
@@ -202,6 +214,13 @@ export default function OutboundsPage() {
                         <div className={`p-3 rounded-2xl ${out.is_default ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-900/20' : 'bg-main text-muted border border-line'}`}>
                           {getProtocolIcon(out.protocol)}
                         </div>
+                        {/* НОВОЕ: Бейдж ноды */}
+                        <div className="px-3 py-1.5 bg-main border border-line rounded-xl flex items-center gap-2">
+                          <Cpu size={12} className="text-indigo-500" />
+                          <span className="text-[9px] font-black uppercase tracking-tighter text-base italic">
+                            {nodesMap[out.node_id] || t("nodes.masterNode")}
+                          </span>
+                        </div>
                         <div className="flex gap-2">
                           <button 
                             onClick={() => handleEditOutbound(out)}
@@ -309,6 +328,13 @@ export default function OutboundsPage() {
                         </div>
 
                         <div className="flex-1 space-y-3">
+                          {/* Добавим информацию о ноде над списком доменов/IP */}
+                          <div className="flex items-center gap-2 mb-1">
+                            <Cpu size={10} className="text-muted" />
+                            <span className="text-[8px] font-bold text-muted uppercase tracking-[0.1em]">
+                              Target Node: <span className="text-indigo-500">{nodesMap[rule.node_id] || t("nodes.masterNode")}</span>
+                            </span>
+                          </div>
                           <div className="flex flex-wrap gap-2">
                             {rule.domain?.map((d: string) => (
                               <span key={d} className="px-2.5 py-1.5 bg-indigo-500/10 text-indigo-400 text-[9px] font-black rounded-xl border border-indigo-500/20 flex items-center gap-1.5 uppercase tracking-tighter">
@@ -374,6 +400,7 @@ export default function OutboundsPage() {
       {/* MODALS */}
       <AddOutboundModal 
         isOpen={isAddOutboundOpen} 
+        nodes={nodes}
         onClose={() => setIsAddOutboundOpen(false)} 
         onSuccess={loadData} 
       />
@@ -407,6 +434,7 @@ export default function OutboundsPage() {
 
       <AddRoutingRuleModal 
         isOpen={isAddRuleOpen} 
+        nodes={nodes}
         outbounds={outbounds} 
         onClose={() => setIsAddRuleOpen(false)} 
         onSuccess={loadData} 

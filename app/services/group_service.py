@@ -3,8 +3,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
 from typing import List
 
-from app.models import UserGroup, UserGroupAssociation
-from app.models import User
+from app.models import UserGroup, UserGroupAssociation, User
 from app.schemas.group import UserGroupCreate, UserGroupUpdate
 
 class GroupService:

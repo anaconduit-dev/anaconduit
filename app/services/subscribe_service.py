@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.models.subscribe import SubscriptionTemplate
+from app.models import SubscriptionTemplate
 from app.schemas.subscribe import SubscriptionTemplateCreate, SubscriptionTemplateUpdate
 
 class SubscribeService:

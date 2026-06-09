@@ -41,6 +41,7 @@ class OutboundBase(BaseModel):
     is_default: bool = False
     is_active: bool = True
     description: Optional[str] = None
+    node_id: Optional[int] = Field(None, description="null для глобального аутбаунда")
 
 class OutboundCreate(OutboundBase):
     pass
@@ -61,6 +62,7 @@ class OutboundUpdate(BaseModel):
     is_default: Optional[bool] = None
     is_active: Optional[bool] = None
     description: Optional[str] = None
+    node_id: Optional[int] = None
 
 
 class RoutingRuleBase(BaseModel):
@@ -73,6 +75,7 @@ class RoutingRuleBase(BaseModel):
     priority: int = 0
     is_active: bool = True
     description: Optional[str] = None
+    node_id: Optional[int] = None
 
 class RoutingRuleCreate(RoutingRuleBase):
     pass
@@ -93,3 +96,4 @@ class RoutingRuleUpdate(BaseModel):
     priority: Optional[int] = None
     is_active: Optional[bool] = None
     description: Optional[str] = None
+    node_id: Optional[int] = None

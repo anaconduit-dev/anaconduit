@@ -1,3 +1,5 @@
+# app/schemas/inbound.py
+
 from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List, Dict, Any, Union, Annotated
 
@@ -114,15 +116,14 @@ class InboundCreate(BaseModel):
     stream_settings: StreamSettings
     sniffing: Sniffing
     is_active: bool = True
+    node_id: Optional[int] = Field(None, description="ID ноды. Если null — локальная мастер-нода")
 
    
 
     @model_validator(mode='after')
     def check_protocol_compatibility(self) -> 'InboundCreate':
-        # Проверка: WS не дружит с Reality (уже на уровне схемы)
         if self.stream_settings.network == "ws" and self.stream_settings.security == "reality":
             raise ValueError("WS network does not support Reality security")
-                
         return self
 
 class InboundUpdate(BaseModel):
@@ -133,4 +134,5 @@ class InboundUpdate(BaseModel):
     stream_settings: dict | None = None
     sniffing: dict | None = None
     is_active: bool | None = None
+    node_id: Optional[int] = None
 
